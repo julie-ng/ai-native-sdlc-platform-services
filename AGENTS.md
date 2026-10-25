@@ -28,12 +28,14 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 | `npm ci` | Install locked dependencies; also runs Nuxt preparation |
 | `npm run dev` | Start local development |
 | `npm run check:guidance` | Check repository guidance links and portable skill metadata |
+| `npm run lint` | Check JavaScript, TypeScript, and Vue with ESLint; warnings fail |
+| `npm run lint:fix` | Apply available ESLint fixes |
 | `npm run build` | Build the application |
-| `npm run verify` | Run guidance checks and the build |
+| `npm run verify` | Run lint, guidance checks, and the build |
 | `npm run preview` | Preview an existing production build |
 
 - For documentation-only changes, run `npm run check:guidance` and `git diff --check`. For application or configuration changes, run `npm run verify` plus relevant behavioral checks.
-- No lint, typecheck, or application test runner is configured yet. The build is not a substitute for typechecking or behavioral tests. Introduce appropriate tooling alongside the first implementation that needs it, and update this table.
+- No explicit typecheck or application test runner is configured yet. ESLint and the build are not substitutes for typechecking or behavioral tests. Introduce appropriate tooling alongside the first implementation that needs it, and update this table.
 - Unit tests belong beside their source (`name.utils.test.ts`); integration tests belong in `tests/integration/` when introduced. Verify meaningful behavior, failure paths, and authorization constraints.
 - Completion means the requested behavior or documentation is implemented, applicable checks pass, and affected docs reflect the result. Report unavailable checks and remaining limitations plainly.
 

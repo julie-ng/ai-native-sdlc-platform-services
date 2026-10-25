@@ -6,7 +6,7 @@ const root = await realpath(fileURLToPath(new URL('../', import.meta.url)))
 const files = ['AGENTS.md', 'README.md']
 const failures: string[] = []
 
-async function collectMarkdown (directory: string) {
+async function collectMarkdown(directory: string) {
   for (const entry of await readdir(resolve(root, directory), { withFileTypes: true })) {
     const path = `${directory}/${entry.name}`
     if (entry.isDirectory()) {
