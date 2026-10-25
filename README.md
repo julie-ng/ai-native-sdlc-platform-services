@@ -2,6 +2,13 @@
 
 Nuxt 4 application for RESTful platform APIs. The initial release focuses on APIs; product UI follows later. See [architecture and decisions](./docs/architecture.md) for implemented capabilities, agreed stack choices, and open decisions.
 
+## Service handoffs
+
+- [Workflow service](./docs/workflow-service-schema.md) — CLI run registration, steps/attempts, reporting, usage, gates and escalation state.
+- [Artifact service](./docs/artifact-service-schema.md) — artifact metadata, access policy, SAS URLs and upload acknowledgment.
+
+Both are design brainstorms. Each includes the small assignment/reference contract needed to implement its service independently; unresolved API choices remain explicit.
+
 ## Development
 
 Use Node.js 24 (see [.node-version](./.node-version)) and npm.
