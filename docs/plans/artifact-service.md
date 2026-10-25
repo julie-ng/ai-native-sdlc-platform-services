@@ -3,6 +3,49 @@
 > [!IMPORTANT]
 > **Plan in progress.** Items under [Agreed](#agreed) are decided; data-model fields, task permissions and endpoint contracts remain proposals. Authority: [ADR-003](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/003-platform-services-vs-agent-pods.md) for trust/authentication and [ADR-005](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/005-state-and-artifacts.md) for artifacts. Nothing here is implemented yet.
 
+## Next session — proposed artifact-first start
+
+2026-10-25 checkpoint: the architect leans toward fleshing out and building the artifact service first, even before Kubernetes integration. Proposed sequence for tomorrow; exact contracts and implementation tickets still need agreement.
+
+**Start with one concrete handoff:** a planner creates `plan.md`, uploads it, acknowledges success, then a coder obtains read access and downloads the same bytes. A small script can act as both callers; no model calls or running workflow engine are needed for this first demonstration.
+
+### First conversation
+
+- Agree the three HTTP operations: request create/upload access, acknowledge successful upload, request read/download access. Write one request/response example and the relevant validation/authorization errors for each before implementing routes.
+- Bind one planner and one coder assignment to fixed run/step/attempt IDs. Define which exact artifact each can create/read. Exercise changed run, attempt, artifact and action as denied cases.
+- Use trusted assignment fixtures for local tests while real caller authentication/integration remains open. The fixtures stand in for platform-supplied context; a request body must not be able to replace that context. This does not select HMAC or Kubernetes tokens.
+- Before a persistence ticket, confirm the PostgreSQL driver/local test setup and how the workflow-owned `step_attempts(id)` foreign-key target is provided. Minimal test seed records can represent that dependency; building the workflow service's endpoints is not a prerequisite. Preserve the existing FK contract rather than silently removing it for a standalone demo.
+
+### Build in layers
+
+Each layer has its own completion evidence. Keep a successful local layer even if Azure or Kubernetes access is unavailable.
+
+| Layer | Proposed work | Done when |
+|---|---|---|
+| 1 · Local API and policy | Runtime request validation, assignment-scoped authorization, three HTTP operations; test doubles for metadata/signing where needed | A local script completes the request sequence; altered references/actions are denied; denied requests never invoke the signer. This proves application behavior, not Azure SAS validity. |
+| 2 · Durable metadata | Drizzle tables/migrations and a local database fixture containing the required workflow identities | Reservation and upload acknowledgment persist across a service restart; uniqueness and foreign-key behavior are checked against the database. |
+| 3 · Real Blob handoff, outside K8s | Run the service locally against an available test storage account with an explicitly configured development/service identity | Producer uploads directly with the issued SAS, acknowledges it, and downstream caller reads identical bytes. Check read-only access and the selected create-only upload behavior against Azure itself. |
+| 4 · Cluster integration | Supply real trusted assignments/caller identity and platform workload identity; connect the CLI-submitted Argo workflow | The same artifact handoff works between separate pods with the selected authentication/delivery mechanism. Local fixtures and storage test doubles are replaced. |
+
+For layer 3, Microsoft's JavaScript example supports obtaining a user delegation key with an authenticated local development identity; Kubernetes is not required for that storage API. Actual account access, permissions and credential availability still need checking. Caller processes receive only SAS URLs; the service process holds the Azure identity. [Local development and user delegation SAS](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blob-create-user-delegation-sas-javascript#use-the-defaultazurecredential-in-local-development).
+
+If storage access is unavailable, build layers 1–2 and leave layer 3 explicitly unverified. A generated-looking URL or mocked successful upload is not evidence of an Azure handoff.
+
+### First implementation tickets — proposed sequence
+
+1. **Contracts and authorization:** agree the three operation examples, implement runtime schemas and the task/artifact policy, select minimal test tooling, and cover allowed/denied assignments.
+2. **Local HTTP and metadata:** implement the operations and metadata repository, add migrations/local fixtures once the persistence dependency is settled, and supply a repeatable command-line smoke script. Acknowledge uploads without proxying artifact bytes.
+3. **Azure storage adapter:** replace the signing test double, document required server-side identity/permissions, and run the direct upload/acknowledgment/download check against test storage.
+
+Use these as bounded tickets after the first conversation; do not hand an agent the whole platform plan as one build task. Add the Kubernetes/Argo integration ticket once this service contract has been exercised.
+
+### Ideas to retain for later
+
+- Add a binary artifact, such as a screenshot, to the same smoke script after the first handoff works.
+- Repeat create-authorization and upload-acknowledgment requests to settle their response semantics with concrete evidence.
+- Check retention/abandoned reservations after the basic durable handoff exists.
+- Keep update support, a product UI, additional coding-loop types and webhook ingress outside the first artifact slice.
+
 ## Initial release scope
 
 - Authorize access to a specific artifact and return a scoped Azure Blob SAS URL. Pods transfer bytes directly to/from Blob Storage; the service never streams artifact bytes.
@@ -189,6 +232,7 @@ The workflow orders production before consumption; downstream steps do not poll 
 
 | Date | Decision | Reasoning |
 |---|---|---|
+| 2026-10-25 | Record an artifact-first, local-first proposal for the next session | Architect leans toward building this service before K8s integration. Plan separate API, persistence, real-storage and cluster checks; implementation sequencing and mechanisms remain proposals. |
 | 2026-10-25 | Maintain this implementation plan under `docs/plans/` | Architect wants to continue planning independently of the repository's architecture and Git workflow references. Agreed decisions and unresolved choices remain distinct. |
 | 2026-10-25 | Separate artifact and workflow implementation handoffs | Architect needs to delegate them to different coding agents; keep only assignment/reference and foreign-key integration here. |
 | 2026-10-25 | Authorization policy independent of authentication; sketch task/action permissions | Architect confirmed policy remains required under either HMAC or Kubernetes tokens. Tally Split's map is the reference; exact policy entries and persistence remain proposals. |

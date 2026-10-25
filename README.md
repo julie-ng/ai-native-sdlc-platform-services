@@ -9,6 +9,8 @@ Nuxt 4 application for RESTful platform APIs. The initial release focuses on API
 
 Both are implementation plans in progress. Each includes the small assignment/reference contract needed to implement its service independently; unresolved API choices remain explicit.
 
+Next session: start with the [artifact-first proposal](./docs/plans/artifact-service.md#next-session--proposed-artifact-first-start), including a local handoff demonstration and staged implementation tickets.
+
 ## Development
 
 Use Node.js 24 (see [.node-version](./.node-version)) and npm.
