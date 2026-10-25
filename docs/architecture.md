@@ -22,6 +22,12 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 | Agent guidance | Root and nested `AGENTS.md`; portable workflows under `.agents/skills/` | Shared guidance authored here; client adapters are managed separately |
 | Durable context | Repository documentation is the minimum; personal memory is optional | No personal memory or other repository is required |
 
+## Service responsibilities
+
+- [Workflow service](./workflow-service-schema.md) owns runs, steps/attempts, status/usage reports, gate results, escalation state and trusted assignments.
+- [Artifact service](./artifact-service-schema.md) owns artifact metadata, artifact authorization policy, SAS issuance and upload acknowledgment.
+- The handoff contract carries trusted caller assignments and exact artifact references. Separate implementation documents do not select separate deployments or databases; transport/access between the services is still open.
+
 ## Module boundaries
 
 - `server/api/`: HTTP contracts and request handling; use explicit guards for protected operations.
@@ -41,6 +47,7 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 
 | Date / context | Decision and reason |
 | --- | --- |
+| 2026-10-25 / service handoffs | Keep workflow and artifact service designs standalone for separate coding-agent assignments, with only the identity/reference integration contract repeated. Preserve agreed behavior and keep unresolved integration choices open. |
 | 2026-10-25 / repository bootstrap | Start with TypeScript and REST APIs; defer UI implementation to keep the first release focused. Drizzle is the chosen ORM; Pinia, Tailwind, and Nuxt UI are reserved for later UI work. |
 | 2026-10-25 / coding preferences | Use PascalCase components and adapt utility/composable conventions to TypeScript. Do not inherit another application's domain model, credentials, or service choices. |
 | 2026-10-25 / agent portability | Author rules once in root/nested `AGENTS.md` and workflows in standard `SKILL.md` files. Client adapters are separate; repo docs must support fresh sessions independently of personal memory. |
