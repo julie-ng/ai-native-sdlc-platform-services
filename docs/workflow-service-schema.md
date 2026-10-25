@@ -11,13 +11,21 @@ The Argo side of the same contract — what templates must emit and stamp so the
 - Server version: **PostgreSQL 17** (`postgres_version = "17"` in infrastructure `defaults.auto.tfvars`, checked 2026-10-25). Matters for UUID generation — see [Identifiers](#identifiers).
 - The workflow service is the system of record: runs, retries, start times, per-task cost from goose token usage ([ADR-005](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/005-state-and-artifacts.md)).
 - The artifact service authorizes access and issues Blob SAS URLs; pods transfer bytes directly to/from Blob Storage ([02 · Architecture](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/02-architecture.md#state), merged 2026-10-23).
+- This repository contains the workflow service and artifact service. The GitHub broker lives in its own repository; its GitHub permission roles do not define workflow step types.
+
+## Initial release scope
+
+- Human submits the workflow with the **Argo Workflows CLI**.
+- A temporary registration/logging step calls the workflow service to record the run and obtain our run UUID before agent steps start. Argo already exists at that point and supplies its workflow UID.
+- Focus: run/step/attempt records, assigned status reports, artifact policy and producer → downstream handoffs.
+- GitHub webhook ingress and delivery deduplication belong to the target design. Keep their references [below](#references); they are not initial-release implementation work. The combined schema sketch retains nullable webhook fields for that later path.
 
 ## Agreed
 
 Architect answers, 2026-10-25.
 
 - **Artifact metadata lives in the database.**
-- **Own run UUID**, independent of Argo. Target: GitHub webhook → workflow service, which owns the ID. The POC triggers from the Argo CLI; the schema still carries our own run UUID.
+- **Own run UUID**, independent of Argo. The initial release triggers from the Argo CLI; the workflow service records the run and owns its UUID. Target design: GitHub webhook → workflow service → Argo.
 - **One active run per issue.** Several concurrent runs for one issue are waste.
 - **Raw token counts always stored.** Price too, if cheap. Currency: as configured — USD for now.
 - **Token counts are user feedback, not governance.** Spend limits are enforced at the AI gateway.
@@ -25,6 +33,10 @@ Architect answers, 2026-10-25.
 - **GitLab out of scope** for code.
 - **Step ≠ step attempt.** Separate entities.
 - **Step status comes from agent reports.**
+- **Trusted workflow/platform code establishes assignments and selects the outputs passed downstream.** Agents report only against their own assigned run, step and attempt.
+- **Artifact authorization policy is required regardless of authentication mechanism.** HMAC vs. Kubernetes ServiceAccount authentication and policy persistence are separate implementation choices.
+- **Upload completion:** agent requests a SAS URL, uploads directly to Azure, receives a successful response, then reports completion to the artifact service. Downstream steps request the completed upstream artifacts supplied by the workflow.
+- **Checks and gates are steps too.** A step's purpose, execution kind and optional agent role are distinct from its GitHub broker permissions.
 - **Different kinds of cap**, not one cap with several names — see [Caps](#caps).
 - Where the 2026-10-21 workflow comparison handoff conflicts with ADR-009, ADR-009 applies.
 
@@ -71,8 +83,9 @@ export const RUN_STATUSES = ['pending', 'running', 'finished'] as const
 export const RUN_OUTCOMES = ['green', 'escalated', 'failed', 'cancelled'] as const
 export const ATTEMPT_STATUSES = ['queued', 'running', 'finished'] as const
 
-// ADR-012 role table. OPEN: ADR-014 names architect + coder as committing roles — reconcile
-export const ROLES = ['planner', 'coder', 'reviewer', 'open-pr'] as const
+// Proposal: a gate can execute code, use an agent, or wait for a human.
+// Workflow step types and agent roles are independent of GitHub broker roles.
+export const STEP_KINDS = ['agent', 'code', 'suspend'] as const
 
 export const TRIGGER_SOURCES = ['webhook', 'cli'] as const
 ```
@@ -117,7 +130,7 @@ export const repositories = pgTable('repositories', {
 export const triggers = pgTable('triggers', {
   id: id(),
   source: text('source', { enum: TRIGGER_SOURCES }).notNull(),
-  // X-GitHub-Delivery GUID. Unique → a redelivered event can't start a second run.
+  // Later, target webhook path only: X-GitHub-Delivery GUID. See References.
   // NULL for CLI; PostgreSQL treats NULLs as distinct in unique constraints.
   githubDeliveryId: text('github_delivery_id').unique(),
   event: text('event'), // X-GitHub-Event, e.g. issues, issue_comment
@@ -191,34 +204,39 @@ CREATE UNIQUE INDEX "runs_one_active_per_issue" ON "runs" USING btree ("reposito
 
 ### Steps and attempts
 
-- **Step** = our iteration: "implement · 2" in the [loop diagram](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/04-workflow.md). Bounded by the iteration cap.
-- **Step attempt** = one pod. Argo's `retryStrategy` re-runs a step in a new pod.
+- **Step** = one logical node of the unrolled DAG: plan, implement · 1, review · 1, implement · 2, review · 2, open PR in the [loop diagram](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/04-workflow.md). Checks and gates are also steps; one iteration can contain several steps.
+- **Step attempt** = one execution of that node. For container steps, each attempt runs in its own pod; Argo's `retryStrategy` re-runs that step in a new pod. A suspend gate does not require an agent pod.
+- **Output attempt** = the existing `step_attempts` row referenced by `steps.outputAttemptId`: the execution that produced the outputs passed downstream. If planner P1 attempt 1 crashes and attempt 2 produces the plan, the pointer identifies P1 attempt 2. It is not another kind of attempt or an approval. A second coding iteration is a new step C2, not another infrastructure attempt of C1.
+- Trusted workflow/platform code establishes the run/step/attempt assignments and binds exact input/output references. Agents report status and usage only for their own assignment; they do not assign themselves another role, select upstream attempts, or change downstream grants.
 - Argo's default `retryPolicy` is `OnFailure`: "Retry steps whose main container is marked as failed in Kubernetes" ([retries](https://argo-workflows.readthedocs.io/en/latest/retries/)). A non-zero goose exit for a domain reason is retried too, and every retry pays for model calls again.
 - Agents report per pod. Without attempts, reports from retries overwrite or mix, and token totals come out wrong.
 - Argo exposes the retry number to container templates as `{{retries}}` ([variables](https://argo-workflows.readthedocs.io/en/latest/variables/)).
 
 ```ts
 /**
- * One logical node of the unrolled DAG, e.g. "implement · 2". Iterations are steps.
- * Timestamps derive from attempts: first attempt started → accepted attempt finished.
+ * One logical node of the unrolled DAG, e.g. "implement · 2" or a checks/gate step.
+ * Timestamps derive from attempts: first attempt started → output attempt finished.
  */
 export const steps = pgTable('steps', {
   id: id(),
   runId: uuid('run_id').notNull().references(() => runs.id, { onDelete: 'cascade' }),
   stepKey: text('step_key').notNull(), // e.g. P1, C1, C2. OPEN: assigned by template or service
-  role: text('role', { enum: ROLES }).notNull(),
-  iteration: integer('iteration').notNull(), // X of runs.max_iterations
+  taskType: text('task_type').notNull(), // policy key, e.g. planner, coder, checks, gate-classify, decide
+  kind: text('kind', { enum: STEP_KINDS }).notNull(), // execution kind, not GitHub access
+  agentRole: text('agent_role'), // e.g. planner, coder, reviewer; null for code/suspend steps
+  iteration: integer('iteration'), // loop round; null for steps outside the repeated loop
   retryLimit: integer('retry_limit').notNull(), // snapshot of retryStrategy.limit
   outcome: text('outcome'), // OPEN: outcome set not finalized
-  // OPEN: which attempt downstream steps read when a producer was retried
-  acceptedAttemptId: uuid('accepted_attempt_id').references((): AnyPgColumn => stepAttempts.id, { onDelete: 'restrict' }),
+  // Set by trusted workflow/platform code, not by the reporting agent.
+  // Must belong to this step. OPEN: service check vs. composite FK for that invariant.
+  outputAttemptId: uuid('output_attempt_id').references((): AnyPgColumn => stepAttempts.id, { onDelete: 'restrict' }),
   createdAt: createdAt(),
 }, table => [
   unique('steps_run_step_key_unique').on(table.runId, table.stepKey),
 ])
 
 /**
- * One pod. Argo retryStrategy re-runs a step in a new pod; each reports and costs separately.
+ * One execution attempt. Container attempts have separate pods and usage reports.
  */
 export const stepAttempts = pgTable('step_attempts', {
   id: id(),
@@ -312,8 +330,8 @@ export const artifacts = pgTable('artifacts', {
   name: text('name').notNull(), // logical name, e.g. plan
   kind: text('kind'), // e.g. summary, notes, log, screenshot (ADR-005)
   contentType: text('content_type'),
-  // SAS is issued before the bytes exist: reserved → uploaded is the one state change.
-  // OPEN: allow that update, or record uploads as separate insert-only rows
+  // Agent uploads using the SAS, receives Azure success, then reports completion.
+  // reserved → uploaded records that acknowledgment; it does not update artifact bytes.
   state: text('state', { enum: ['reserved', 'uploaded'] }).notNull().default('reserved'),
   sizeBytes: bigint('size_bytes', { mode: 'number' }), // known after upload
   sha256: text('sha256'), // known after upload
@@ -356,27 +374,34 @@ export const escalations = pgTable('escalations', {
 })
 ```
 
-### Conditional on agent authentication
+### Optional authorization persistence
 
-Exist only depending on HMAC vs. Kubernetes ServiceAccount tokens ([Open](#open)). Both come from the 2026-10-23 artifact service discussion — proposals, not accepted: artifact identity = run + producing step + producing attempt + name; caller is distinct from producer; workflows pass logical references, never Blob paths or SAS URLs.
+Authorization is required under either authentication mechanism; the [policy sketch](#artifact-and-reporting-policy--proposal) expresses it in code. This table is optional persistence for the exact grants instantiated by trusted workflow/platform code. Whether those grants are stored as rows or resolved from trusted assignments is separate from HMAC vs. Kubernetes ServiceAccount authentication. Artifact identity = run + producing step + producing attempt + name; caller is distinct from producer; workflows pass logical references, never Blob paths or SAS URLs.
 
 ```ts
 /**
  * Exists if grants are persisted server-side. Caller ≠ producer: the coder (caller)
  * reads the planner's plan (target). Changing target or action must fail authorization.
- * OPEN: when grants are created relative to attempt creation.
+ * Trusted workflow/platform code creates grants from the policy and assignments.
+ * OPEN: exact provisioning timing relative to attempt creation.
  */
 export const artifactGrants = pgTable('artifact_grants', {
   id: id(),
   callerAttemptId: uuid('caller_attempt_id').notNull().references(() => stepAttempts.id, { onDelete: 'cascade' }),
   targetProducerAttemptId: uuid('target_producer_attempt_id').notNull().references(() => stepAttempts.id, { onDelete: 'cascade' }),
   targetName: text('target_name').notNull(),
-  action: text('action', { enum: ['create', 'read'] }).notNull(), // create-only: no update (ADR-005)
+  action: text('action', { enum: ['create', 'read', 'update'] }).notNull(), // distinct actions; policy grants no updates today
   createdAt: createdAt(),
 }, table => [
   unique('artifact_grants_unique').on(table.callerAttemptId, table.targetProducerAttemptId, table.targetName, table.action),
 ])
+```
 
+### Conditional credential delivery
+
+Only credential delivery/cleanup records depend on the authentication implementation. The artifact policy above still applies if no HMAC Secret is needed.
+
+```ts
 /**
  * Exists if HMAC tokens are delivered as Kubernetes Secrets. The workflow service owns
  * cleanup when the run finishes, so it must keep the run ↔ Secret association.
@@ -418,7 +443,7 @@ export const runsRelations = relations(runs, ({ one, many }) => ({
 export const stepsRelations = relations(steps, ({ one, many }) => ({
   run: one(runs, { fields: [steps.runId], references: [runs.id] }),
   attempts: many(stepAttempts, { relationName: 'attempts' }),
-  acceptedAttempt: one(stepAttempts, { fields: [steps.acceptedAttemptId], references: [stepAttempts.id], relationName: 'accepted' }),
+  outputAttempt: one(stepAttempts, { fields: [steps.outputAttemptId], references: [stepAttempts.id], relationName: 'output' }),
 }))
 
 export const stepAttemptsRelations = relations(stepAttempts, ({ one, many }) => ({
@@ -428,6 +453,91 @@ export const stepAttemptsRelations = relations(stepAttempts, ({ one, many }) => 
   artifacts: many(artifacts),
 }))
 ```
+
+## Artifact and reporting policy — proposal
+
+Pattern: [Tally Split `shared/config/task-permissions.js`](https://github.com/julie-ng/tally-split-ai/blob/main/shared/config/task-permissions.js). Keep the allowed actions in one map, then constrain each request to the caller's trusted assignment. Authentication supplies the caller context; it does not grant access to every artifact in the run. The HMAC representation, ServiceAccount validation and whether grants become database rows remain open.
+
+The task/artifact names below illustrate the local comparison handoff, `tmp/handoffs/sdl-workflow-poc-handoff.md` in the architecture workspace. The exact map remains a proposal; the full comparison workflow is not adopted. In particular, a new GitHub `reader` broker role is a separate proposal from that handoff; checks/gates need workflow task types regardless of whether they receive GitHub access.
+
+- `artifact/<name>:create`, `:read` and `:update` are separate capabilities. No broad `write` permission.
+- Reads require the exact input/output reference bound to this assignment. Creates require the caller's own declared output reference. A matching role or filename alone grants nothing.
+- Updates require an explicit `:update` entry and the producing assignment's own output reference. Same-role callers in other steps/attempts do not automatically get update access. No updates are granted below, preserving ADR-005's current create-only rule; enabling them would require revisiting that rule.
+- Reporting is restricted to the caller's own run, step and attempt. Assignment creation, output-attempt selection and downstream authorization remain with trusted workflow/platform code.
+- Unknown tasks/actions/references are denied. The service loads assignments and permissions from trusted platform state, never from a pod-supplied policy or list of grants.
+
+```js
+export const ARTIFACT_ACTIONS = ['create', 'read', 'update']
+
+// Illustrative policy keys, not GitHub broker roles or a finalized workflow.
+export const TASK_PERMISSIONS = {
+  planner: ['artifact/plan:create', 'attempt:report'],
+  'gate-classify': ['artifact/plan:read', 'artifact/gate:create', 'attempt:report'],
+  'approve-plan': [], // human/control-plane gate; no agent credential
+  coder: ['artifact/plan:read', 'artifact/handoff:read', 'artifact/coder-notes:create', 'attempt:report'],
+  checks: ['artifact/checks-log:create', 'artifact/diff:create', 'attempt:report'],
+  reviewer: ['artifact/plan:read', 'artifact/diff:read', 'artifact/checks-log:read', 'artifact/review:create', 'attempt:report'],
+  decide: ['artifact/coder-notes:read', 'artifact/checks-log:read', 'artifact/review:read', 'artifact/handoff:create', 'attempt:report'],
+  'pr-writer': ['artifact/plan:read', 'artifact/diff:read', 'artifact/review:read', 'artifact/pr:create', 'attempt:report'],
+  'open-pr': ['artifact/pr:read', 'artifact/pr-result:create', 'attempt:report'],
+}
+
+export function getTaskActions (taskType) {
+  if (!Object.hasOwn(TASK_PERMISSIONS, taskType)) {
+    return []
+  }
+  return [...TASK_PERMISSIONS[taskType]].sort()
+}
+
+function sameArtifact (left, right) {
+  return left.runId === right.runId &&
+    left.producerStepId === right.producerStepId &&
+    left.producerAttemptId === right.producerAttemptId &&
+    left.name === right.name
+}
+
+// assignment is loaded server-side for the authenticated caller:
+// { runId, stepId, attemptId, taskType, inputs: ArtifactRef[], outputs: ArtifactRef[] }
+// ArtifactRef = { runId, producerStepId, producerAttemptId, name }
+export function canAccessArtifact (assignment, target, action) {
+  if (!ARTIFACT_ACTIONS.includes(action)) {
+    return false
+  }
+  if (!getTaskActions(assignment.taskType).includes(`artifact/${target.name}:${action}`)) {
+    return false
+  }
+  if (target.runId !== assignment.runId) {
+    return false
+  }
+
+  if (action === 'read') {
+    return [...assignment.inputs, ...assignment.outputs].some(ref => sameArtifact(ref, target))
+  }
+
+  // Both create and any explicitly enabled update are restricted to own outputs.
+  return target.producerStepId === assignment.stepId &&
+    target.producerAttemptId === assignment.attemptId &&
+    assignment.outputs.some(ref => sameArtifact(ref, target))
+}
+
+export function canReportAttempt (assignment, target) {
+  return getTaskActions(assignment.taskType).includes('attempt:report') &&
+    target.runId === assignment.runId &&
+    target.stepId === assignment.stepId &&
+    target.attemptId === assignment.attemptId
+}
+```
+
+Example binding: coder C1 attempt 1 receives `plan` from planner P1 attempt 2 and declares `coder-notes` under C1 attempt 1. The map permits reading `plan`; the binding selects that exact P1 attempt 2 reference. Changing it to P1 attempt 1, another run, another filename or a create/update action is denied. The same `coder` task type in C2 has its own assignment and grants.
+
+### Upload and downstream handoff
+
+1. Producer asks the artifact service for create access to its assigned output; the service authorizes it and returns a SAS URL.
+2. Producer uploads directly to Azure Blob Storage and receives Azure's successful response.
+3. Producer reports successful upload to the artifact service against that same output reference. The service scopes this acknowledgment to the producing assignment and records completion metadata.
+4. Trusted workflow/platform code passes the selected output attempt's completed artifact reference to the downstream step. The downstream step then asks for read access and receives its own SAS URL.
+
+The workflow orders production before consumption; downstream steps do not poll for artifacts that have not been produced. Upload acknowledgment changes metadata, not artifact contents, and grants no permission to overwrite bytes. Selecting an output attempt does not turn a failed check or rejected review into QA green; its report may itself be the input needed for the next iteration.
 
 ## Identifiers
 
@@ -440,7 +550,6 @@ export const stepAttemptsRelations = relations(stepAttempts, ({ one, many }) => 
 
 | ID | Source | Notes |
 |---|---|---|
-| Delivery GUID | `X-GitHub-Delivery` header | unique constraint → idempotent webhook handling |
 | Repository ID | GitHub numeric `id` | `full_name` changes on rename / transfer. **Unverified:** that the numeric ID is guaranteed stable. |
 | Issue / PR number, commit SHA | GitHub | per repository |
 | Workflow name + UID | Argo | `workflow.uid`; nullable until submitted (target flow) |
@@ -480,9 +589,11 @@ PostgreSQL cannot reference across databases, so anything in `argo` is a stored 
 
 ## Run creation
 
-- **Target:** webhook → workflow service creates the run → submits to Argo ([ADR-004](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/004-orchestration-argo-workflows.md)). Argo workflow UID filled in after submit.
-- **POC proposal** (2026-10-23 artifact service discussion): Argo CLI submit → a registration call from Argo → workflow service creates the run and returns the run UUID **before any model-driven pod starts**. Temporary and unauthenticated; replaced by authenticated ingress. Argo workflow UID known at creation.
-- Either way: `triggers.source` distinguishes the paths; `runs.argo_workflow_uid` is nullable.
+**Initial release:** human → Argo CLI submission → temporary registration/logging step → workflow service records the run and returns its UUID → agent steps start.
+
+- Registration completes **before any model-driven pod starts**. The temporary call is initially unauthenticated; exact step implementation remains a proposal.
+- Record `triggers.source = 'cli'` and the already-known Argo workflow name/UID. `githubDeliveryId` is null.
+- The workflow service owns our run UUID even though Argo starts first. The [target webhook flow](#references) reverses that submission order later.
 
 ## Crash capture — later
 
@@ -495,20 +606,23 @@ Not needed for the first POC stage.
 
 ## Open
 
+Design backlog; not every item is a prerequisite for the initial release. Webhook-specific work is deferred to the [target-design reference](#references).
+
 - [ ] **States.** Go through all run, step and attempt states. A run waiting on a human is "pending" — decide whether pending counts as active for one-active-run-per-issue.
 - [ ] **Iteration cap unit:** review rounds vs. coder passes including failed checks. Needs investigation.
-- [ ] **Raw webhook payload vs. extracted fields.** Measure payload size once built, then compare.
 - [ ] **Resume after escalation:** new run with `parent_run_id`, or sub-run under the same run (ADR-009 allows either).
 - [ ] **Project ↔ repository:** start 1:1 or 1:N. Projects with submodules are 1:N. The broker scopes each token to one repository, so one run → one repository either way.
-- [ ] **Agent authentication:** HMAC (documented) vs. Kubernetes ServiceAccount tokens (under evaluation, pending the GitHub broker). Decides whether `artifact_grants` and `credential_secrets` exist. Authorization stays in the artifact service either way.
+- [ ] **Agent authentication:** HMAC (documented) vs. Kubernetes ServiceAccount tokens (under evaluation, pending the GitHub broker). Mechanism details are deferred; artifact policy is required either way. Credential delivery may require `credential_secrets`.
+- [ ] **Authorization persistence:** resolve the code policy against trusted assignments directly, or persist instantiated grants in `artifact_grants`. Independent of authentication choice.
 - [ ] **UUID version:** v4 vs. v7; PostgreSQL 17 vs. 18.
-- [ ] **Accepted attempt:** when a producer is retried, which attempt's artifact downstream steps read.
+- [ ] **Output-attempt binding:** exact Argo/service mechanism for recording which attempt's outputs are passed downstream; trusted workflow/platform code owns selection. Enforce same-step membership for `outputAttemptId`.
+- [ ] **Reporting follow-up:** repeated CLI registration, cumulative vs. incremental usage, duplicate reports and late transitions. Revisit with the first working CLI run; this is separate from future webhook delivery deduplication.
 - [ ] **`queued_at` source** for cold-start measurement.
 - [ ] **Step outcome set** — not finalized.
 - [ ] **Pricing table upkeep:** who enters prices, and whether the gateway reports cost directly.
 - [ ] **Stale attempts:** how a crashed attempt is detected.
 - [ ] **Database-enforced statuses:** `text` + `{ enum }` generates no `CHECK`. Add `check()` per status column, a lookup table, or rely on the application.
-- [ ] **Roles:** ADR-012's planner / coder / reviewer / open-PR vs. ADR-014's architect + coder committing roles.
+- [ ] **Task policy:** finalize the illustrative task/artifact map and step-kind representation. Checks/gates are steps; GitHub permissions are assigned separately. ADR-012 vs. ADR-014 agent-role naming still needs reconciliation.
 - [ ] **`{{retries}}` numbering:** 0- or 1-based — decides `attempt_number`.
 - [ ] **`onDelete` policies:** `restrict` on references to projects, repositories, triggers, loop types and producing attempts; `cascade` on child rows. Do runs ever get deleted?
 
@@ -516,6 +630,12 @@ Not needed for the first POC stage.
 
 | Date | Decision | Reasoning |
 |---|---|---|
+| 2026-10-25 | Focus implementation discussion on the initial Argo CLI release; retain webhook delivery details as references | Architect requested fewer target-design rabbit holes while scoping the first release. No webhook receiver or delivery deduplication in that release. |
+| 2026-10-25 | Authorization policy is independent of authentication; sketch it as a task/action map | Architect confirmed policy remains necessary with either HMAC or Kubernetes tokens; Tally Split's task-permissions map is the reference. Exact map and persistence remain proposals. |
+| 2026-10-25 | Trusted workflow/platform code establishes assignments and selects downstream outputs; agents report only their own assignments | Architect confirmed ownership. Rename the proposed "accepted attempt" pointer to "output attempt" to distinguish output selection from approval. |
+| 2026-10-25 | Producer reports upload completion after Azure's successful response; workflow orders downstream consumption | Architect clarified the intended SAS upload/handoff flow. Recording completion metadata does not grant artifact-content update permission. |
+| 2026-10-25 | Model checks and gates as workflow steps, separately from agent/broker roles | Architect confirmed these steps were missing. The handoff illustrates agent, code and suspend execution; its full workflow and new broker roles remain proposals. |
+| 2026-10-25 | Keep initial Argo registration/logging separate from target GitHub → workflow service → Argo | Architect clarified the POC workaround; no webhook delivery ID applies to CLI registration. |
 | 2026-10-25 | Schema proposal as Drizzle code blocks, one per entity group | Easier to read and comment on in a PR than tables. Conventions follow tally-split-ai; UUID primary keys instead of text IDs. Type-checked and SQL generated with drizzle-kit, no database. |
 | 2026-10-25 | Started schema brainstorm in platform-services | Workflow service owns the database (ADR-005); the agent implementing it works in this repo. Argo-side contract in the workflows repo. |
 | 2026-10-25 | Artifact metadata in the database | Architect. |
@@ -534,3 +654,17 @@ Not needed for the first POC stage.
 | Argo IDs are not foreign keys | No referential integrity to Argo; keeps Argo swappable. |
 | Self-reported status | A crashed pod can't report; stale attempts are visible only once detection exists. |
 | Token usage reported by untrusted pods | Display figure, not a control. |
+
+## References
+
+<details>
+<summary>Target design — GitHub webhook ingress and delivery IDs (later)</summary>
+
+Target flow: GitHub webhook → workflow service creates the run → workflow service submits to Argo. This is the accepted direction in [ADR-004](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/004-orchestration-argo-workflows.md); the initial CLI registration step is a temporary workaround.
+
+- **`X-GitHub-Delivery`** is an HTTP header supplied by GitHub when it sends a webhook notification. GitHub calls sending that notification a "delivery"; the header contains a GUID identifying the event. The proposed `triggers.githubDeliveryId` column stores that value. [GitHub: delivery headers](https://docs.github.com/en/webhooks/webhook-events-and-payloads#delivery-headers).
+- A requested redelivery carries the same header value as the original delivery. The proposed unique constraint helps recognize an already-recorded notification so the service can avoid starting another run for it. [GitHub: use the delivery header](https://docs.github.com/en/webhooks/using-webhooks/best-practices-for-using-webhooks#use-the-x-github-delivery-header).
+- GitHub generates this identifier; the workflow service generates our run UUID. CLI-triggered runs have no GitHub delivery ID.
+- Later implementation work: webhook authentication/filtering, duplicate-delivery handling, and whether to store the raw payload or extracted fields. None is required for the initial CLI release.
+
+</details>
