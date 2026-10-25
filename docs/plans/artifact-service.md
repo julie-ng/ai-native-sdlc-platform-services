@@ -1,7 +1,7 @@
-# Artifact service — design and schema brainstorm
+# Artifact service — implementation plan
 
 > [!IMPORTANT]
-> **Brainstorm, not an implementation specification.** Items under [Agreed](#agreed) are decided; schema fields, task permissions and endpoint contracts remain proposals. Authority: [ADR-003](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/003-platform-services-vs-agent-pods.md) for trust/authentication and [ADR-005](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/005-state-and-artifacts.md) for artifacts. Nothing here is implemented yet.
+> **Plan in progress.** Items under [Agreed](#agreed) are decided; data-model fields, task permissions and endpoint contracts remain proposals. Authority: [ADR-003](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/003-platform-services-vs-agent-pods.md) for trust/authentication and [ADR-005](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/005-state-and-artifacts.md) for artifacts. Nothing here is implemented yet.
 
 ## Initial release scope
 
@@ -27,9 +27,9 @@
 - The workflow orders production before consumption. The artifact service authorizes the supplied exact reference; downstream agents do not poll for missing upstream outputs.
 - How assignments/bindings reach this service—shared server code/database access or an internal API—is open. It must be authoritative and available before the caller needs artifact access.
 
-The [workflow service handoff](./workflow-service-schema.md) owns run/step/attempt records and credential provisioning/cleanup. The only workflow table referenced by the artifact schema below is `step_attempts(id)`, a UUID primary key. Artifact agents need that identity contract, not the workflow's business schema. In the existing combined database proposal, these are real foreign keys; this document split does not remove them or introduce another database.
+The [workflow service handoff](./workflow-service.md) owns run/step/attempt records and credential provisioning/cleanup. The only workflow table referenced by the artifact schema below is `step_attempts(id)`, a UUID primary key. Artifact agents need that identity contract, not the workflow's business schema. In the existing combined database proposal, these are real foreign keys; this document split does not remove them or introduce another database.
 
-## Schema — proposal
+## Data model — proposal
 
 PostgreSQL 17, using the existing `workflow` database proposal and Drizzle `pg-core`. No migrations exist. UUID v4 defaults use `gen_random_uuid()`; the broader v4/v7 choice remains open. Use `timestamptz`, UTC service sessions, and explicit snake_case column names. `text(..., { enum })` provides TypeScript typing only; runtime validation/database checks still need a decision.
 
@@ -189,6 +189,7 @@ The workflow orders production before consumption; downstream steps do not poll 
 
 | Date | Decision | Reasoning |
 |---|---|---|
+| 2026-10-25 | Maintain this implementation plan under `docs/plans/` | Architect wants to continue planning independently of the repository's architecture and Git workflow references. Agreed decisions and unresolved choices remain distinct. |
 | 2026-10-25 | Separate artifact and workflow implementation handoffs | Architect needs to delegate them to different coding agents; keep only assignment/reference and foreign-key integration here. |
 | 2026-10-25 | Authorization policy independent of authentication; sketch task/action permissions | Architect confirmed policy remains required under either HMAC or Kubernetes tokens. Tally Split's map is the reference; exact policy entries and persistence remain proposals. |
 | 2026-10-25 | Producer acknowledges upload after Azure success; workflow orders downstream consumption | Architect clarified the intended handoff. Recording completion metadata does not grant permission to update bytes. |

@@ -25,8 +25,8 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 
 ## Service responsibilities
 
-- [Workflow service](./workflow-service-schema.md) owns runs, steps/attempts, status/usage reports, gate results, escalation state and trusted assignments.
-- [Artifact service](./artifact-service-schema.md) owns artifact metadata, artifact authorization policy, SAS issuance and upload acknowledgment.
+- [Workflow service](./plans/workflow-service.md) owns runs, steps/attempts, status/usage reports, gate results, escalation state and trusted assignments.
+- [Artifact service](./plans/artifact-service.md) owns artifact metadata, artifact authorization policy, SAS issuance and upload acknowledgment.
 - The handoff contract carries trusted caller assignments and exact artifact references. Separate implementation documents do not select separate deployments or databases; transport/access between the services is still open.
 
 ## Module boundaries
@@ -48,6 +48,7 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 
 | Date / context | Decision and reason |
 | --- | --- |
+| 2026-10-25 / plan organization | Keep evolving workflow and artifact implementation plans in `docs/plans/`, separate from architecture and Git workflow references. |
 | 2026-10-25 / service handoffs | Keep workflow and artifact service designs standalone for separate coding-agent assignments, with only the identity/reference integration contract repeated. Preserve agreed behavior and keep unresolved integration choices open. |
 | 2026-10-25 / repository bootstrap | Start with TypeScript and REST APIs; defer UI implementation to keep the first release focused. Drizzle is the chosen ORM; Pinia, Tailwind, and Nuxt UI are reserved for later UI work. |
 | 2026-10-25 / coding preferences | Use PascalCase components and adapt utility/composable conventions to TypeScript. Do not inherit another application's domain model, credentials, or service choices. |

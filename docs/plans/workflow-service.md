@@ -1,7 +1,7 @@
-# Workflow service — design and schema brainstorm
+# Workflow service — implementation plan
 
 > [!IMPORTANT]
-> **Brainstorm, not a schema.** Only the items under [Agreed](#agreed) are decided. Everything else is a proposal to iterate on. Design authority stays with the [architecture docs and ADRs](https://github.com/julie-ng/ai-native-sdlc/tree/main/architecture) — mainly [ADR-003](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/003-platform-services-vs-agent-pods.md), [ADR-004](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/004-orchestration-argo-workflows.md), [ADR-005](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/005-state-and-artifacts.md), [ADR-009](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/009-stop-conditions.md) and [04 · Workflow](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/04-workflow.md).
+> **Plan in progress.** Items under [Agreed](#agreed) are decided; the remaining proposals and open choices will be refined before implementation. Design authority stays with the [architecture docs and ADRs](https://github.com/julie-ng/ai-native-sdlc/tree/main/architecture) — mainly [ADR-003](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/003-platform-services-vs-agent-pods.md), [ADR-004](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/004-orchestration-argo-workflows.md), [ADR-005](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/005-state-and-artifacts.md), [ADR-009](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/009-stop-conditions.md) and [04 · Workflow](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/04-workflow.md).
 
 Implementation handoff for the workflow service. Responsibilities, reporting policy and schema proposals are contained here; endpoint contracts and open choices still need agreement before implementation.
 
@@ -45,9 +45,9 @@ Architect answers, 2026-10-25.
 - The workflow orders production before consumption. The producer reports upload completion to the artifact service after Azure responds successfully; downstream steps then receive the completed output references.
 - The artifact service consumes trusted assignments and applies its own artifact policy. Workflow code establishes bindings; an agent cannot expand them. How assignments are made available—shared server code/database access or an internal API—is open. Splitting the documents does not select separate deployments or databases.
 
-The [artifact service handoff](./artifact-service-schema.md) owns artifact tables and access behavior. This document supplies the identity/binding contract its implementer needs. Its proposed foreign keys reference workflow-owned `step_attempts(id)`; preserve that integration when coordinating migrations.
+The [artifact service handoff](./artifact-service.md) owns artifact tables and access behavior. This document supplies the identity/binding contract its implementer needs. Its proposed foreign keys reference workflow-owned `step_attempts(id)`; preserve that integration when coordinating migrations.
 
-## Schema — proposal
+## Data model — proposal
 
 Drizzle `pg-core` definitions, one block per entity group so each line can be commented on. Conventions follow [tally-split-ai `server/db/schema.ts`](https://github.com/julie-ng/tally-split-ai/blob/main/server/db/schema.ts): explicit snake_case column names, camelCase keys, `timestamptz`, `text` with `{ enum }`, `relations()` declared separately. The difference: IDs are `uuid().defaultRandom()`, not text IDs.
 
@@ -483,7 +483,7 @@ What the iteration cap counts — review rounds, or every coder pass including f
 
 | Reference | FK? | Why |
 |---|---|---|
-| everything inside `workflow` — see `.references()` in [Schema](#schema--proposal) | yes | same database; `onDelete` per FK is a proposal |
+| everything inside `workflow` — see `.references()` in [Data model](#data-model--proposal) | yes | same database; `onDelete` per FK is a proposal |
 | run → Argo workflow | no | Argo's own database; archive optional; Argo stays swappable ([ADR-005](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/005-state-and-artifacts.md) trade-off) |
 | attempt → Argo node, pod | no | pods are ephemeral |
 | repository, issue, PR, commit → GitHub | no | external |
@@ -533,13 +533,14 @@ Design backlog; not every item is a prerequisite for the initial release. Webhoo
 
 | Date | Decision | Reasoning |
 |---|---|---|
+| 2026-10-25 | Maintain this implementation plan under `docs/plans/` | Architect wants to continue planning independently of the repository's architecture and Git workflow references. Agreed decisions and unresolved choices remain distinct. |
 | 2026-10-25 | Separate workflow and artifact implementation handoffs | Architect requested independent documents for different coding agents. Workflow owns execution/business state and assignments; artifact service owns metadata and artifact access. Retain only the integration contract here. |
 | 2026-10-25 | Focus implementation discussion on the initial Argo CLI release; retain webhook delivery details as references | Architect requested fewer target-design rabbit holes while scoping the first release. No webhook receiver or delivery deduplication in that release. |
 | 2026-10-25 | Trusted workflow/platform code establishes assignments and selects downstream outputs; agents report only their own assignments | Architect confirmed ownership. Rename the proposed "accepted attempt" pointer to "output attempt" to distinguish output selection from approval. |
 | 2026-10-25 | Model checks and gates as workflow steps, separately from agent/broker roles | Architect confirmed these steps were missing. The handoff illustrates agent, code and suspend execution; its full workflow and new broker roles remain proposals. |
 | 2026-10-25 | Keep initial Argo registration/logging separate from target GitHub → workflow service → Argo | Architect clarified the POC workaround; no webhook delivery ID applies to CLI registration. |
 | 2026-10-25 | Schema proposal as Drizzle code blocks, one per entity group | Easier to read and comment on in a PR than tables. Conventions follow tally-split-ai; UUID primary keys instead of text IDs. Type-checked and SQL generated with drizzle-kit, no database. |
-| 2026-10-25 | Started schema brainstorm in platform-services | Workflow service owns the database (ADR-005); the agent implementing it works in this repo. Argo-side contract in the workflows repo. |
+| 2026-10-25 | Started workflow service planning in platform-services | Workflow service owns the database (ADR-005); the agent implementing it works in this repo. Argo-side contract in the workflows repo. |
 | 2026-10-25 | Own run UUID | Target trigger is the workflow service; POC Argo CLI trigger must not dictate the ID. |
 | 2026-10-25 | One active run per issue | Concurrent runs on one issue are waste. |
 | 2026-10-25 | Store raw token counts; price if cheap; USD | Feedback to the human, not governance. Gateway enforces limits. |
