@@ -18,6 +18,7 @@ logs
 .fleet
 .idea
 .devcontainer/devcontainer.json
+tmp/
 
 # Local env files
 .env
