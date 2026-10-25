@@ -1,75 +1,32 @@
-# Nuxt Minimal Starter
+# Platform Services
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Nuxt 4 application for RESTful platform APIs. The initial release focuses on APIs; product UI follows later. See [architecture and decisions](./docs/architecture.md) for implemented capabilities, agreed stack choices, and open decisions.
 
-## Setup
+## Development
 
-Make sure to install dependencies:
-
-```bash
-# npm
-npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
-```
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+Use Node.js 24 (see [.node-version](./.node-version)) and npm.
 
 ```bash
-# npm
+npm ci
 npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+The development server defaults to `http://localhost:3000`.
 
-Build the application for production:
+## Verification and production
 
 ```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
+npm run check:guidance  # Local documentation links and portable skill metadata
+npm run verify          # Guidance checks and Nuxt production build
+npm run preview         # Preview the completed build
 ```
 
-Locally preview production build:
+`npm run build` is available separately. There is no configured lint, explicit typecheck, or application test runner yet; introduce these with the first product code and document the commands. The build does not establish type safety or API correctness.
 
-```bash
-# npm
-npm run preview
+## Working with agents
 
-# pnpm
-pnpm preview
+Start with [AGENTS.md](./AGENTS.md). It routes to nested instructions for the area being changed; explicitly read those files even if your client does not load them automatically.
 
-# yarn
-yarn preview
+The [add-api-endpoint skill](./.agents/skills/add-api-endpoint/SKILL.md) provides the API workflow. Its content is ordinary Markdown with standard skill metadata, so agents can read it directly if native discovery is unavailable. Shared guidance lives in root/nested `AGENTS.md`; client-specific adapters are managed separately.
 
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+Project knowledge belongs in repository documentation. Personal memories and other repository checkouts are optional and are not required to understand or build this application.
