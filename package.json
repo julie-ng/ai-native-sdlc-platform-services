@@ -7,13 +7,20 @@
     "check:guidance": "node scripts/check-guidance.ts",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "verify": "npm run check:guidance && npm run build"
+    "verify": "npm run lint && npm run check:guidance && npm run build"
   },
   "dependencies": {
     "nuxt": "^4.6.2",
     "vue": "^3.5.44",
     "vue-router": "^5.4.0"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^1.17.0",
+    "eslint": "^10.13.0",
+    "typescript": "^6.0.3"
   }
 }
