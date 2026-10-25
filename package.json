@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
+    "check:guidance": "node scripts/check-guidance.ts",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "verify": "npm run check:guidance && npm run build"
   },
   "dependencies": {
     "nuxt": "^4.6.2",
