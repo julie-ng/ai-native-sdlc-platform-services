@@ -50,20 +50,28 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 
 ## Knowledge and collaboration
 
-- Repository documentation is required context. Record accepted decisions and their reasoning in [architecture and decisions](./docs/architecture.md), updating the current-state description when implementation changes.
-- Personal memory is supplementary. Every task must be understandable from its explicit input and repository files, without another checkout, personal memory, or conversation history.
+- Repository documentation is required context. Record accepted decisions in the dated decision log in [architecture and decisions](./docs/architecture.md), including reasoning and tradeoffs; update the current-state description when implementation changes. Flag disagreements between design docs and decision records rather than silently choosing one.
+- Default to interactive collaboration with the human architect. An explicit task or GitHub issue defines the scope for independent work; ask when the intended direction is unclear rather than inventing a task or design decision.
 - Follow the task's scope. Check the code and docs before asking; batch genuine open decisions in plain prose rather than multiple-choice forms. Flag adjacent problems without silently expanding the task.
 - Verify technical claims against the installed code and current primary documentation. Mark proposals and unverified claims in the document itself. Do not turn an inherited choice into an accepted decision.
+- Explain mechanisms rather than saying something is handled. Leave unknown table cells empty instead of guessing; identify secondary sources when their authority is not obvious.
 - Use available documentation tools when useful, with official documentation as a fallback. Do not require a named MCP server or personal skill for routine project work.
-- Write concise, scannable Markdown. No hard line breaks within paragraphs. Use GitHub callouts for facts that merit emphasis; reserve `IMPORTANT` for load-bearing intent.
-- Report outcomes, failures, and unresolved issues directly. Keep current state distinct from future goals.
+- Write concise, scannable Markdown without preambles or repeated summaries. Keep tables succinct; link to external docs instead of restating them. No hard line breaks within paragraphs. Use GitHub callouts for facts that merit emphasis; reserve `IMPORTANT` for load-bearing intent. Put occasional reference material in `<details>`.
+- Lead with the outcome or correction. Report failures with the actual output, unresolved issues, and anything left out with its reason. Keep current state distinct from future goals; a goal that is not yet implemented is work remaining, not a contradiction.
+
+## Cross-session memory
+
+- Personal memory is supplementary. Every task must be understandable from its explicit input and repository files, without another checkout, personal memory, or conversation history. Repository docs and decision records remain authoritative.
+- If project Markdown memory is available, all harnesses must explicitly read its `MEMORY.md` index and task-relevant linked files; do not assume they were loaded automatically. In the configured dev container, locate the mounted Claude directory through the original workspace's local `.devcontainer/devcontainer.json`, then the project's `projects/<workspace-path-slug>/memory/` directory. Use that original workspace's memory directory in task worktrees.
+- Keep reusable learnings and preferences in existing memory entries and maintain the index. Keep entries harness-agnostic unless the detail is specific to a harness; coordinate before editing shared memory. Verify remembered technical claims against repository files and current sources.
+- If memory is missing or unreadable, report that limitation and continue with repository documentation.
 
 ## Git and security
 
 - Work in an isolated worktree on your own `agent/` branch. Never edit, commit, push, or merge directly into `main` or another protected branch, or bypass branch protections.
-- Use native `git` and the authenticated `gh` CLI for repository and GitHub operations. Codex must not use GitHub MCP tools or the GitHub connector.
+- Use native `git` and the authenticated `gh` CLI for repository and GitHub operations. Codex must not use GitHub MCP tools or the GitHub connector; this restriction does not apply to other MCP tools or connectors.
 - Follow the [Git workflow](./docs/git-workflow.md) before creating branches or commits. Keep credentials out of files, command output, logs, and commits.
-- Instructions and command filters guide behavior; runtime controls enforce isolation. Do not describe one as the other.
+- Instructions and command filters guide behavior; claim a security boundary only where OS-level controls enforce it. Name the mechanism and distinguish mitigations from guarantees. Session managers, dashboards, and worktree UIs provide convenience; do not credit them with isolation they do not enforce.
 
 ## Code Review Rules
 
