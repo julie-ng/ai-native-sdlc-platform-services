@@ -1,7 +1,7 @@
 # Artifact service contract
 
 > [!IMPORTANT]
-> Contract/documentation PR only; no routes, database or Azure integration are implemented. The architect's agreed POC rules supersede the original attempt-specific/create-only scope. Remaining new choices are labeled under [choice sources](#choice-sources).
+> Merged PR #12 is the authoritative contract. The [executable foundation](./foundation.md) implements schemas, context/policy utilities and exported ports; routes, database and Azure integration remain pending. [Choice sources](#choice-sources) preserve the proposal/review provenance; merge settled those choices for implementation.
 
 - [Ontology](../plans/artifact-service.md#ontology) defines run, step, attempt, artifact, producer, consumer and caller.
   - The step owns the artifact. An agent execution writes it; retries do not create a different artifact.

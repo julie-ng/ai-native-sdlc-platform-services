@@ -1,7 +1,7 @@
 # Artifact implementation contract
 
 - Read the [airport model and API overview](./README.md) first.
-  - These are detailed proposals for implementing that contract, not an implemented service. Choice sources are recorded in the overview.
+  - These merged specifications define the contract. The [foundation handoff](./foundation.md) identifies implemented utilities and exports; service/routes and real adapters remain pending. Choice provenance is recorded in the overview.
 
 ## Validation and errors
 
@@ -111,12 +111,12 @@ v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 
 ## Code boundaries
 
-- [artifact-ports.ts](./artifact-ports.ts) contains compile-checked design interfaces, not implementations.
-  - [artifact-schemas.ts](./artifact-schemas.ts) is generated from OpenAPI; `json-schema-to-ts` derives payload/context types. Keep one schema source rather than handwritten duplicate payload interfaces.
-- Future shared ownership: `shared/utils/artifact-schemas/` and `shared/types/artifact.ts`; server ports: `server/utils/artifact/ports.ts`.
+- [artifact-ports.ts](./artifact-ports.ts) re-exports the compile-checked production ports from `server/utils/artifact/ports.ts`, not implementations.
+  - [artifact-schemas.ts](./artifact-schemas.ts) re-exports shared constants generated from OpenAPI; `json-schema-to-ts` derives payload/context types. Keep one schema source rather than handwritten duplicate payload interfaces.
+- Implemented shared ownership: `shared/utils/artifact-schemas/` and `shared/types/artifact.ts`; server ports: `server/utils/artifact/ports.ts`.
   - Preserve the exported interfaces/method signatures so adapters compile against a common contract. Concrete database/SDK construction is private composition wiring.
 
-| Future module / exports | Responsibility |
+| Module / exports | Responsibility |
 | --- | --- |
 | `server/utils/artifact/context.utils.ts` / `readCallerContext` | Validate `event.context.caller`; no authentication. |
 | `server/utils/artifact/policy.utils.ts` / `canAccessArtifact`, `deriveArtifactAccess` | Pure policy and exact trusted binding intersection; no server needed for unit tests. |
@@ -132,19 +132,19 @@ v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 - Metadata ports receive server-derived scope/reference, not caller-supplied permissions.
   - Recheck scope on every request. No cached permission from a previous registration or a known artifact ID.
 
-## Dependency proposals and checks
+## Dependency baseline and checks
 
-| Use | Proposed baseline |
+| Use | Baseline |
 | --- | --- |
-| Contract checks, installed dev dependencies | `@apidevtools/swagger-parser@13.1.0`, `ajv@8.20.0`, `ajv-formats@3.0.1`, `json-schema-to-ts@3.1.1` |
-| Runtime validation | Promote the same Ajv/formats versions to runtime; generated shared JSON schemas; no coercion, defaults or removal of unknown fields. |
+| Contract/schema tooling (Ajv/formats are runtime) | `@apidevtools/swagger-parser@13.1.0`, `ajv@8.20.0`, `ajv-formats@3.0.1`, `json-schema-to-ts@3.1.1` |
+| Runtime validation | Installed Ajv/formats versions above; generated shared JSON schemas; no coercion, defaults or removal of unknown fields. |
 | Unit / HTTP tests | Node 24 `node:test`, `node:assert/strict`, native fetch; pure policy/context tests first, HTTP tests against built Nitro on a disposable port. |
-| Product typecheck | Dev `vue-tsc@3.3.13`, `nuxt typecheck`; not installed/configured here. |
+| Product typecheck | Dev `vue-tsc@3.3.13`, `nuxt typecheck`, plus standalone test/support TypeScript; installed and configured. |
 | Persistence | `drizzle-orm@0.45.4`, `pg@8.23.1`; dev `drizzle-kit@0.31.11`, `@types/pg@8.23.1` |
 | Azure SAS | `@azure/storage-blob@12.34.0`, `@azure/identity@4.14.0` |
 
-- Only contract-check development dependencies are installed in this PR.
-  - Other versions are proposals checked against package metadata/primary docs, not installed or integration-tested. Node 24 meets Azure's Node >=22 engines; vue-tsc declares TypeScript >=5 compatibility.
+- The foundation installs this dependency baseline, including runtime Ajv/formats and the future PostgreSQL/Azure adapter packages.
+  - Installed packages are not evidence of a configured database, credentials or integration behavior. Node 24 meets Azure's Node >=22 engines; vue-tsc declares TypeScript >=5 compatibility.
 - Use one lazy `pg.Pool` per Nitro process, `max=5`, UTC session initialization and shutdown cleanup.
   - Database tests need disposable PostgreSQL 17. Native TS unit tests use explicit relative `.ts` imports rather than unresolved Nuxt aliases.
 - Primary references: [Ajv schemas](https://ajv.js.org/json-schema.html), [schema-derived types](https://github.com/ThomasAribart/json-schema-to-ts), [Node tests](https://nodejs.org/docs/latest-v24.x/api/test.html), [Drizzle PostgreSQL](https://orm.drizzle.team/docs/get-started-postgresql).
@@ -160,7 +160,7 @@ git diff --check
 
 - `check:artifact-contract` validates OpenAPI structure with Swagger Parser, compiles schemas with Ajv/formats, checks supplied examples/context-seed relationships, rejects missing/malformed context examples and typechecks the ports.
   - It checks negative example rejection and generated-schema freshness. It does not execute authorization or contact Azure/PostgreSQL; Swagger Parser is not a complete semantic OpenAPI linter.
-- `verify` includes that command; `generate:artifact-schemas` refreshes generated constants after contract edits.
+- `verify` includes contract checks, offline unit tests and application/test typechecking; `generate:artifact-schemas` refreshes generated constants after contract edits.
   - Later tests must execute visibility/action distinctions, timestamp and repeat-write cases, prove metadata discovery does not call the signer, and prove scope omissions return no foreign records.
 - Real Azure tests must upload `plan\n`, acknowledge it, overwrite the same blob with `revised plan\n`, acknowledge again and read the latest bytes/hash via a separate SAS.
   - Prove stable ID/key, planner overwrite success, create-only overwrite denial even without its conditional header, and read-only permission boundaries. A fake URL or successful build proves none of this.

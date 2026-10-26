@@ -2,7 +2,7 @@
 
 Applies to `server/db/**`, in addition to the root and [server instructions](../AGENTS.md).
 
-- Drizzle is the chosen ORM. It is not installed yet; no driver, schema, connection helper, or migration commands exist. The artifact contract proposes PostgreSQL 17 and node-postgres; that planning target does not provision a database. Check [open decisions](../../docs/architecture.md#open-decisions) before adding them.
+- Drizzle and node-postgres are installed for the PostgreSQL 17 artifact target. No schema, connection helper, or migration commands exist; installed packages do not provision a database. Check [open decisions](../../docs/architecture.md#open-decisions) before adding them.
 - Keep database connections, schemas, and migrations server-side. Export request-safe types through `shared/` without pulling database runtime code into the client.
 - Distinguish HTTP request schemas from database insert/update schemas. Accept only allowed fields; derive ownership, identity, and other server-controlled values from trusted context.
 - Generate and review migrations when schemas change. Preserve existing data and verify migration behavior in an appropriate disposable database; do not silently apply migrations to a shared or production database.
@@ -13,7 +13,7 @@ Applies to `server/db/**`, in addition to the root and [server instructions](../
 
 ## Artifact persistence handoff
 
-- Read the [artifact persistence and workflow-ownership contract](../../docs/api/implementation.md#persistence-and-workflow-ownership) before schema/adapter work. Its exact field constraints, export names and migration prerequisites remain the reference; no deployed database or installed Drizzle/driver is assumed.
+- Read the [artifact persistence and workflow-ownership contract](../../docs/api/implementation.md#persistence-and-workflow-ownership) before schema/adapter work. Its exact field constraints, export names and migration prerequisites remain the reference; no deployed database or implemented schema/adapter is assumed.
 - Persist one current artifact per producing step/name. Preserve stable IDs across retries and repeated writes; use the workflow-owned step identity, not an artifact-to-attempt relationship. Workflow owns the minimal run/step schema and prerequisite migrations; artifact code must not create a competing workflow table owner or require workflow endpoints/attempt tracking.
 - Require `createdAt` and `updatedAt` on artifact records, initially equal. Each accepted upload acknowledgment replaces latest size/hash/state and sets `updatedAt` and `uploadedAt` using one DB timestamp in the same update, including identical report retries. Matching registration/SAS renewal leaves the row unchanged; avoid automatic hooks that would make it advance `updatedAt`. Do not append upload/attempt history.
 - Separate any-action-scoped existence queries from requested-action checks; discovery queries use readable scope only. Repository adapters must not expose unrestricted ID lookups to implement the 403/404 distinction from the [server instructions](../AGENTS.md#guards-and-validation).

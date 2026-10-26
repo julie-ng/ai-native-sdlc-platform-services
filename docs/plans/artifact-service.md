@@ -1,7 +1,7 @@
 # Artifact service — POC contract
 
 > [!IMPORTANT]
-> Contracts and documentation only; no product API or integration exists yet. The architect's review decisions below supersede the original issue's attempt-specific, universally create-only requirements. The pinned plans are references; [choice sources](../api/README.md#choice-sources) distinguish agreed rules from new proposals.
+> Merged contract; an [executable foundation](../api/foundation.md) exists, with no product API or live integration yet. The architect's review decisions below supersede the original issue's attempt-specific, universally create-only requirements. The pinned plans are references; [choice sources](../api/README.md#choice-sources) distinguish agreed rules from new proposals.
 
 ## Ontology
 
