@@ -28,14 +28,16 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 | `npm ci` | Install locked dependencies; also runs Nuxt preparation |
 | `npm run dev` | Start local development |
 | `npm run check:guidance` | Check repository guidance links and portable skill metadata |
+| `npm run check:artifact-contract` | Validate artifact OpenAPI/examples and typecheck design ports |
+| `npm run generate:artifact-schemas` | Refresh design schema constants from OpenAPI |
 | `npm run lint` | Check JavaScript, TypeScript, and Vue with ESLint; warnings fail |
 | `npm run lint:fix` | Apply available ESLint fixes |
 | `npm run build` | Build the application |
-| `npm run verify` | Run lint, guidance checks, and the build |
+| `npm run verify` | Run lint, guidance and artifact contract checks, and the build |
 | `npm run preview` | Preview an existing production build |
 
 - For documentation-only changes, run `npm run check:guidance` and `git diff --check`. For application or configuration changes, run `npm run verify` plus relevant behavioral checks.
-- No explicit typecheck or application test runner is configured yet. ESLint and the build are not substitutes for typechecking or behavioral tests. Introduce appropriate tooling alongside the first implementation that needs it, and update this table.
+- No application typecheck or application test runner is configured yet; the artifact contract command checks design ports only. ESLint and the build are not substitutes for typechecking or behavioral tests. Introduce appropriate tooling alongside the first implementation that needs it, and update this table.
 - Unit tests belong beside their source (`name.utils.test.ts`); integration tests belong in `tests/integration/` when introduced. Verify meaningful behavior, failure paths, and authorization constraints.
 - Completion means the requested behavior or documentation is implemented, applicable checks pass, and affected docs reflect the result. Report unavailable checks and remaining limitations plainly.
 
@@ -53,6 +55,7 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 ## Knowledge and collaboration
 
 - Repository documentation is required context. Record accepted decisions in the dated decision log in [architecture and decisions](./docs/architecture.md), including reasoning and tradeoffs; update the current-state description when implementation changes. Flag disagreements between design docs and decision records rather than silently choosing one.
+- Keep reusable, accepted implementation rules in the applicable `AGENTS.md`, including refinements agreed during review. Link to plans/contracts for full schemas, limits and interface signatures; do not promote open proposals into mandatory rules.
 - Default to interactive collaboration with the human architect. An explicit task or GitHub issue defines the scope for independent work; ask when the intended direction is unclear rather than inventing a task or design decision.
 - Follow the task's scope. Check the code and docs before asking; batch genuine open decisions in plain prose rather than multiple-choice forms. Flag adjacent problems without silently expanding the task.
 - Verify technical claims against the installed code and current primary documentation. Mark proposals and unverified claims in the document itself. Do not turn an inherited choice into an accepted decision.
