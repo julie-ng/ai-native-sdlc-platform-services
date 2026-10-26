@@ -113,20 +113,21 @@ v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 
 - Handwritten Zod domain schemas under `shared/utils/zod-schemas/` are the source of truth; payload/context types in `shared/types/artifact.ts` use `z.infer`. Runtime callers import a domain schema and use `safeParse`. All objects are strict; no coercion/defaults/transforms or unknown-field stripping.
   - `scripts/artifact-openapi.ts` owns handwritten HTTP metadata; `npm run generate:artifact-openapi` combines it with Zod's built-in OpenAPI 3.0 schema export to produce [OpenAPI](./artifact.openapi.json). Do not hand edit generated JSON. See the [workflow and runtime example](./foundation.md#schema-workflow).
-- [artifact-ports.ts](./artifact-ports.ts) re-exports the compile-checked production interfaces from `server/utils/artifact/ports.ts`; their signatures are unchanged by the schema authoring migration.
+- [artifact-ports.ts](./artifact-ports.ts) re-exports the compile-checked production interfaces from `server/utils/artifact/ports.ts`; the schema migration preserves their shapes. The workflow lookup uses the architect-reviewed names `WorkflowStepLookup`, `WorkflowStepReference` and dependency field `workflowSteps`.
   - Preserve the exported interfaces/method signatures so adapters compile against a common contract. Concrete database/SDK construction is private composition wiring.
 
-| Module / exports | Responsibility |
-| --- | --- |
-| `server/utils/artifact/context.utils.ts` / `readCallerContext` | Validate `event.context.caller`; no authentication. |
-| `server/utils/artifact/policy.utils.ts` / `canAccessArtifact`, `deriveArtifactAccess` | Pure policy and exact trusted binding intersection; no server needed for unit tests. |
-| `server/db/workflow.schema.ts` / `runs`, `steps` | Workflow-owned identity schema and migrations. |
-| `server/utils/artifact/workflow-identity.utils.ts` / `createWorkflowIdentityRepository` | Step → run lookup. |
-| `server/db/artifact.schema.ts` / `artifacts` | Artifact metadata and FK migration. |
-| `server/utils/artifact/metadata.utils.ts` / `createArtifactMetadataRepository` | Stable registration, explicit timestamps; any-action-scoped lookups, read-scoped lists. |
-| `server/utils/artifact/azure-url.utils.ts` / `createAzureArtifactUrlIssuer` | Blob-key derivation and SAS issuance; no artifact access decision. |
-| `server/utils/artifact/service.utils.ts` / `createArtifactService` | Compose trusted scope, workflow identity, metadata and signer. |
+| Module / exports | Status | Responsibility |
+| --- | --- | --- |
+| `server/utils/artifact/context.utils.ts` / `readCallerContext` | Implemented | Validate `event.context.caller`; no authentication. |
+| `server/utils/artifact/policy.utils.ts` / `canAccessArtifact`, `deriveArtifactAccess` | Implemented | Pure policy and exact trusted binding intersection; no server needed for unit tests. |
+| `server/db/workflow.schema.ts` / `runs`, `steps` | Planned | Workflow-owned run/step schema and migrations. |
+| `server/utils/artifact/workflow-step.utils.ts` / `createWorkflowStepLookup` | Planned | Look up a persisted step and its run; no authentication. |
+| `server/db/artifact.schema.ts` / `artifacts` | Planned | Artifact metadata and FK migration. |
+| `server/utils/artifact/metadata.utils.ts` / `createArtifactMetadataRepository` | Planned | Stable registration, explicit timestamps; any-action-scoped lookups, read-scoped lists. |
+| `server/utils/artifact/azure-url.utils.ts` / `createAzureArtifactUrlIssuer` | Planned | Blob-key derivation and SAS issuance; no artifact access decision. |
+| `server/utils/artifact/service.utils.ts` / `createArtifactService` | Planned | Compose trusted scope, workflow-step lookup, metadata and signer. |
 
+- Planned rows describe future modules; those files do not exist yet. `WorkflowStepLookup` and `WorkflowStepReference` are exported interfaces today; `createWorkflowStepLookupFake` is test support. The production `createWorkflowStepLookup` factory remains planned.
 - Ports return discriminated results for expected failures; no thrown H3 errors in adapters.
   - The service catches unexpected exceptions and maps them to sanitized 500. Response serializers select public fields explicitly; they do not return repository records.
 - Metadata ports receive server-derived scope/reference, not caller-supplied permissions.
@@ -162,5 +163,5 @@ git diff --check
   - It checks negative example rejection and generated OpenAPI freshness. It does not execute authorization or contact Azure/PostgreSQL; Swagger Parser is not a complete semantic OpenAPI linter.
 - `verify` includes contract checks, offline unit tests and application/test typechecking; `generate:artifact-openapi` refreshes generated OpenAPI after Zod schema or TypeScript HTTP definition edits.
   - Later tests must execute visibility/action distinctions, timestamp and repeat-write cases, prove metadata discovery does not call the signer, and prove scope omissions return no foreign records.
-- Real Azure tests must upload `plan\n`, acknowledge it, overwrite the same blob with `revised plan\n`, acknowledge again and read the latest bytes/hash via a separate SAS.
+- Real Azure tests must upload UTF-8 text containing `plan` followed by one LF newline, acknowledge it, overwrite the same blob with `revised plan` followed by one LF newline, acknowledge again and read the latest bytes/hash via a separate SAS.
   - Prove stable ID/key, planner overwrite success, create-only overwrite denial even without its conditional header, and read-only permission boundaries. A fake URL or successful build proves none of this.

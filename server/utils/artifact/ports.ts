@@ -33,12 +33,13 @@ export interface ArtifactAccess extends ArtifactWriteScope {
 // Visibility is the de-duplicated union of all three effective grant sets.
 export type DeriveArtifactAccess = (caller: CallerContext) => ArtifactAccess
 
-export interface WorkflowStepIdentity {
+// Persisted workflow record IDs for step/run consistency, not authentication.
+export interface WorkflowStepReference {
   runId: string
   stepId: string
 }
-export interface WorkflowIdentityRepository {
-  findStep(stepId: string): Promise<Result<WorkflowStepIdentity, 'not_found' | 'unavailable'>>
+export interface WorkflowStepLookup {
+  findStep(stepId: string): Promise<Result<WorkflowStepReference, 'not_found' | 'unavailable'>>
 }
 
 export type ArtifactMetadata = Omit<CreateArtifactRequest, 'name'>
@@ -90,7 +91,7 @@ export interface ArtifactUrlIssuer {
   issueDownload(record: UploadedArtifact): Promise<Result<DownloadSas, 'unavailable'>>
 }
 export interface ArtifactServiceDependencies {
-  identities: WorkflowIdentityRepository
+  workflowSteps: WorkflowStepLookup
   metadata: ArtifactMetadataRepository
   urls: ArtifactUrlIssuer
   deriveArtifactAccess: DeriveArtifactAccess

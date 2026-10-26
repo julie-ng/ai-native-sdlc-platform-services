@@ -38,7 +38,7 @@ npm run verify                         Freshness, examples, tests, types and bui
 | `shared/utils/zod-schemas/error.schema.ts` | Error envelopes and field categories |
 | `shared/utils/zod-schemas/index.ts` | `artifactSchemas`; named components for generation and checked examples |
 | `shared/types/artifact.ts` | Payload/context types inferred with `z.infer`; no duplicate field definitions |
-| `server/utils/artifact/ports.ts` | `WorkflowIdentityRepository`, `ArtifactMetadataRepository`, `ArtifactUrlIssuer`, `ArtifactServiceDependencies`, `ArtifactService`, discriminated `Result` and failure types; adapter signatures retained |
+| `server/utils/artifact/ports.ts` | `WorkflowStepLookup`, `ArtifactMetadataRepository`, `ArtifactUrlIssuer`, `ArtifactServiceDependencies`, `ArtifactService`, discriminated `Result` and failure types; workflow lookup dependency is `workflowSteps` |
 | `server/utils/artifact/context.utils.ts` | `readCallerContext`; validates middleware context shape and binding ownership/run constraints |
 | `server/utils/artifact/policy.utils.ts` | Exact task/binding policy and de-duplicated visibility scopes |
 | `server/utils/artifact/storage-key.utils.ts` | `artifactStorageKey`; validates the complete server-selected reference and derives the stable key |
@@ -69,7 +69,7 @@ Zod's built-in JSON Schema export targets OpenAPI 3.0. Schema definitions use re
 - `npm run test:unit` runs native Node 24 tests in one process, without aliases, a server, credentials or a database. Tests must avoid shared environment mutations.
 - `npm run typecheck` runs `nuxt typecheck` and the strict standalone `tsconfig.unit.json`, including tests and support modules. `npm run verify` includes both commands.
 - `tests/support/artifact-fixtures.ts` loads the exact checked deterministic caller/identity fixtures and validates caller contexts. Fixtures are test-only, injected as trusted middleware context; no token parser or resolver exists.
-- `tests/support/artifact-fakes.ts` supplies a scoped read-only metadata fake, workflow-identity fake and URL-issuer spies. Write/signing spies return `unavailable` unless a test explicitly overrides them. No fake successful upload is supplied.
+- `tests/support/artifact-fakes.ts` supplies a scoped read-only metadata fake, workflow-step lookup fake and URL-issuer spies. Write/signing spies return `unavailable` unless a test explicitly overrides them. No fake successful upload is supplied.
 - Tests execute positive/negative schema examples, malformed and spoofed context cases, exact run/step/name matching, planner own-output create/update, coder bound reads, unknown actions/tasks, same-step later execution, and stable validated keys. Port composition probes exercise the contract's 403/404 denial cases without signing. These probes are test support, not production service orchestration.
 
 ## Remaining implementation

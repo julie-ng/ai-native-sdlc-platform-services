@@ -1,7 +1,7 @@
 import { mock } from 'node:test'
 import type {
   ArtifactMetadataRepository, ArtifactRecord, ArtifactRef, ArtifactUrlIssuer,
-  WorkflowIdentityRepository, WorkflowStepIdentity,
+  WorkflowStepLookup, WorkflowStepReference,
 } from '../../server/utils/artifact/ports.ts'
 import { sameArtifactReference } from '../../server/utils/artifact/policy.utils.ts'
 
@@ -37,11 +37,11 @@ export function createUrlIssuerSpy() {
   } satisfies ArtifactUrlIssuer
 }
 
-export function createWorkflowIdentityFake(steps: readonly WorkflowStepIdentity[]) {
+export function createWorkflowStepLookupFake(steps: readonly WorkflowStepReference[]) {
   return {
-    findStep: mock.fn<WorkflowIdentityRepository['findStep']>(async (id) => {
+    findStep: mock.fn<WorkflowStepLookup['findStep']>(async (id) => {
       const step = steps.find(step => step.stepId === id)
       return step ? { ok: true, value: { ...step } } : { ok: false, error: 'not_found' }
     }),
-  } satisfies WorkflowIdentityRepository
+  } satisfies WorkflowStepLookup
 }
