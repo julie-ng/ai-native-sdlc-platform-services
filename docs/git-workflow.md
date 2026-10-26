@@ -37,4 +37,4 @@
 - Title pull requests as Conventional Commits and target the default branch. Link the issue with `Closes #N`.
 - Under Verification, list only commands actually run with their results, and name checks that were not run with the reason.
 - Prefer bullets to paragraphs. A bullet may take two or three sentences, but do not repeat the diff or commit messages.
-- Keep the agent attribution line at the end of the pull request description.
+- End the pull request description with an agent attribution line that names the agent and the actual model and version, for example "Claude (Sonnet 5.5)", not just "Claude". Do not guess the model.
