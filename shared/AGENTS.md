@@ -11,4 +11,10 @@ Applies to `shared/**`, in addition to the root instructions.
 - Use Nuxt's `#shared/` imports inside Nuxt. Do not assume nested files are auto-imported; use explicit imports or a deliberately maintained index.
 - Co-locate pure utility tests as `name.utils.test.ts` when test tooling is introduced. Include relevant invalid inputs, date/time edges, and serialization behavior.
 
+## Artifact schemas and types
+
+- Read the [artifact ontology](../docs/plans/artifact-service.md#ontology) and [contract/type ownership](../docs/api/implementation.md#code-boundaries) before implementing shared artifact schemas/types. Use the contract's OpenAPI/schema-derived types and common ports; do not create a parallel payload or adapter contract.
+- Keep HTTP request schemas distinct from the trusted middleware caller context. Artifact ownership/references are step-based, without attempt identity; a client-provided role, reference or ID never establishes access. Shared types do not make caller-supplied context trustworthy.
+- Include server-owned `createdAt`/`updatedAt` in metadata response schemas, using the contract's UTC representation. Do not accept them in registration/completion payloads or add stored metadata to write-only acknowledgments. Preserve closed field allowlists and run `npm run check:artifact-contract` when changing shapes or examples; schema checks do not execute authorization.
+
 Reference: [Nuxt 4 shared directory](https://nuxt.com/docs/4.x/directory-structure/shared).

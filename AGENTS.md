@@ -55,6 +55,7 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 ## Knowledge and collaboration
 
 - Repository documentation is required context. Record accepted decisions in the dated decision log in [architecture and decisions](./docs/architecture.md), including reasoning and tradeoffs; update the current-state description when implementation changes. Flag disagreements between design docs and decision records rather than silently choosing one.
+- Keep reusable, accepted implementation rules in the applicable `AGENTS.md`, including refinements agreed during review. Link to plans/contracts for full schemas, limits and interface signatures; do not promote open proposals into mandatory rules.
 - Default to interactive collaboration with the human architect. An explicit task or GitHub issue defines the scope for independent work; ask when the intended direction is unclear rather than inventing a task or design decision.
 - Follow the task's scope. Check the code and docs before asking; batch genuine open decisions in plain prose rather than multiple-choice forms. Flag adjacent problems without silently expanding the task.
 - Verify technical claims against the installed code and current primary documentation. Mark proposals and unverified claims in the document itself. Do not turn an inherited choice into an accepted decision.
