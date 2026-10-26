@@ -1,7 +1,6 @@
 import { mock } from 'node:test'
 import type {
   ArtifactMetadataRepository, ArtifactRecord, ArtifactRef, ArtifactUrlIssuer,
-  WorkflowStepLookup, WorkflowStepReference,
 } from '../../server/utils/artifact/ports.ts'
 import { sameArtifactReference } from '../../server/utils/artifact/policy.utils.ts'
 
@@ -35,13 +34,4 @@ export function createUrlIssuerSpy() {
     issueUpload: mock.fn<ArtifactUrlIssuer['issueUpload']>(async () => ({ ok: false, error: 'unavailable' })),
     issueDownload: mock.fn<ArtifactUrlIssuer['issueDownload']>(async () => ({ ok: false, error: 'unavailable' })),
   } satisfies ArtifactUrlIssuer
-}
-
-export function createWorkflowStepLookupFake(steps: readonly WorkflowStepReference[]) {
-  return {
-    findStep: mock.fn<WorkflowStepLookup['findStep']>(async (id) => {
-      const step = steps.find(step => step.stepId === id)
-      return step ? { ok: true, value: { ...step } } : { ok: false, error: 'not_found' }
-    }),
-  } satisfies WorkflowStepLookup
 }

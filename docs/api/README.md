@@ -38,10 +38,10 @@
 
 ## Trusted caller context
 
-- Authentication is outside this task. Define the trusted field that existing middleware must supply:
+- Authentication and context construction are deferred. The initial service consumes the trusted field directly; it has no workflow-step lookup dependency. HMAC versus Kubernetes ServiceAccount authentication remains undecided. Tests inject fixed server-owned contexts; future trusted middleware must establish this field:
 
 ```ts
-// Server context only; never populated from the HTTP body or query.
+// Server context only; never populated from body, query or arbitrary headers.
 event.context.caller = {
   runId,     // workflow instance
   stepId,    // caller's logical step; ownership boundary

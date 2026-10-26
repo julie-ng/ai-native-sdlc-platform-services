@@ -36,7 +36,7 @@
 - Assume one active writer per step and no overlapping executions.
   - This is an operating assumption, not service-enforced isolation. No locks, leases or concurrent-writer coordination are required for this POC.
 - Authentication is outside this task; upstream middleware supplies caller context.
-  - The service checks its required shape and fails closed if missing. Do not implement a token parser, identity provider or assignment resolver.
+  - The service checks its required shape and binding consistency and fails closed if missing. Consume complete trusted context directly; defer workflow-step lookup, token parsing and context construction. HMAC versus Kubernetes ServiceAccount authentication remains undecided. Tests inject fixed server-owned context without production auth bypasses.
 
 ## Caller flow
 

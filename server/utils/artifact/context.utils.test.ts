@@ -15,7 +15,7 @@ for (const example of examples.invalidContexts) {
 }
 
 test('does not resolve tokens, authenticate or trust HTTP claims', () => {
-  for (const context of [null, undefined, 'planner', {}, { token: 'planner-p1' }, { body: { caller: contexts['planner-p1'] } }, { query: contexts['planner-p1'] }]) {
+  for (const context of [null, undefined, 'planner', {}, { token: 'planner-p1' }, { body: { caller: contexts['planner-p1'] } }, { query: contexts['planner-p1'] }, { headers: { 'x-caller-context': JSON.stringify(contexts['planner-p1']) } }]) {
     assert.deepEqual(readCallerContext(context), { ok: false, error: 'context_unavailable' })
   }
   const caller = contexts['planner-p1']!

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { artifactRecords, contexts, examples } from '../../../tests/support/artifact-fixtures.ts'
-import { createMetadataFake, createUrlIssuerSpy, createWorkflowStepLookupFake } from '../../../tests/support/artifact-fakes.ts'
+import { createMetadataFake, createUrlIssuerSpy } from '../../../tests/support/artifact-fakes.ts'
 import { canAccessArtifact, deriveArtifactAccess, visibleArtifactReferences, sameArtifactReference } from './policy.utils.ts'
 import type { ArtifactAction, CallerContext } from './ports.ts'
 
@@ -109,9 +109,6 @@ test('test ports retain discriminated failures and never fake completed uploads'
   const ref = contexts['planner-p1']!.outputs[0]!
   assert.deepEqual(await metadata.register(ref, { contentType: 'text/markdown' }), { ok: false, error: 'unavailable' })
   assert.deepEqual(await metadata.findReferenceWithinScope(ref, [ref]), { ok: false, error: 'not_found' })
-  const workflowSteps = createWorkflowStepLookupFake([{ runId: ref.runId, stepId: ref.producerStepId }])
-  assert.deepEqual(await workflowSteps.findStep(ref.producerStepId), { ok: true, value: { runId: ref.runId, stepId: ref.producerStepId } })
-  assert.deepEqual(await workflowSteps.findStep('missing'), { ok: false, error: 'not_found' })
   const urls = createUrlIssuerSpy()
   assert.deepEqual(await urls.issueUpload(artifactRecords()[0]!, 'create-or-update'), { ok: false, error: 'unavailable' })
 })

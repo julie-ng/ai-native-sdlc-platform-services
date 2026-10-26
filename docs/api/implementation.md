@@ -15,6 +15,7 @@
   - Only 400 carries `fields`: 1–20 JSON-pointer paths and categories. Missing body uses path `''`/`required`; malformed JSON uses `''`/`format`; forbidden query fields use `/query`/`unknown_field`. No input values, credentials, SAS URLs, SQL details or stack traces are returned.
 - Result mapping is `forbidden` → 403, `not_found` → 404, `conflict` → 409, `unavailable` → 503 and `internal_error` → 500.
   - Missing/invalid middleware context specifically maps to 503 `CALLER_CONTEXT_UNAVAILABLE`; other unavailable dependencies use `DEPENDENCY_UNAVAILABLE`. Authentication responses belong to upstream middleware, outside this contract.
+- Trusted caller context is an input to the artifact service. Validate its shape, same-run bindings and own-step outputs, then apply resource policy; do not resolve the caller through workflow persistence. Future authentication integration must establish this context server-side. Missing/malformed context stays 503 `CALLER_CONTEXT_UNAVAILABLE`; body, query and arbitrary header claims cannot replace it.
 - Handler order is context validation → HTTP validation → derive any-action visibility → scoped existence lookup → requested-action check → operation/SAS issuance.
   - Ingress size limits can run earlier. Future handlers need deliberate error shaping rather than H3's default error envelope.
 
@@ -46,7 +47,7 @@
 - Planned target: PostgreSQL 17 + Drizzle in the shared `workflow` database; no deployed database is assumed.
   - Fields: `id`, `producerStepId`, `name`, `kind`, `title`, `description`, `contentType`, `state`, `sizeBytes`, `sha256`, `createdAt`, `updatedAt`, `uploadedAt`. No attempt, revision, SAS or blob-key column/table.
 - Require UUID PK, unique `(producer_step_id, name)` and `producer_step_id -> steps(id) ON DELETE RESTRICT`.
-  - This step FK replaces the original issue's withdrawn attempt FK. Join the workflow-owned step to validate run membership; the same step/name always selects one current artifact.
+  - This step FK replaces the original issue's withdrawn attempt FK. The metadata adapter joins the workflow-owned step to validate run membership as persistence integrity, independently of caller authentication; the same step/name always selects one current artifact.
 - `contentType` is NOT NULL; omitted kind/title/description become SQL NULL and are omitted from public responses.
   - Explicit JSON null is rejected. Registration metadata stays immutable; only completion fields/state change in this slice.
 - Reserved means size/hash/uploaded time are NULL; uploaded means all three are present.
@@ -113,7 +114,7 @@ v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 
 - Handwritten Zod domain schemas under `shared/utils/zod-schemas/` are the source of truth; payload/context types in `shared/types/artifact.ts` use `z.infer`. Runtime callers import a domain schema and use `safeParse`. All objects are strict; no coercion/defaults/transforms or unknown-field stripping.
   - `scripts/artifact-openapi.ts` owns handwritten HTTP metadata; `npm run generate:artifact-openapi` combines it with Zod's built-in OpenAPI 3.0 schema export to produce [OpenAPI](./artifact.openapi.json). Do not hand edit generated JSON. See the [workflow and runtime example](./foundation.md#schema-workflow).
-- [artifact-ports.ts](./artifact-ports.ts) re-exports the compile-checked production interfaces from `server/utils/artifact/ports.ts`; the schema migration preserves their shapes. The workflow lookup uses the architect-reviewed names `WorkflowStepLookup`, `WorkflowStepReference` and dependency field `workflowSteps`.
+- [artifact-ports.ts](./artifact-ports.ts) re-exports the compile-checked production interfaces from `server/utils/artifact/ports.ts`; the schema migration preserves their shapes. Caller context is supplied directly; no workflow-step lookup dependency is required.
   - Preserve the exported interfaces/method signatures so adapters compile against a common contract. Concrete database/SDK construction is private composition wiring.
 
 | Module / exports | Status | Responsibility |
@@ -121,13 +122,12 @@ v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 | `server/utils/artifact/context.utils.ts` / `readCallerContext` | Implemented | Validate `event.context.caller`; no authentication. |
 | `server/utils/artifact/policy.utils.ts` / `canAccessArtifact`, `deriveArtifactAccess` | Implemented | Pure policy and exact trusted binding intersection; no server needed for unit tests. |
 | `server/db/workflow.schema.ts` / `runs`, `steps` | Planned | Workflow-owned run/step schema and migrations. |
-| `server/utils/artifact/workflow-step.utils.ts` / `createWorkflowStepLookup` | Planned | Look up a persisted step and its run; no authentication. |
 | `server/db/artifact.schema.ts` / `artifacts` | Planned | Artifact metadata and FK migration. |
 | `server/utils/artifact/metadata.utils.ts` / `createArtifactMetadataRepository` | Planned | Stable registration, explicit timestamps; any-action-scoped lookups, read-scoped lists. |
 | `server/utils/artifact/azure-url.utils.ts` / `createAzureArtifactUrlIssuer` | Planned | Blob-key derivation and SAS issuance; no artifact access decision. |
-| `server/utils/artifact/service.utils.ts` / `createArtifactService` | Planned | Compose trusted scope, workflow-step lookup, metadata and signer. |
+| `server/utils/artifact/service.utils.ts` / `createArtifactService` | Planned | Apply trusted caller scope and compose metadata and signer. |
 
-- Planned rows describe future modules; those files do not exist yet. `WorkflowStepLookup` and `WorkflowStepReference` are exported interfaces today; `createWorkflowStepLookupFake` is test support. The production `createWorkflowStepLookup` factory remains planned.
+- Planned rows describe future modules; those files do not exist yet. The initial artifact service consumes complete trusted caller context and has no step-lookup interface, factory or dependency. Authentication and context construction remain deferred; HMAC versus Kubernetes ServiceAccount authentication is undecided. Tests inject fixed server-owned context directly.
 - Ports return discriminated results for expected failures; no thrown H3 errors in adapters.
   - The service catches unexpected exceptions and maps them to sanitized 500. Response serializers select public fields explicitly; they do not return repository records.
 - Metadata ports receive server-derived scope/reference, not caller-supplied permissions.
