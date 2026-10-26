@@ -11,7 +11,9 @@
     "lint:fix": "eslint . --fix",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "verify": "npm run lint && npm run check:guidance && npm run build"
+    "verify": "npm run lint && npm run check:guidance && npm run check:artifact-contract && npm run build",
+    "generate:artifact-schemas": "node scripts/check-artifact-contract.ts --write",
+    "check:artifact-contract": "node scripts/check-artifact-contract.ts && tsc --ignoreConfig --noEmit --strict --skipLibCheck --module nodenext --target es2023 docs/api/artifact-ports.ts"
   },
   "dependencies": {
     "nuxt": "^4.6.2",
@@ -19,8 +21,12 @@
     "vue-router": "^5.4.0"
   },
   "devDependencies": {
+    "@apidevtools/swagger-parser": "13.1.0",
     "@nuxt/eslint": "^1.17.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "eslint": "^10.13.0",
+    "json-schema-to-ts": "3.1.1",
     "typescript": "^6.0.3"
   }
 }

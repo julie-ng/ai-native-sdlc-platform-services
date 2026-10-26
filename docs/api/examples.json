@@ -1,0 +1,627 @@
+{
+  "handoff": [
+    {
+      "id": "createUpload-201",
+      "operationId": "createUpload",
+      "request": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "contentType": "text/markdown",
+        "kind": "notes"
+      },
+      "responseStatus": 201,
+      "response": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "state": "reserved",
+        "upload": {
+          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
+          "method": "PUT",
+          "headers": {
+            "x-ms-blob-type": "BlockBlob",
+            "If-None-Match": "*",
+            "Content-Type": "text/markdown"
+          },
+          "expiresAt": "2026-10-26T10:05:00Z"
+        }
+      },
+      "caller": "fixture-planner-p1-e1",
+      "expectedPolicy": "allow"
+    },
+    {
+      "id": "createUpload-200",
+      "operationId": "createUpload",
+      "request": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "contentType": "text/markdown",
+        "kind": "notes"
+      },
+      "responseStatus": 200,
+      "response": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "state": "reserved",
+        "upload": {
+          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
+          "method": "PUT",
+          "headers": {
+            "x-ms-blob-type": "BlockBlob",
+            "If-None-Match": "*",
+            "Content-Type": "text/markdown"
+          },
+          "expiresAt": "2026-10-26T10:05:00Z"
+        }
+      },
+      "caller": "fixture-planner-p1-e1",
+      "expectedPolicy": "allow"
+    },
+    {
+      "id": "acknowledgeUpload-200",
+      "operationId": "acknowledgeUpload",
+      "request": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "uploadSucceeded": true,
+        "sizeBytes": 5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
+      },
+      "responseStatus": 200,
+      "response": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "state": "uploaded"
+      },
+      "caller": "fixture-planner-p1-e1",
+      "expectedPolicy": "allow"
+    },
+    {
+      "id": "readDownload-200",
+      "operationId": "readDownload",
+      "request": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        }
+      },
+      "responseStatus": 200,
+      "response": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "contentType": "text/markdown",
+        "sizeBytes": 5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+        "download": {
+          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=r&sig=DOCUMENTATION-ONLY",
+          "method": "GET",
+          "expiresAt": "2026-10-26T10:05:00Z"
+        }
+      },
+      "caller": "fixture-coder-c1-e1",
+      "expectedPolicy": "allow"
+    }
+  ],
+  "schemaCases": [
+    {
+      "id": "bad-uuid",
+      "operationId": "readDownload",
+      "schema": "ReadDownloadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "not-a-uuid",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        }
+      }
+    },
+    {
+      "id": "uppercase-uuid",
+      "operationId": "readDownload",
+      "schema": "ReadDownloadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "A0000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        }
+      }
+    },
+    {
+      "id": "non-v4-uuid",
+      "operationId": "readDownload",
+      "schema": "ReadDownloadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-7000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        }
+      }
+    },
+    {
+      "id": "caller-taskType",
+      "operationId": "createUpload",
+      "schema": "CreateUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "taskType": "planner"
+      }
+    },
+    {
+      "id": "caller-permissions",
+      "operationId": "createUpload",
+      "schema": "CreateUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "permissions": [
+          "artifact/plan:create"
+        ]
+      }
+    },
+    {
+      "id": "caller-assignment",
+      "operationId": "createUpload",
+      "schema": "CreateUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "assignment": {
+          "runId": "10000000-0000-4000-8000-000000000002"
+        }
+      }
+    },
+    {
+      "id": "caller-storageKey",
+      "operationId": "createUpload",
+      "schema": "CreateUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "storageKey": "elsewhere"
+      }
+    },
+    {
+      "id": "caller-expiresIn",
+      "operationId": "createUpload",
+      "schema": "CreateUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "expiresIn": 3600
+      }
+    },
+    {
+      "id": "name-8",
+      "operationId": "createUpload",
+      "schema": "CreateUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "../plan"
+        },
+        "contentType": "text/markdown",
+        "kind": "notes"
+      }
+    },
+    {
+      "id": "name-9",
+      "operationId": "createUpload",
+      "schema": "CreateUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan.md"
+        },
+        "contentType": "text/markdown",
+        "kind": "notes"
+      }
+    },
+    {
+      "id": "name-10",
+      "operationId": "createUpload",
+      "schema": "CreateUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "Plan"
+        },
+        "contentType": "text/markdown",
+        "kind": "notes"
+      }
+    },
+    {
+      "id": "name-11",
+      "operationId": "createUpload",
+      "schema": "CreateUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan/secret"
+        },
+        "contentType": "text/markdown",
+        "kind": "notes"
+      }
+    },
+    {
+      "id": "name-12",
+      "operationId": "createUpload",
+      "schema": "CreateUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": ""
+        },
+        "contentType": "text/markdown",
+        "kind": "notes"
+      }
+    },
+    {
+      "id": "name-13",
+      "operationId": "createUpload",
+      "schema": "CreateUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "contentType": "text/markdown",
+        "kind": "notes"
+      }
+    },
+    {
+      "id": "ack-14",
+      "operationId": "acknowledgeUpload",
+      "schema": "AcknowledgeUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "uploadSucceeded": true,
+        "sizeBytes": 104857601,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
+      }
+    },
+    {
+      "id": "ack-15",
+      "operationId": "acknowledgeUpload",
+      "schema": "AcknowledgeUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "uploadSucceeded": true,
+        "sizeBytes": -1,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
+      }
+    },
+    {
+      "id": "ack-16",
+      "operationId": "acknowledgeUpload",
+      "schema": "AcknowledgeUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "uploadSucceeded": true,
+        "sizeBytes": 1.5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
+      }
+    },
+    {
+      "id": "ack-17",
+      "operationId": "acknowledgeUpload",
+      "schema": "AcknowledgeUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "uploadSucceeded": true,
+        "sizeBytes": 5,
+        "sha256": "not-a-hash"
+      }
+    },
+    {
+      "id": "ack-18",
+      "operationId": "acknowledgeUpload",
+      "schema": "AcknowledgeUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "uploadSucceeded": false,
+        "sizeBytes": 5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
+      }
+    },
+    {
+      "id": "ack-19",
+      "operationId": "acknowledgeUpload",
+      "schema": "AcknowledgeUploadRequest",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "uploadSucceeded": true,
+        "sizeBytes": 5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+        "uploadedAt": "2026-10-26T10:00:00Z"
+      }
+    },
+    {
+      "id": "write-response-leaks-metadata",
+      "operationId": "acknowledgeUpload",
+      "schema": "AcknowledgeUploadResponse",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "state": "uploaded",
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
+      }
+    },
+    {
+      "id": "upload-method",
+      "operationId": "createUpload",
+      "schema": "CreateUploadResponse",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "state": "reserved",
+        "upload": {
+          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
+          "method": "GET",
+          "headers": {
+            "x-ms-blob-type": "BlockBlob",
+            "If-None-Match": "*",
+            "Content-Type": "text/markdown"
+          },
+          "expiresAt": "2026-10-26T10:05:00Z"
+        }
+      }
+    },
+    {
+      "id": "insecure-url",
+      "operationId": "readDownload",
+      "schema": "ReadDownloadResponse",
+      "valid": false,
+      "value": {
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "producerStepId": "20000000-0000-4000-8000-000000000001",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+          "name": "plan"
+        },
+        "contentType": "text/markdown",
+        "sizeBytes": 5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+        "download": {
+          "url": "http://example.com/?sig=bad",
+          "method": "GET",
+          "expiresAt": "2026-10-26T10:05:00Z"
+        }
+      }
+    }
+  ],
+  "policyDenials": [
+    {
+      "id": "changed-runId",
+      "caller": "fixture-coder-c1-e1",
+      "operationId": "readDownload",
+      "reference": {
+        "runId": "10000000-0000-4000-8000-000000000002",
+        "producerStepId": "20000000-0000-4000-8000-000000000001",
+        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+        "name": "plan"
+      },
+      "expectedStatus": 403
+    },
+    {
+      "id": "changed-producerStepId",
+      "caller": "fixture-coder-c1-e1",
+      "operationId": "readDownload",
+      "reference": {
+        "runId": "10000000-0000-4000-8000-000000000001",
+        "producerStepId": "20000000-0000-4000-8000-000000000002",
+        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+        "name": "plan"
+      },
+      "expectedStatus": 403
+    },
+    {
+      "id": "changed-producerAttemptId",
+      "caller": "fixture-coder-c1-e1",
+      "operationId": "readDownload",
+      "reference": {
+        "runId": "10000000-0000-4000-8000-000000000001",
+        "producerStepId": "20000000-0000-4000-8000-000000000001",
+        "producerAttemptId": "30000000-0000-4000-8000-000000000003",
+        "name": "plan"
+      },
+      "expectedStatus": 403
+    },
+    {
+      "id": "changed-name",
+      "caller": "fixture-coder-c1-e1",
+      "operationId": "readDownload",
+      "reference": {
+        "runId": "10000000-0000-4000-8000-000000000001",
+        "producerStepId": "20000000-0000-4000-8000-000000000001",
+        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+        "name": "other"
+      },
+      "expectedStatus": 403
+    },
+    {
+      "id": "coder-cannot-create-plan",
+      "caller": "fixture-coder-c1-e1",
+      "operationId": "createUpload",
+      "reference": {
+        "runId": "10000000-0000-4000-8000-000000000001",
+        "producerStepId": "20000000-0000-4000-8000-000000000001",
+        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+        "name": "plan"
+      },
+      "expectedStatus": 403
+    },
+    {
+      "id": "planner-has-no-read-grant",
+      "caller": "fixture-planner-p1-e1",
+      "operationId": "readDownload",
+      "reference": {
+        "runId": "10000000-0000-4000-8000-000000000001",
+        "producerStepId": "20000000-0000-4000-8000-000000000001",
+        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+        "name": "plan"
+      },
+      "expectedStatus": 403
+    },
+    {
+      "id": "same-task-different-owner",
+      "caller": "fixture-planner-p2-e1",
+      "operationId": "createUpload",
+      "reference": {
+        "runId": "10000000-0000-4000-8000-000000000001",
+        "producerStepId": "20000000-0000-4000-8000-000000000001",
+        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+        "name": "plan"
+      },
+      "expectedStatus": 403
+    },
+    {
+      "id": "unknown-task",
+      "caller": "fixture-unknown-task",
+      "operationId": "readDownload",
+      "reference": {
+        "runId": "10000000-0000-4000-8000-000000000001",
+        "producerStepId": "20000000-0000-4000-8000-000000000001",
+        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+        "name": "plan"
+      },
+      "expectedStatus": 403
+    }
+  ]
+}
