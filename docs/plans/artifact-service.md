@@ -52,7 +52,7 @@
 - Planner P1 in run A writes its plan locally before registering it, optionally with a title/description authored by the LLM.
   - It may write that same artifact repeatedly, reusing an unexpired SAS or obtaining a fresh one. After Azure success it reports completion; coder C1 later reads the latest plan.
 - Completion reports metadata, not independently verified cloud content.
-  - Foreign and missing IDs both return 404. HTTP claims cannot replace roles, ownership or permissions from trusted context.
+  - Missing artifacts or no granted access return 404; an existing accessible artifact with the wrong action returns 403. HTTP claims cannot replace roles, ownership or permissions from trusted context.
 
 ## Implementable contract
 
@@ -63,10 +63,13 @@
 - Planned persistence is PostgreSQL 17 + Drizzle; no deployed database is assumed.
   - Proposed FK: `producerStepId -> steps(id)`; unique producing step/name. Workflow owns minimal run/step identities and migrations, without requiring workflow endpoints or an attempts table for this slice.
 
+- Artifacts keep `createdAt` and `updatedAt`, exposed in permitted metadata reads.
+  - Both start together; each accepted upload report refreshes `updatedAt` and `uploadedAt` with one DB timestamp. SAS renewal/read/denial does not modify the row. Mutation acknowledgments still omit stored metadata for write-only callers.
+
 ## Delivery after contract merge
 
 1. Implement pure context/policy functions and resource routes against injected adapters.
-   - Unit tests need no server. Cover same-step repeat writes, different-step denials, latest completion, discovery without signing and response allowlists.
+   - Unit tests need no server. Cover same-step writes, 404 with no access versus 403 with wrong action, latest completion/timestamps, discovery without signing and response allowlists.
 2. Supply workflow-owned run/step identities, then artifact migrations and disposable PostgreSQL 17 tests.
    - Prove the step FK, unique step/name, stable IDs and restart durability; do not build attempt tracking or overlapping-writer coordination.
 3. Exercise real Azure upload, overwrite, acknowledgment and download with separately supplied service credentials.

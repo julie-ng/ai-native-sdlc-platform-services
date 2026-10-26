@@ -27,6 +27,8 @@ export type Result<T, E extends string>
 
 // Context validation only; authentication is upstream.
 export type ReadCallerContext = (eventContext: unknown) => Result<CallerContext, 'context_unavailable'>
+// A false action check alone does not choose HTTP status; first establish
+// any-action visibility and existence, then map wrong permission to 403.
 export type CanAccessArtifact = (caller: CallerContext, reference: ArtifactRef, action: ArtifactAction) => boolean
 export interface ArtifactWriteScope {
   creatable: readonly ArtifactRef[]
@@ -35,8 +37,9 @@ export interface ArtifactWriteScope {
 export interface ArtifactAccess extends ArtifactWriteScope {
   readable: readonly ArtifactRef[]
 }
-// Unknown task => forbidden. Known task with no bindings => empty sets.
-export type DeriveArtifactAccess = (caller: CallerContext) => Result<ArtifactAccess, 'forbidden'>
+// Unknown tasks and ungranted bindings yield empty sets: no existence disclosure.
+// Visibility is the de-duplicated union of all three effective grant sets.
+export type DeriveArtifactAccess = (caller: CallerContext) => ArtifactAccess
 
 export interface WorkflowStepIdentity {
   runId: string
@@ -52,6 +55,7 @@ interface ArtifactBase {
   reference: ArtifactRef
   metadata: ArtifactMetadata
   createdAt: string // UTC ISO instant, fixed on first registration.
+  updatedAt: string // Same initial instant; refreshed by each accepted acknowledgment.
 }
 export interface ReservedArtifact extends ArtifactBase {
   state: 'reserved'
@@ -66,7 +70,7 @@ export interface UploadedArtifact extends ArtifactBase {
   uploadedAt: string // Latest accepted acknowledgment time; no history.
 }
 export type ArtifactRecord = ReservedArtifact | UploadedArtifact
-export type MetadataFailure = 'not_found' | 'conflict' | 'unavailable'
+export type MetadataFailure = 'not_found' | 'forbidden' | 'conflict' | 'unavailable'
 export type Completion = Pick<CompleteArtifactRequest, 'sizeBytes' | 'sha256'>
 
 export interface ArtifactMetadataRepository {
@@ -76,12 +80,16 @@ export interface ArtifactMetadataRepository {
     record: ArtifactRecord
     created: boolean
   }, MetadataFailure>>
-  // Query within trusted reference scope; missing AND foreign IDs => not_found.
-  listWithinScope(references: readonly ArtifactRef[]): Promise<Result<ArtifactRecord[], 'unavailable'>>
-  findWithinScope(id: string, references: readonly ArtifactRef[]): Promise<Result<ArtifactRecord, 'not_found' | 'unavailable'>>
+  // Discovery receives readable scope only. ID/reference lookups receive the union
+  // of all action scopes; missing OR no access => not_found. The service then
+  // checks the requested action on a found row, returning forbidden if needed.
+  listWithinScope(readable: readonly ArtifactRef[]): Promise<Result<ArtifactRecord[], 'unavailable'>>
+  findWithinScope(id: string, visible: readonly ArtifactRef[]): Promise<Result<ArtifactRecord, 'not_found' | 'unavailable'>>
+  findReferenceWithinScope(reference: ArtifactRef, visible: readonly ArtifactRef[]): Promise<Result<ArtifactRecord, 'not_found' | 'unavailable'>>
   // First report needs create; changed report after upload needs update. An exact
   // retry is accepted for create-only callers. Every accepted report refreshes
-  // uploadedAt. Scope comes from policy, never HTTP; retain only the latest values.
+  // uploadedAt and updatedAt using one DB instant. Existing accessible rows that
+  // need an ungranted update return forbidden; no history is retained.
   acknowledgeWithinScope(id: string, scope: ArtifactWriteScope, completion: Completion): Promise<Result<UploadedArtifact, MetadataFailure>>
 }
 export interface ArtifactUrlIssuer {

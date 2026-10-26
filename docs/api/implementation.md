@@ -8,15 +8,28 @@
 - POST/PUT accept only `application/json`, optionally with UTF-8 charset, with an 8 KiB body limit.
   - Invalid/absent JSON is 400; oversized bodies 413; other media types 415. GET accepts no body. No query parameters are accepted.
 - Request/response objects are closed at every level; do not coerce types, trim names or strip unknown fields.
-  - Caller context, roles, permissions, producer IDs, storage paths and TTL overrides in HTTP input are rejected. The ID path parameter is validated, then used only inside a trusted access scope.
+  - Caller context, roles, permissions, producer IDs, storage paths and TTL overrides in HTTP input are rejected. The ID path parameter is validated, then looked up inside the union of effective read/create/update scopes.
 - All responses use `Cache-Control: no-store`.
   - Unsupported methods return 405 with `Allow: GET, POST` on the collection, `Allow: GET, PUT` on an artifact, or `Allow: GET` on its SAS subresource. There are no redirects to cloud URLs.
 - Errors use `{ error: { code, message, fields? } }` as specified in OpenAPI.
   - Only 400 carries `fields`: 1–20 JSON-pointer paths and categories. Missing body uses path `''`/`required`; malformed JSON uses `''`/`format`; forbidden query fields use `/query`/`unknown_field`. No input values, credentials, SAS URLs, SQL details or stack traces are returned.
 - Result mapping is `forbidden` → 403, `not_found` → 404, `conflict` → 409, `unavailable` → 503 and `internal_error` → 500.
   - Missing/invalid middleware context specifically maps to 503 `CALLER_CONTEXT_UNAVAILABLE`; other unavailable dependencies use `DEPENDENCY_UNAVAILABLE`. Authentication responses belong to upstream middleware, outside this contract.
-- Handler order is context validation → HTTP validation → derive access → scoped metadata operation → SAS issuance if requested.
+- Handler order is context validation → HTTP validation → derive any-action visibility → scoped existence lookup → requested-action check → operation/SAS issuance.
   - Ingress size limits can run earlier. Future handlers need deliberate error shaping rather than H3's default error envelope.
+
+### 404 versus 403
+
+- Default to 404 when the artifact is missing or outside the caller's any-action scope, regardless of whether a row exists elsewhere.
+  - Use the same `ARTIFACT_NOT_FOUND` response for both. Empty effective scope needs no metadata query. Unknown tasks yield empty scopes rather than an unconditional 403.
+- Return 403 only after finding an existing artifact inside that scope and determining that the requested action is not permitted.
+  - A planner with write access to an existing plan gets 403 on metadata/download reads; a coder with read access gets 403 when completing/writing it. Return no artifact fields with the error. A readable but never-acknowledged artifact returns 409 for a download SAS, after permission succeeds.
+- Discovery queries only readable scope and returns 200 with an empty list if none exists.
+  - It neither returns write-only records nor fails the whole collection with 403. Having a raw binding without an effective policy capability grants no visibility.
+- Registration targets the caller's own step/name, derived server-side; an input with the same name is a different target.
+  - If that target is outside any-action scope, return 404 without lookup. If visible, use `findReferenceWithinScope` before deciding permission: missing + create grant allows insertion; missing without create is 404; existing + missing required action is 403. Reserved upload renewal requires create, uploaded renewal requires create/update capability. Only permitted requests reach metadata comparison/registration or signing.
+- Completion first looks up the ID within any-action scope, then checks own-output create/update permissions.
+  - Read-only access produces 403 for an existing artifact, not 404. A changed completion without update permission is also 403; a metadata mismatch on an otherwise permitted registration remains 409.
 
 | Field | Validation / ownership |
 | --- | --- |
@@ -31,15 +44,17 @@
 ## Persistence and workflow ownership
 
 - Planned target: PostgreSQL 17 + Drizzle in the shared `workflow` database; no deployed database is assumed.
-  - Fields: `id`, `producerStepId`, `name`, `kind`, `title`, `description`, `contentType`, `state`, `sizeBytes`, `sha256`, `createdAt`, `uploadedAt`. No attempt, revision, SAS or blob-key column/table.
+  - Fields: `id`, `producerStepId`, `name`, `kind`, `title`, `description`, `contentType`, `state`, `sizeBytes`, `sha256`, `createdAt`, `updatedAt`, `uploadedAt`. No attempt, revision, SAS or blob-key column/table.
 - Require UUID PK, unique `(producer_step_id, name)` and `producer_step_id -> steps(id) ON DELETE RESTRICT`.
   - This step FK replaces the original issue's withdrawn attempt FK. Join the workflow-owned step to validate run membership; the same step/name always selects one current artifact.
 - `contentType` is NOT NULL; omitted kind/title/description become SQL NULL and are omitted from public responses.
   - Explicit JSON null is rejected. Registration metadata stays immutable; only completion fields/state change in this slice.
 - Reserved means size/hash/uploaded time are NULL; uploaded means all three are present.
   - Use explicit SQL CHECKs for state/nullability, field patterns/lengths and size/hash limits. TypeScript enum hints do not enforce database constraints.
-- DB clocks own fixed `createdAt` and latest accepted-report `uploadedAt`; use `timestamptz`, UTC sessions and UTC `Z` strings at ports.
-  - An accepted acknowledgment updates the current size/hash/time together in one statement. Do not append a log, retain prior reports or introduce upload/attempt version numbers.
+- Require `created_at` and `updated_at` as NOT NULL `timestamptz`, both defaulting to PostgreSQL `CURRENT_TIMESTAMP` at registration.
+  - They start at the same instant. Keep `createdAt` fixed. On each accepted acknowledgment explicitly set `updated_at = CURRENT_TIMESTAMP` and `uploaded_at = CURRENT_TIMESTAMP` in the same SQL UPDATE as size/hash/state. Both use one [DB transaction timestamp](https://www.postgresql.org/docs/17/functions-datetime.html#FUNCTIONS-DATETIME-CURRENT), including identical report retries; UTC sessions/serialization yield `Z` strings.
+- SAS renewal matches the existing row without changing it; reads, failures and denied requests do not update timestamps.
+  - Do not attach an automatic ORM on-update hook or blanket trigger that would make a no-op registration/URL refresh advance `updatedAt`. No general metadata editing exists yet. Do not append history or introduce upload/attempt version numbers.
 - Workflow owns only the run/step identity prerequisite below for this slice; artifact code imports its `steps` export.
   - Full workflow endpoints, execution tracking and an attempts table are not required. Artifact code must not create a competing owner of workflow identities.
 
@@ -50,7 +65,7 @@
 
 - Apply workflow-owned identity migrations before artifact migrations in one journal.
   - Seed the exact runs/steps in [caller-contexts.fixture.json](./caller-contexts.fixture.json) using future workflow-owned `seedArtifactWorkflowIdentities(client)` in `tests/integration/fixtures/workflow-identities.ts`. `planner-p1-later-execution` deliberately has the same context as P1: it is not another identity row.
-- Local PostgreSQL 17 tests must prove the real step FK, run membership, unique step/name, stable IDs, latest-report replacement and restart durability.
+- Local PostgreSQL 17 tests must prove the real step FK, run membership, unique step/name, stable IDs, latest-report replacement, initial timestamp equality, acknowledgment updates and unchanged timestamps on renewal/denial, plus restart durability.
   - Test data also names artifact IDs/references. Remove child artifacts first during cleanup or drop the disposable database. No concurrent-writer/attempt-history tests or locking protocol are required under the agreed operating assumption.
 
 ## Repeat-write semantics
@@ -58,10 +73,10 @@
 - `register(reference, metadata)` atomically inserts or returns the row for that step/name; it never creates a row for a retry.
   - A different registration content type/kind/title/description is 409. `createdAt` and artifact ID remain fixed. Only the URL expiry changes on renewal; existing upload state and completion metadata remain intact.
 - The service chooses upload mode from trusted policy, not from HTTP input.
-  - Create + update capability on the own output selects `create-or-update`, even for a newly registered artifact. Create without update selects `create-only` and may obtain renewal only while reserved; an already uploaded artifact returns 409 before signing.
+  - Create + update capability on the own output selects `create-or-update`, even for a newly registered artifact. Create without update selects `create-only` and may obtain renewal only while reserved; an already uploaded artifact returns 403 before signing because it exists within scope but update permission is absent.
 - First completion requires create permission within the caller's own-output scope.
-  - Later changed size/hash requires update permission in that same scope. For the planner this replaces the latest values, not a new artifact. An identical retry is accepted, including for create-only callers, and refreshes the last-acknowledgment time.
-- `uploadedAt` is the service's last accepted-report time, not an audit log or an independently verified Azure timestamp.
+  - Later changed size/hash requires update permission in that same scope. For the planner this replaces the latest values, not a new artifact. Missing update permission for a changed report is 403. An identical retry is accepted, including for create-only callers, and refreshes `uploadedAt` and `updatedAt` together.
+- `uploadedAt` and `updatedAt` are the service's last accepted-report time, not an audit log or an independently verified Azure timestamp.
   - The service does not HEAD/download/hash Blob content. A report can be dishonest, and SAS does not enforce the API's reported size cap on actual bytes.
 - Assume one active writer per step, no overlapping executions, and consumption after production.
   - No leases, locks, ETags, revision IDs or compare-and-swap protocol are added. Previously issued URLs remain usable until expiry; neither metadata nor SAS issuance coordinates a read/write snapshot. Metadata can lag changed bytes until the next report.
@@ -108,7 +123,7 @@ v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 | `server/db/workflow.schema.ts` / `runs`, `steps` | Workflow-owned identity schema and migrations. |
 | `server/utils/artifact/workflow-identity.utils.ts` / `createWorkflowIdentityRepository` | Step → run lookup. |
 | `server/db/artifact.schema.ts` / `artifacts` | Artifact metadata and FK migration. |
-| `server/utils/artifact/metadata.utils.ts` / `createArtifactMetadataRepository` | Stable step/name registration, latest completion; scoped queries. |
+| `server/utils/artifact/metadata.utils.ts` / `createArtifactMetadataRepository` | Stable registration, explicit timestamps; any-action-scoped lookups, read-scoped lists. |
 | `server/utils/artifact/azure-url.utils.ts` / `createAzureArtifactUrlIssuer` | Blob-key derivation and SAS issuance; no artifact access decision. |
 | `server/utils/artifact/service.utils.ts` / `createArtifactService` | Compose trusted scope, workflow identity, metadata and signer. |
 
@@ -146,6 +161,6 @@ git diff --check
 - `check:artifact-contract` validates OpenAPI structure with Swagger Parser, compiles schemas with Ajv/formats, checks supplied examples/context-seed relationships, rejects missing/malformed context examples and typechecks the ports.
   - It checks negative example rejection and generated-schema freshness. It does not execute authorization or contact Azure/PostgreSQL; Swagger Parser is not a complete semantic OpenAPI linter.
 - `verify` includes that command; `generate:artifact-schemas` refreshes generated constants after contract edits.
-  - Later tests must execute access/repeat-write cases, prove metadata discovery does not call the signer, and prove scope omissions return no foreign records.
+  - Later tests must execute visibility/action distinctions, timestamp and repeat-write cases, prove metadata discovery does not call the signer, and prove scope omissions return no foreign records.
 - Real Azure tests must upload `plan\n`, acknowledge it, overwrite the same blob with `revised plan\n`, acknowledge again and read the latest bytes/hash via a separate SAS.
   - Prove stable ID/key, planner overwrite success, create-only overwrite denial even without its conditional header, and read-only permission boundaries. A fake URL or successful build proves none of this.

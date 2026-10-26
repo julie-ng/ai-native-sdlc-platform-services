@@ -106,7 +106,8 @@
             "createdAt": "2026-10-26T10:00:00Z",
             "sizeBytes": 5,
             "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
-            "uploadedAt": "2026-10-26T10:00:10Z"
+            "uploadedAt": "2026-10-26T10:00:10Z",
+            "updatedAt": "2026-10-26T10:00:10Z"
           }
         ]
       }
@@ -129,7 +130,8 @@
             "createdAt": "2026-10-26T10:00:00Z",
             "sizeBytes": 5,
             "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
-            "uploadedAt": "2026-10-26T10:00:10Z"
+            "uploadedAt": "2026-10-26T10:00:10Z",
+            "updatedAt": "2026-10-26T10:00:10Z"
           },
           {
             "id": "40000000-0000-4000-8000-000000000002",
@@ -142,7 +144,8 @@
             "createdAt": "2026-10-26T10:00:00Z",
             "sizeBytes": 5,
             "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
-            "uploadedAt": "2026-10-26T10:00:10Z"
+            "uploadedAt": "2026-10-26T10:00:10Z",
+            "updatedAt": "2026-10-26T10:00:10Z"
           }
         ]
       }
@@ -172,7 +175,8 @@
         "createdAt": "2026-10-26T10:00:00Z",
         "sizeBytes": 5,
         "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
-        "uploadedAt": "2026-10-26T10:00:10Z"
+        "uploadedAt": "2026-10-26T10:00:10Z",
+        "updatedAt": "2026-10-26T10:00:10Z"
       },
       "parameters": {
         "id": "40000000-0000-4000-8000-000000000001"
@@ -191,7 +195,8 @@
         "title": "Implementation plan",
         "description": "Plan for the first artifact-service slice.",
         "state": "reserved",
-        "createdAt": "2026-10-26T10:00:00Z"
+        "createdAt": "2026-10-26T10:00:00Z",
+        "updatedAt": "2026-10-26T10:00:00Z"
       },
       "parameters": {
         "id": "40000000-0000-4000-8000-000000000001"
@@ -297,10 +302,20 @@
         "createdAt": "2026-10-26T10:00:00Z",
         "sizeBytes": 13,
         "sha256": "f4a90b9259644af654e832b9cf06ea6010fff56543282188118ba91351511644",
-        "uploadedAt": "2026-10-26T10:10:10Z"
+        "uploadedAt": "2026-10-26T10:10:10Z",
+        "updatedAt": "2026-10-26T10:10:10Z"
       },
       "parameters": {
         "id": "40000000-0000-4000-8000-000000000001"
+      }
+    },
+    {
+      "id": "unknown-task-has-no-readable-artifacts",
+      "operationId": "listArtifacts",
+      "context": "unknown-task",
+      "responseStatus": 200,
+      "response": {
+        "artifacts": []
       }
     }
   ],
@@ -674,7 +689,8 @@
           "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=r&sig=DOCUMENTATION-ONLY",
           "method": "GET",
           "expiresAt": "2026-10-26T10:05:00Z"
-        }
+        },
+        "updatedAt": "2026-10-26T10:00:10Z"
       },
       "responseStatus": 200
     },
@@ -694,7 +710,8 @@
         "sizeBytes": 5,
         "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
         "uploadedAt": "2026-10-26T10:00:10Z",
-        "producerStepId": "20000000-0000-4000-8000-000000000001"
+        "producerStepId": "20000000-0000-4000-8000-000000000001",
+        "updatedAt": "2026-10-26T10:00:10Z"
       },
       "responseStatus": 200
     },
@@ -761,6 +778,49 @@
         "description": "Plan for the first artifact-service slice.",
         "uploadMode": "create-or-update"
       }
+    },
+    {
+      "id": "createArtifact-cannot-set-updatedAt",
+      "operationId": "createArtifact",
+      "part": "body",
+      "value": {
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
+        "updatedAt": "2026-10-26T10:00:00Z"
+      }
+    },
+    {
+      "id": "completeArtifact-cannot-set-updatedAt",
+      "operationId": "completeArtifact",
+      "part": "body",
+      "value": {
+        "state": "uploaded",
+        "sizeBytes": 5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+        "updatedAt": "2026-10-26T10:00:00Z"
+      }
+    },
+    {
+      "id": "artifact-metadata-requires-updatedAt",
+      "operationId": "getArtifact",
+      "part": "response",
+      "responseStatus": 200,
+      "value": {
+        "id": "40000000-0000-4000-8000-000000000001",
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
+        "state": "uploaded",
+        "createdAt": "2026-10-26T10:00:00Z",
+        "sizeBytes": 5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+        "uploadedAt": "2026-10-26T10:00:10Z"
+      }
     }
   ],
   "accessCases": [
@@ -771,6 +831,17 @@
       "expectedStatus": 404,
       "parameters": {
         "id": "40000000-0000-4000-8000-000000000003"
+      },
+      "preconditions": {
+        "artifactExists": true,
+        "hasAnyAccess": false,
+        "actionAllowed": false
+      },
+      "response": {
+        "error": {
+          "code": "ARTIFACT_NOT_FOUND",
+          "message": "Artifact not found"
+        }
       }
     },
     {
@@ -780,6 +851,17 @@
       "expectedStatus": 404,
       "parameters": {
         "id": "40000000-0000-4000-8000-000000000002"
+      },
+      "preconditions": {
+        "artifactExists": true,
+        "hasAnyAccess": false,
+        "actionAllowed": false
+      },
+      "response": {
+        "error": {
+          "code": "ARTIFACT_NOT_FOUND",
+          "message": "Artifact not found"
+        }
       }
     },
     {
@@ -789,6 +871,17 @@
       "expectedStatus": 404,
       "parameters": {
         "id": "40000000-0000-4000-8000-000000000099"
+      },
+      "preconditions": {
+        "artifactExists": false,
+        "hasAnyAccess": false,
+        "actionAllowed": false
+      },
+      "response": {
+        "error": {
+          "code": "ARTIFACT_NOT_FOUND",
+          "message": "Artifact not found"
+        }
       }
     },
     {
@@ -803,47 +896,174 @@
         "state": "uploaded",
         "sizeBytes": 5,
         "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
+      },
+      "preconditions": {
+        "artifactExists": true,
+        "hasAnyAccess": false,
+        "actionAllowed": false
+      },
+      "response": {
+        "error": {
+          "code": "ARTIFACT_NOT_FOUND",
+          "message": "Artifact not found"
+        }
       }
     },
     {
       "id": "planner-cannot-read-own-write-only-artifact",
       "operationId": "getArtifact",
       "context": "planner-p1",
-      "expectedStatus": 404,
+      "expectedStatus": 403,
       "parameters": {
         "id": "40000000-0000-4000-8000-000000000001"
+      },
+      "preconditions": {
+        "artifactExists": true,
+        "hasAnyAccess": true,
+        "actionAllowed": false
+      },
+      "response": {
+        "error": {
+          "code": "FORBIDDEN",
+          "message": "Forbidden"
+        }
       }
     },
     {
       "id": "coder-cannot-create-plan",
       "operationId": "createArtifact",
       "context": "coder-c1",
-      "expectedStatus": 403,
+      "expectedStatus": 404,
       "body": {
         "name": "plan",
         "contentType": "text/markdown",
         "kind": "notes",
         "title": "Implementation plan",
         "description": "Plan for the first artifact-service slice."
+      },
+      "preconditions": {
+        "artifactExists": false,
+        "hasAnyAccess": false,
+        "actionAllowed": false
+      },
+      "response": {
+        "error": {
+          "code": "ARTIFACT_NOT_FOUND",
+          "message": "Artifact not found"
+        }
       }
-    },
-    {
-      "id": "unknown-task-is-denied",
-      "operationId": "listArtifacts",
-      "context": "unknown-task",
-      "expectedStatus": 403
     },
     {
       "id": "ungranted-name-is-denied",
       "operationId": "createArtifact",
       "context": "planner-p1",
-      "expectedStatus": 403,
+      "expectedStatus": 404,
       "body": {
         "name": "other",
         "contentType": "text/markdown",
         "kind": "notes",
         "title": "Implementation plan",
         "description": "Plan for the first artifact-service slice."
+      },
+      "preconditions": {
+        "artifactExists": true,
+        "hasAnyAccess": false,
+        "actionAllowed": false
+      },
+      "response": {
+        "error": {
+          "code": "ARTIFACT_NOT_FOUND",
+          "message": "Artifact not found"
+        }
+      }
+    },
+    {
+      "id": "read-only-caller-cannot-complete-artifact",
+      "operationId": "completeArtifact",
+      "context": "coder-c1",
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000001"
+      },
+      "body": {
+        "state": "uploaded",
+        "sizeBytes": 5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
+      },
+      "expectedStatus": 403,
+      "preconditions": {
+        "artifactExists": true,
+        "hasAnyAccess": true,
+        "actionAllowed": false
+      },
+      "response": {
+        "error": {
+          "code": "FORBIDDEN",
+          "message": "Forbidden"
+        }
+      }
+    },
+    {
+      "id": "write-only-caller-cannot-download",
+      "operationId": "getArtifactSas",
+      "context": "planner-p1",
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000001"
+      },
+      "expectedStatus": 403,
+      "preconditions": {
+        "artifactExists": true,
+        "hasAnyAccess": true,
+        "actionAllowed": false
+      },
+      "response": {
+        "error": {
+          "code": "FORBIDDEN",
+          "message": "Forbidden"
+        }
+      }
+    },
+    {
+      "id": "unknown-task-cannot-see-existing-artifact",
+      "operationId": "getArtifact",
+      "context": "unknown-task",
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000001"
+      },
+      "expectedStatus": 404,
+      "preconditions": {
+        "artifactExists": true,
+        "hasAnyAccess": false,
+        "actionAllowed": false
+      },
+      "response": {
+        "error": {
+          "code": "ARTIFACT_NOT_FOUND",
+          "message": "Artifact not found"
+        }
+      }
+    },
+    {
+      "id": "unregistered-ungranted-name-is-hidden",
+      "operationId": "createArtifact",
+      "context": "planner-p1",
+      "body": {
+        "name": "unregistered",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice."
+      },
+      "expectedStatus": 404,
+      "preconditions": {
+        "artifactExists": false,
+        "hasAnyAccess": false,
+        "actionAllowed": false
+      },
+      "response": {
+        "error": {
+          "code": "ARTIFACT_NOT_FOUND",
+          "message": "Artifact not found"
+        }
       }
     }
   ],

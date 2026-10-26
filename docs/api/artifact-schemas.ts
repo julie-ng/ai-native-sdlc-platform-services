@@ -541,7 +541,8 @@ export const schemas = {
       "name",
       "contentType",
       "createdAt",
-      "state"
+      "state",
+      "updatedAt"
     ],
     "properties": {
       "id": {
@@ -588,6 +589,11 @@ export const schemas = {
         "enum": [
           "reserved"
         ]
+      },
+      "updatedAt": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "Z$"
       }
     }
   },
@@ -602,7 +608,8 @@ export const schemas = {
       "state",
       "sizeBytes",
       "sha256",
-      "uploadedAt"
+      "uploadedAt",
+      "updatedAt"
     ],
     "properties": {
       "id": {
@@ -663,6 +670,11 @@ export const schemas = {
         "type": "string",
         "format": "date-time",
         "pattern": "Z$"
+      },
+      "updatedAt": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "Z$"
       }
     }
   },
@@ -676,7 +688,8 @@ export const schemas = {
           "name",
           "contentType",
           "createdAt",
-          "state"
+          "state",
+          "updatedAt"
         ],
         "properties": {
           "id": {
@@ -723,6 +736,11 @@ export const schemas = {
             "enum": [
               "reserved"
             ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
           }
         }
       },
@@ -737,7 +755,8 @@ export const schemas = {
           "state",
           "sizeBytes",
           "sha256",
-          "uploadedAt"
+          "uploadedAt",
+          "updatedAt"
         ],
         "properties": {
           "id": {
@@ -798,6 +817,11 @@ export const schemas = {
             "type": "string",
             "format": "date-time",
             "pattern": "Z$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
           }
         }
       }
@@ -823,7 +847,8 @@ export const schemas = {
                 "name",
                 "contentType",
                 "createdAt",
-                "state"
+                "state",
+                "updatedAt"
               ],
               "properties": {
                 "id": {
@@ -870,6 +895,11 @@ export const schemas = {
                   "enum": [
                     "reserved"
                   ]
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "Z$"
                 }
               }
             },
@@ -884,7 +914,8 @@ export const schemas = {
                 "state",
                 "sizeBytes",
                 "sha256",
-                "uploadedAt"
+                "uploadedAt",
+                "updatedAt"
               ],
               "properties": {
                 "id": {
@@ -942,6 +973,11 @@ export const schemas = {
                   "pattern": "^[0-9a-f]{64}$"
                 },
                 "uploadedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "Z$"
+                },
+                "updatedAt": {
                   "type": "string",
                   "format": "date-time",
                   "pattern": "Z$"

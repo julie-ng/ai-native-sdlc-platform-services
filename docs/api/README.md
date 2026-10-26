@@ -13,7 +13,7 @@
 - A caller can ask, “What artifacts are available to me?”
   - Discovery returns zero, one or several readable artifacts; the caller need not know their IDs first.
 - An artifact ID selects an item within that access list, like a baggage tag rather than a passport.
-  - Foreign and nonexistent IDs receive the same 404. Knowing an ID never grants access.
+  - Missing artifacts and artifacts with no granted action receive the same 404. If the artifact exists and the caller has some access but lacks the requested action, return 403. Knowing an ID never grants access.
 - A SAS URL is the temporary ticket to the actual file in cloud storage.
   - Metadata reads do not issue that ticket. Obtain a download SAS only when needed.
 
@@ -54,7 +54,7 @@ event.context.caller = {
 
 - IDs are canonical lowercase UUID v4; each binding array has at most 64 references.
   - References stay within the caller's run. Outputs belong to its own step. A step's retry receives the same artifact context; no attempt field is required or accepted by this contract.
-- Missing/malformed context fails closed with 503 `CALLER_CONTEXT_UNAVAILABLE`; unknown tasks return 403.
+- Missing/malformed context fails closed with 503 `CALLER_CONTEXT_UNAVAILABLE`. Unknown tasks receive no effective grants: resource requests are 404 and discovery is an empty list.
   - `readCallerContext` validates the trusted field. It never fills it from HTTP claims or performs authentication. Tests inject context directly, not via token fixtures.
 
 ## Authorization is code
@@ -65,8 +65,8 @@ event.context.caller = {
   - Matching task types do not share ownership. The two upload modes also support a future explicitly configured create-only task without granting it overwrite rights; no additional task policy is selected here.
 - Registration uses `name` to select a permitted own-output slot; the service derives the full reference.
   - No caller-supplied producer ID, role, permission list, blob path or SAS lifetime is accepted.
-- ID lookup and completion query only within the relevant trusted scope.
-  - Repository ports expose no unrestricted ID lookup. A different step's artifact is outside scope, even if the caller is also a planner.
+- Determine visibility from the union of readable, creatable and updatable grants before ID lookup.
+  - Repository lookups stay within that any-action scope. Missing/outside scope is 404; a found record with the wrong action is 403. List results still use readable scope only; no stored fields or SAS are returned on a permission error.
 - Writes do not imply reads. Registration/completion return small acknowledgments rather than stored rows.
   - A write-only planner receives no download URL or stored metadata. Policy/context unit tests run without an HTTP server; HTTP tests are separate.
 
@@ -74,20 +74,22 @@ event.context.caller = {
 
 | Operation | Success | Key failures |
 | --- | --- | --- |
-| Register / renew upload SAS | 201 new artifact; 200 same artifact and fresh SAS. Body: `id`, current `state`, `upload`. | 403 ungranted output; 404 missing step identity; 409 changed registration metadata or create-only artifact already uploaded. |
-| Complete upload | 200; only `id`, `state: uploaded`. | 404 outside own scope/missing; 409 changed completion without update capability. |
-| List | 200; `{ artifacts: [...] }`, possibly empty. | 403 unknown task. |
-| Metadata | 200; reserved/uploaded information. | 404 outside readable scope/missing. |
-| Download SAS | 200; `url`, `method: GET`, `expiresAt`. | 404 outside readable scope/missing; 409 never acknowledged. |
+| Register / renew upload SAS | 201 new artifact; 200 same artifact and fresh SAS. Body: `id`, current `state`, `upload`. | 404 no access/missing step; 403 existing accessible artifact lacks create/update; 409 changed registration metadata. |
+| Complete upload | 200; only `id`, `state: uploaded`. | 404 no access/missing; 403 existing accessible artifact lacks the required create/update action. |
+| List | 200; `{ artifacts: [...] }`, possibly empty. | Missing/malformed middleware context is 503. |
+| Metadata | 200; reserved/uploaded information. | 404 no access/missing; 403 existing artifact has only write access. |
+| Download SAS | 200; `url`, `method: GET`, `expiresAt`. | 404 no access/missing; 403 existing artifact has only write access; 409 never acknowledged. |
 
 - Registration accepts required `name`, `contentType` and optional `kind`, `title`, `description`.
   - One row/ID per producing step/name. Repeat the same descriptive metadata to renew SAS; changing those fields is outside this slice and returns 409. After upload, the planner still receives the same ID and a write-capable SAS.
 - Completion accepts `state: uploaded`, `sizeBytes`, `sha256`, only after Azure upload success.
-  - For the planner, each accepted report replaces size/hash and refreshes `uploadedAt` using server time, including an identical retry. It is the last acknowledgment time, not independently verified Azure upload time; no report history is stored.
-- An unexpired planner upload SAS can be reused for multiple writes. Refreshing it does not reset state, completion metadata, ID or blob key.
+  - For the planner, each accepted report replaces size/hash and refreshes `uploadedAt` and `updatedAt` together using one DB timestamp, including an identical retry. It is the last acknowledgment time, not independently verified Azure upload time; no report history is stored.
+- An unexpired planner upload SAS can be reused for multiple writes. Refreshing it does not change state, metadata, `updatedAt`, ID or blob key.
   - Until another acknowledgment, metadata describes the last acknowledged upload. This POC relies on read-after-production ordering, not atomic coordination between Blob bytes and database metadata.
-- Information includes `id`, `name`, `contentType`, `state`, `createdAt` and supplied kind/title/description.
+- Information includes `id`, `name`, `contentType`, `state`, `createdAt`, `updatedAt` and supplied kind/title/description.
   - Uploaded records also include latest reported size/hash/`uploadedAt`; reserved records omit those fields. Responses contain no producer identity, internal reference or SAS.
+- `createdAt` is fixed at registration; `updatedAt` starts at the same instant and advances on every accepted upload acknowledgment.
+  - Descriptive metadata is immutable in this slice. Reads, denied/failed operations and SAS renewals leave timestamps unchanged. Write-only acknowledgments still omit stored timestamps/metadata.
 - Discovery returns all existing readable records, reserved or uploaded, ordered by `createdAt`, then `id`, ascending.
   - At most 128 trusted bindings bound the result; no pagination or single-result assumption. Unregistered bindings do not create fake records. Metadata/discovery never calls the SAS issuer.
 - A signing failure returns 503 while preserving the artifact for retry.
@@ -107,7 +109,8 @@ event.context.caller = {
 | Step ownership; same ID/blob across retries; planner repeat writes; latest completion only | Agreed with architect on 2026-10-26; supersedes attempt-specific identity and blanket create-only restrictions in issue #5. |
 | No per-attempt logging/history; one active writer per step; consumers read after production | Agreed POC operating scope, not an enforced concurrency guarantee. |
 | Different step cannot overwrite by default; same-step later execution may update under policy | Architect's explicit clarification; roles alone do not transfer ownership. |
-| Resource paths, metadata/SAS separation, inaccessible ID → 404, airport analogy and discovery | Architect's PR comments and interactive direction. |
+| Resource paths, metadata/SAS separation, airport analogy and discovery | Architect's PR comments and interactive direction. |
+| 404 for missing/no access; 403 only for an existing accessible artifact with wrong action; required `createdAt`/`updatedAt` | Architect's inline review comments; timestamp update mechanism is specified in the implementation contract. |
 | Authentication upstream; define caller context only | Architect's explicit instruction; no token/resolver work in this slice. |
 | Direct cloud bytes, PostgreSQL 17/Drizzle, metadata ownership | Original issue requirements retained; no deployed database assumed. |
 | Step FK/export contract; exact blob key; 300-second SAS; two SAS modes | **New concrete proposals**, consistent with the agreed step-owned model. |

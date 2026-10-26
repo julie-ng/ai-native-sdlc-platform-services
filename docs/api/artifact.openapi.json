@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Artifact service contract proposal",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "description": "Step-owned current artifacts: one ID/blob per producing step/name. Middleware supplies event.context.caller; authentication is outside this slice. Planner may create/update its own plan; consumers read after production. No attempts, revision history or overlapping-writer coordination. Contracts/examples only; no routes or integrations are implemented."
   },
   "x-caller-context": {
@@ -16,7 +16,7 @@
       "post": {
         "operationId": "createArtifact",
         "summary": "Register a step-owned artifact, or obtain fresh upload SAS for the same artifact",
-        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented.",
+        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented. Artifact lookup uses the union of trusted read/create/update grants: missing or no access is 404; existing with some access but wrong action is 403. Discovery filters to readable records and returns an empty list when none are readable.",
         "responses": {
           "201": {
             "description": "Created",
@@ -142,7 +142,7 @@
       "get": {
         "operationId": "listArtifacts",
         "summary": "Discover artifacts readable by the middleware-established caller",
-        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented.",
+        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented. Artifact lookup uses the union of trusted read/create/update grants: missing or no access is 404; existing with some access but wrong action is 403. Discovery filters to readable records and returns an empty list when none are readable.",
         "responses": {
           "200": {
             "description": "Success",
@@ -176,7 +176,8 @@
                           "createdAt": "2026-10-26T10:00:00Z",
                           "sizeBytes": 5,
                           "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
-                          "uploadedAt": "2026-10-26T10:00:10Z"
+                          "uploadedAt": "2026-10-26T10:00:10Z",
+                          "updatedAt": "2026-10-26T10:00:10Z"
                         }
                       ]
                     }
@@ -187,9 +188,6 @@
           },
           "400": {
             "$ref": "#/components/responses/Error400"
-          },
-          "403": {
-            "$ref": "#/components/responses/Error403"
           },
           "500": {
             "$ref": "#/components/responses/Error500"
@@ -204,7 +202,7 @@
       "put": {
         "operationId": "completeArtifact",
         "summary": "Record the latest successful upload; retain no completion history",
-        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented.",
+        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented. Artifact lookup uses the union of trusted read/create/update grants: missing or no access is 404; existing with some access but wrong action is 403. Discovery filters to readable records and returns an empty list when none are readable.",
         "responses": {
           "200": {
             "description": "Success",
@@ -293,7 +291,7 @@
       "get": {
         "operationId": "getArtifact",
         "summary": "Read artifact metadata without generating a SAS URL",
-        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented.",
+        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented. Artifact lookup uses the union of trusted read/create/update grants: missing or no access is 404; existing with some access but wrong action is 403. Discovery filters to readable records and returns an empty list when none are readable.",
         "responses": {
           "200": {
             "description": "Success",
@@ -325,7 +323,8 @@
                       "createdAt": "2026-10-26T10:00:00Z",
                       "sizeBytes": 5,
                       "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
-                      "uploadedAt": "2026-10-26T10:00:10Z"
+                      "uploadedAt": "2026-10-26T10:00:10Z",
+                      "updatedAt": "2026-10-26T10:00:10Z"
                     }
                   }
                 }
@@ -368,7 +367,7 @@
       "get": {
         "operationId": "getArtifactSas",
         "summary": "Receive a just-in-time download SAS URL",
-        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented.",
+        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented. Artifact lookup uses the union of trusted read/create/update grants: missing or no access is 404; existing with some access but wrong action is 403. Discovery filters to readable records and returns an empty list when none are readable.",
         "responses": {
           "200": {
             "description": "Success",
@@ -680,7 +679,8 @@
           "name",
           "contentType",
           "createdAt",
-          "state"
+          "state",
+          "updatedAt"
         ],
         "properties": {
           "id": {
@@ -709,6 +709,9 @@
             "enum": [
               "reserved"
             ]
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/UtcInstant"
           }
         }
       },
@@ -723,7 +726,8 @@
           "state",
           "sizeBytes",
           "sha256",
-          "uploadedAt"
+          "uploadedAt",
+          "updatedAt"
         ],
         "properties": {
           "id": {
@@ -760,6 +764,9 @@
             "$ref": "#/components/schemas/Sha256"
           },
           "uploadedAt": {
+            "$ref": "#/components/schemas/UtcInstant"
+          },
+          "updatedAt": {
             "$ref": "#/components/schemas/UtcInstant"
           }
         }
@@ -1284,7 +1291,7 @@
         }
       },
       "Error403": {
-        "description": "FORBIDDEN",
+        "description": "The artifact exists within the caller's any-action scope, but the requested action is not permitted. Never use 403 for an unseen or missing artifact.",
         "headers": {
           "Cache-Control": {
             "schema": {
@@ -1314,7 +1321,7 @@
         }
       },
       "Error404": {
-        "description": "ARTIFACT_NOT_FOUND",
+        "description": "Artifact is missing or outside the caller's any-action scope; do not disclose which.",
         "headers": {
           "Cache-Control": {
             "schema": {
