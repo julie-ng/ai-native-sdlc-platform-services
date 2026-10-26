@@ -14,7 +14,7 @@ Shared instructions for every coding agent working in this repository.
 | Database schema and migrations | Server instructions, then [server/db/AGENTS.md](./server/db/AGENTS.md) |
 | Vue application and future UI | [app/AGENTS.md](./app/AGENTS.md) |
 | Shared schemas, types, constants, utilities | [shared/AGENTS.md](./shared/AGENTS.md) |
-| Branches, credentials, commits, delivery | [Git workflow](./docs/git-workflow.md) |
+| Branches, credentials, commits, issues, pull requests, delivery | [Git workflow](./docs/git-workflow.md) |
 
 - When adding a REST route or HTTP method, read the [add-api-endpoint skill](./.agents/skills/add-api-endpoint/SKILL.md). Read it directly if your client does not discover skills.
 - Keep broadly applicable rules here and area-specific rules in nested `AGENTS.md` files. Skills describe procedures and reference those rules instead of duplicating them.
@@ -72,7 +72,7 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 
 - Work in an isolated worktree on your own `agent/` branch. Never edit, commit, push, or merge directly into `main` or another protected branch, or bypass branch protections.
 - Use native `git` and the authenticated `gh` CLI for repository and GitHub operations. Codex must not use GitHub MCP tools or the GitHub connector; this restriction does not apply to other MCP tools or connectors.
-- Follow the [Git workflow](./docs/git-workflow.md) before creating branches or commits. Keep credentials out of files, command output, logs, and commits.
+- Follow the [Git workflow](./docs/git-workflow.md) before creating branches, commits, issues, or pull requests. Keep credentials out of files, command output, logs, and commits.
 - Instructions and command filters guide behavior; claim a security boundary only where OS-level controls enforce it. Name the mechanism and distinguish mitigations from guarantees. Session managers, dashboards, and worktree UIs provide convenience; do not credit them with isolation they do not enforce.
 
 ## Code Review Rules
