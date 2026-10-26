@@ -1,129 +1,119 @@
 # Artifact service contract
 
 > [!IMPORTANT]
-> This PR proposes the API and adapter contracts. It implements no product routes, database or Azure integration. New choices are labeled below; the pinned plans are reference material, not acceptance of their proposals.
+> Contract/documentation PR only; no routes, database or Azure integration are implemented. The architect's agreed POC rules supersede the original attempt-specific/create-only scope. Remaining new choices are labeled under [choice sources](#choice-sources).
+
+- [Ontology](../plans/artifact-service.md#ontology) defines run, step, attempt, artifact, producer, consumer and caller.
+  - The step owns the artifact. An agent execution writes it; retries do not create a different artifact.
 
 ## The airport model
 
-- The caller arrives at the artifact-service counter with its identity already checked by middleware.
-  - Think of `event.context.caller` as the passport and itinerary the counter receives from the trusted system. The caller cannot write its own itinerary into the request body.
-- The service already knows which artifacts that caller may create or read.
-  - It derives access from trusted context and code policy. A claimed role, a matching filename or knowledge of an artifact ID grants nothing.
+- Middleware has checked the caller's passport and supplies its trusted itinerary in `event.context.caller`.
+  - The service already knows which artifacts the caller can read, create or update. A claimed role or matching filename grants nothing.
 - A caller can ask, “What artifacts are available to me?”
-  - The service returns the readable artifacts from its own access list. There may be none, one or several; the caller need not know their IDs first.
-- An artifact ID selects an item within that access list.
-  - It works like a baggage tag, not a passport. A foreign or nonexistent ID receives the same 404 response.
-- A SAS URL is a temporary ticket to the actual file in cloud storage.
-  - Looking at artifact information does not issue that ticket. The caller requests a download URL only when needed.
+  - Discovery returns zero, one or several readable artifacts; the caller need not know their IDs first.
+- An artifact ID selects an item within that access list, like a baggage tag rather than a passport.
+  - Foreign and nonexistent IDs receive the same 404. Knowing an ID never grants access.
+- A SAS URL is the temporary ticket to the actual file in cloud storage.
+  - Metadata reads do not issue that ticket. Obtain a download SAS only when needed.
 
 ## Caller experience
 
-| Request | What happens |
+| Request | Result |
 | --- | --- |
-| `POST /api/artifacts` | Register a file already written locally, with metadata. Receive an artifact ID and upload SAS URL. |
-| `PUT <Azure SAS URL>` | Upload bytes directly to Azure; the artifact API never carries them. |
-| `PUT /api/artifacts/{id}` | Report successful upload and completion metadata. |
-| `GET /api/artifacts` | Discover artifacts this caller may read. No SAS URLs. |
-| `GET /api/artifacts/{id}` | Read one artifact's metadata. No SAS URL. |
-| `GET /api/artifacts/{id}/sas` | Obtain a just-in-time download SAS URL. |
-| `GET <Azure SAS URL>` | Download bytes directly from Azure. |
+| `POST /api/artifacts` | Register a local file, or obtain fresh upload SAS for the same artifact. |
+| `PUT <Azure SAS URL>` | Upload directly; planner may overwrite its own plan. |
+| `PUT /api/artifacts/{id}` | Record the latest successful upload's size/hash/time. |
+| `GET /api/artifacts` | Discover readable artifact metadata, without SAS URLs. |
+| `GET /api/artifacts/{id}` | Inspect metadata for one permitted artifact, without SAS. |
+| `GET /api/artifacts/{id}/sas` | Obtain a just-in-time read SAS for the current blob. |
+| `GET <Azure SAS URL>` | Download directly from Azure. |
 
-- The first handoff is planner P1/execution 1 in run A creating `plan`, followed by coder C1/execution 1 reading it.
-  - The planner writes the file locally **before** registration. Its optional title/description can be written by the LLM.
-- The three original service responsibilities remain registration, upload completion and read access.
-  - The revised resource API exposes five service operations, separating discovery, metadata and SAS retrieval. This follows the architect's review direction; it replaces the earlier three POST action endpoints.
-- [examples.json](./examples.json) contains sample calls checked against [OpenAPI](./artifact.openapi.json).
-  - Names such as `planner-registers-local-plan` are labels for finding examples. They are not artifact IDs or API inputs; HTTP outcomes are separate fields.
+- Planner P1 writes a local file, registers `plan`, uploads it and reports completion. It may repeat the write/report cycle using the same artifact ID and blob.
+  - A later execution of P1 can continue editing it. A different planner step P2 does not inherit P1's write access.
+- Coder C1 reads P1's current plan after P1 finishes producing it.
+  - Assume one active writer per step and no overlapping executions. No artifact history, attempt logging, version selection or concurrent-writer coordination is required.
+- [examples.json](./examples.json) contains checked sample requests/responses, including repeated writes and same-step retry behavior.
+  - Descriptive example names are navigation labels, not artifact IDs. HTTP outcomes are separate fields.
 
-## Trusted middleware context
+## Trusted caller context
 
-- Authentication is outside this task. Assume upstream middleware has established `event.context.caller`.
-  - No token parser, authentication endpoint, credential fixture, identity provider or assignment resolver is implemented or selected here.
-- The artifact service requires the following field, defined as `CallerContext` in OpenAPI and the [TypeScript ports](./artifact-ports.ts):
+- Authentication is outside this task. Define the trusted field that existing middleware must supply:
 
 ```ts
-// Trusted server context, never an HTTP request body.
+// Server context only; never populated from the HTTP body or query.
 event.context.caller = {
-  runId,       // caller's workflow run UUID
-  stepId,      // caller's logical step UUID
-  attemptId,   // caller's execution UUID
-  taskType,    // server-established task, e.g. planner or coder
-  inputs,      // exact upstream artifact references bound to this execution
-  outputs,     // exact own-output references bound to this execution
+  runId,     // workflow instance
+  stepId,    // caller's logical step; ownership boundary
+  taskType,  // server-established work type, e.g. planner or coder
+  inputs,    // exact readable candidates bound by trusted workflow code
+  outputs,   // exact own-output candidates bound by trusted workflow code
 }
-// Each internal reference:
-// { runId, producerStepId, producerAttemptId, name }
+// Internal artifact reference: { runId, producerStepId, name }
 ```
 
-- IDs are canonical lowercase UUID v4 for this slice. Each input/output array has at most 64 references.
-  - References must belong to the caller's run; outputs must belong to its own step/attempt. Workflow identity lookups verify the corresponding run → step → execution relationships.
-- Missing or malformed context fails closed with 503 `CALLER_CONTEXT_UNAVAILABLE`.
-  - `readCallerContext(event.context)` validates the trusted field before any artifact lookup or signing. It does not authenticate anyone, and it never fills missing fields from body/query/header claims.
-- An unknown task is denied with 403; a known task can have an empty access list.
-  - Caller-context examples are injected directly into test events. They are not mapped from fixed tokens or loaded by production middleware.
+- IDs are canonical lowercase UUID v4; each binding array has at most 64 references.
+  - References stay within the caller's run. Outputs belong to its own step. A step's retry receives the same artifact context; no attempt field is required or accepted by this contract.
+- Missing/malformed context fails closed with 503 `CALLER_CONTEXT_UNAVAILABLE`; unknown tasks return 403.
+  - `readCallerContext` validates the trusted field. It never fills it from HTTP claims or performs authentication. Tests inject context directly, not via token fixtures.
 
-## Authorization is ordinary code
+## Authorization is code
 
-- `deriveArtifactAccess(caller)` computes readable and creatable reference sets before artifact queries.
-  - Use the intersection of code policy and trusted bindings. De-duplicate exact references; never expand access from request fields.
-- This slice proposes the minimal task policy: planner may create `plan`; coder may read `plan`.
-  - This is a selected subset of the old illustrative policy, not adoption of the whole coding loop. Every update action and all other task/name capabilities are denied.
-- Create uses `name` to select an own-output slot from the trusted creatable set.
-  - The service derives the full producer reference. The client supplies no run/step/attempt/owner or replacement permission list. A missing permitted slot is 403.
-- Reads and completion use database queries constrained to the caller's permitted references.
-  - No unrestricted ID lookup is exposed by the repository port. `findWithinScope(id, references)` matches ID and the exact producer/run/step/name relationship; foreign and missing IDs are both 404.
-- A planner's create capability permits completion of its own upload, not reading stored metadata or overwriting bytes.
-  - Create/completion responses are small acknowledgments, not database rows. A matching task type in another execution does not share write access.
-- Policy and context checks are pure code that can be unit-tested without starting a server.
-  - HTTP tests separately check route parsing, status codes and response fields. Denied requests never invoke the SAS issuer; an empty access scope requires no artifact query.
+- `deriveArtifactAccess` intersects task policy with trusted bindings, yielding readable, creatable and updatable reference sets.
+  - De-duplicate references. Create/update requires the caller's own output and same run/step; read requires an exact bound input/output plus read capability.
+- The selected POC map is planner `plan:create` + `plan:update`, coder `plan:read`; all other capabilities are denied.
+  - Matching task types do not share ownership. The two upload modes also support a future explicitly configured create-only task without granting it overwrite rights; no additional task policy is selected here.
+- Registration uses `name` to select a permitted own-output slot; the service derives the full reference.
+  - No caller-supplied producer ID, role, permission list, blob path or SAS lifetime is accepted.
+- ID lookup and completion query only within the relevant trusted scope.
+  - Repository ports expose no unrestricted ID lookup. A different step's artifact is outside scope, even if the caller is also a planner.
+- Writes do not imply reads. Registration/completion return small acknowledgments rather than stored rows.
+  - A write-only planner receives no download URL or stored metadata. Policy/context unit tests run without an HTTP server; HTTP tests are separate.
 
 ## HTTP behavior
 
-| Operation | Successful result | Important failures |
+| Operation | Success | Key failures |
 | --- | --- | --- |
-| Create | 201 new reservation; 200 identical reserved repeat. Body: `id`, `state`, `upload` SAS instructions. | 403 ungranted output; 404 missing workflow identity; 409 changed metadata or already uploaded. |
-| Complete | 200; body only `id`, `state: uploaded`. | 404 outside own scope/missing; 409 conflicting size/hash. |
-| List | 200; `{ artifacts: [...] }`, including an empty list. | 403 unknown task. |
-| Metadata | 200; reserved or uploaded artifact information. | 404 outside readable scope/missing. |
-| Download SAS | 200; `url`, `method: GET`, `expiresAt`. | 404 outside readable scope/missing; 409 upload not yet acknowledged. |
+| Register / renew upload SAS | 201 new artifact; 200 same artifact and fresh SAS. Body: `id`, current `state`, `upload`. | 403 ungranted output; 404 missing step identity; 409 changed registration metadata or create-only artifact already uploaded. |
+| Complete upload | 200; only `id`, `state: uploaded`. | 404 outside own scope/missing; 409 changed completion without update capability. |
+| List | 200; `{ artifacts: [...] }`, possibly empty. | 403 unknown task. |
+| Metadata | 200; reserved/uploaded information. | 404 outside readable scope/missing. |
+| Download SAS | 200; `url`, `method: GET`, `expiresAt`. | 404 outside readable scope/missing; 409 never acknowledged. |
 
-- Create body: required `name`, `contentType`; optional `kind`, `title`, `description`.
-  - Registration atomically reserves `(producerAttemptId, name)` with a server-generated artifact UUID. A repeat must match all metadata, including omitted fields, and returns the same ID with a fresh create-only SAS.
-- Completion body: `state: uploaded`, `sizeBytes`, `sha256`.
-  - This is a narrowly defined completion command, not a general row replacement. Other state values, metadata edits and arbitrary updates are rejected.
-- Complete only after receiving Azure's successful Put Blob response, HTTP 201.
-  - First completion atomically records reported size/hash and server time. Identical repeats leave timestamps unchanged; conflicting repeats return 409. Concurrent operations must preserve these outcomes.
-- Artifact information includes `id`, `name`, `contentType`, `state`, `createdAt` and any supplied title/description/kind.
-  - Uploaded information also includes reported `sizeBytes`, `sha256` and `uploadedAt`—the time the service recorded completion. Reserved information omits those three fields. Neither representation contains a SAS, producer identity or internal reference.
+- Registration accepts required `name`, `contentType` and optional `kind`, `title`, `description`.
+  - One row/ID per producing step/name. Repeat the same descriptive metadata to renew SAS; changing those fields is outside this slice and returns 409. After upload, the planner still receives the same ID and a write-capable SAS.
+- Completion accepts `state: uploaded`, `sizeBytes`, `sha256`, only after Azure upload success.
+  - For the planner, each accepted report replaces size/hash and refreshes `uploadedAt` using server time, including an identical retry. It is the last acknowledgment time, not independently verified Azure upload time; no report history is stored.
+- An unexpired planner upload SAS can be reused for multiple writes. Refreshing it does not reset state, completion metadata, ID or blob key.
+  - Until another acknowledgment, metadata describes the last acknowledged upload. This POC relies on read-after-production ordering, not atomic coordination between Blob bytes and database metadata.
+- Information includes `id`, `name`, `contentType`, `state`, `createdAt` and supplied kind/title/description.
+  - Uploaded records also include latest reported size/hash/`uploadedAt`; reserved records omit those fields. Responses contain no producer identity, internal reference or SAS.
 - Discovery returns all existing readable records, reserved or uploaded, ordered by `createdAt`, then `id`, ascending.
-  - At most 128 distinct trusted bindings exist in this slice, so the full result is bounded and needs no pagination. Unreserved bindings produce no fake artifact record. Read access is evaluated for every result; there is no single-artifact shortcut.
-- Workflow code orders production before consumption; this API introduces no polling requirement.
-  - Metadata can describe a reserved artifact, but SAS download issuance requires uploaded state. An ID never bypasses that check.
-- A signer failure returns 503 and leaves a valid reservation for retry.
-  - Reissuing upload SAS never resets completion or permits overwrite. If Azure upload succeeded but its success response was lost, the caller must not invent completion; recovery requires a new trusted producer execution rather than a byte-probing endpoint in this slice.
+  - At most 128 trusted bindings bound the result; no pagination or single-result assumption. Unregistered bindings do not create fake records. Metadata/discovery never calls the SAS issuer.
+- A signing failure returns 503 while preserving the artifact for retry.
+  - A planner can renew its SAS, re-upload to the same blob and then report success. Issuing a URL or recording completion does not itself upload/verify bytes or revoke previous URLs.
 
-## Detailed contract
+## Detailed contract and checks
 
-- [Implementation details](./implementation.md) specify validation/errors, metadata fields, workflow-owned identity/FK prerequisites, SAS behavior, adapter ownership and dependency proposals.
-  - [OpenAPI](./artifact.openapi.json) is the machine-readable shape source; [ports](./artifact-ports.ts) are compile-checked design interfaces. No product code is added by this PR.
-- On Node 24, run `npm ci`, `npm run check:artifact-contract`, `npm run check:guidance`, `npm run verify` and `git diff --check`.
-  - The contract command checks OpenAPI, sample requests/responses, context/seed data and port types. It does not execute authorization or contact Azure/PostgreSQL.
+- [Implementation details](./implementation.md) define validation/errors, step-based persistence, SAS modes, ports and dependencies; [OpenAPI](./artifact.openapi.json) defines machine-readable shapes.
+  - [Ports](./artifact-ports.ts) are compile-checked interfaces, not implementations. The latest rules do not require workflow endpoints or an attempts table.
+- On Node 24: `npm ci`, `npm run check:artifact-contract`, `npm run check:guidance`, `npm run verify`, `git diff --check`.
+  - Checks validate schemas, examples, seed relationships, stable example IDs and port types. They do not execute authorization or prove Azure/PostgreSQL behavior.
 
-## Choice provenance
+## Choice sources
 
-| Topic | Source / status |
+| Choice | Source / status |
 | --- | --- |
-| Direct cloud transfer, three service responsibilities, trusted assignments and exact references | Issue #5 requirements carried from pinned plans. |
-| Resource paths; artifact ID in create response; separate metadata/SAS reads; inaccessible ID → 404 | Architect's PR comments and interactive clarification on 2026-10-26. |
-| Assume pre-authenticated middleware context; define its shape only | Architect's explicit scope instruction on 2026-10-26; replaces the earlier resolver/token proposal. |
-| Airport analogy and server-owned access discovery | Architect's interactive clarification; retained as a design principle. |
-| `GET /api/artifacts` discovery shape/order/bound; `event.context.caller` field name and missing-context error | **New proposal**, implementing that principle; not specified by pinned plans. |
-| Optional title/description | Architect suggested caller-authored descriptive metadata; **new proposal** for optional title/description fields, limits and persistence. |
-| POST/PUT shapes, immutable metadata, repeat/conflict rules, field allowlists and validation limits | **New proposals**, not committed by pinned plans. |
-| PostgreSQL 17/Drizzle and original metadata fields/FK | Issue requirements / inherited schema proposal; no deployed database assumed. |
-| Code policy instead of grant rows; planner/coder policy subset | Inherited alternatives/illustrative map; **new selections** for this slice. |
-| Blob key, 300-second SAS, exact permissions/headers | **New concrete proposals**, constrained by create-only/read-only requirements. |
-| Scoped adapter ports, minimal workflow exports/seed, dependency versions | **New proposals**, not previously accepted implementation decisions. |
+| Step ownership; same ID/blob across retries; planner repeat writes; latest completion only | Agreed with architect on 2026-10-26; supersedes attempt-specific identity and blanket create-only restrictions in issue #5. |
+| No per-attempt logging/history; one active writer per step; consumers read after production | Agreed POC operating scope, not an enforced concurrency guarantee. |
+| Different step cannot overwrite by default; same-step later execution may update under policy | Architect's explicit clarification; roles alone do not transfer ownership. |
+| Resource paths, metadata/SAS separation, inaccessible ID → 404, airport analogy and discovery | Architect's PR comments and interactive direction. |
+| Authentication upstream; define caller context only | Architect's explicit instruction; no token/resolver work in this slice. |
+| Direct cloud bytes, PostgreSQL 17/Drizzle, metadata ownership | Original issue requirements retained; no deployed database assumed. |
+| Step FK/export contract; exact blob key; 300-second SAS; two SAS modes | **New concrete proposals**, consistent with the agreed step-owned model. |
+| Context field name, limits, discovery order/bound, descriptive metadata immutability | **New proposals** absent from pinned plans; unchanged unless listed above as agreed. |
+| Optional title/description fields and limits, adapter signatures and dependency versions | **New proposals** for PR review; caller-authored descriptive metadata was suggested by the architect. |
+| Completion timestamp refresh on identical retries; create-only repeat rules | **Concrete refinements** of latest-report storage; no deduplication IDs/history added. |
 
-- Review/merge of this PR remains the decision point for proposals.
-  - Production authentication, real credentials and cluster integration are outside this slice. No parent checkout, conversation history, personal memory or running agent is needed to implement the recorded contract.
+- [Architecture decisions](../architecture.md#decision-log) record the accepted refinements; the pinned plans remain references.
+  - Review/merge settles the remaining proposals. Implementation requires no parent checkout, personal memory, conversation history or running agent.

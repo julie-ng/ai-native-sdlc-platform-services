@@ -50,7 +50,6 @@ export const schemas = {
     "required": [
       "runId",
       "producerStepId",
-      "producerAttemptId",
       "name"
     ],
     "properties": {
@@ -60,11 +59,6 @@ export const schemas = {
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
       },
       "producerStepId": {
-        "type": "string",
-        "format": "uuid",
-        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-      },
-      "producerAttemptId": {
         "type": "string",
         "format": "uuid",
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
@@ -83,7 +77,6 @@ export const schemas = {
     "required": [
       "runId",
       "stepId",
-      "attemptId",
       "taskType",
       "inputs",
       "outputs"
@@ -95,11 +88,6 @@ export const schemas = {
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
       },
       "stepId": {
-        "type": "string",
-        "format": "uuid",
-        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-      },
-      "attemptId": {
         "type": "string",
         "format": "uuid",
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
@@ -118,7 +106,6 @@ export const schemas = {
           "required": [
             "runId",
             "producerStepId",
-            "producerAttemptId",
             "name"
           ],
           "properties": {
@@ -128,11 +115,6 @@ export const schemas = {
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
             },
             "producerStepId": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-            },
-            "producerAttemptId": {
               "type": "string",
               "format": "uuid",
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
@@ -155,7 +137,6 @@ export const schemas = {
           "required": [
             "runId",
             "producerStepId",
-            "producerAttemptId",
             "name"
           ],
           "properties": {
@@ -165,11 +146,6 @@ export const schemas = {
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
             },
             "producerStepId": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-            },
-            "producerAttemptId": {
               "type": "string",
               "format": "uuid",
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
@@ -265,110 +241,8 @@ export const schemas = {
     }
   },
   "UploadSas": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "url",
-      "method",
-      "headers",
-      "expiresAt"
-    ],
-    "properties": {
-      "url": {
-        "type": "string",
-        "format": "uri",
-        "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
-      },
-      "method": {
-        "type": "string",
-        "enum": [
-          "PUT"
-        ]
-      },
-      "headers": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "x-ms-blob-type",
-          "If-None-Match",
-          "Content-Type"
-        ],
-        "properties": {
-          "x-ms-blob-type": {
-            "type": "string",
-            "enum": [
-              "BlockBlob"
-            ]
-          },
-          "If-None-Match": {
-            "type": "string",
-            "enum": [
-              "*"
-            ]
-          },
-          "Content-Type": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 127,
-            "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
-          }
-        }
-      },
-      "expiresAt": {
-        "type": "string",
-        "format": "date-time",
-        "pattern": "Z$"
-      }
-    }
-  },
-  "DownloadSas": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "url",
-      "method",
-      "expiresAt"
-    ],
-    "properties": {
-      "url": {
-        "type": "string",
-        "format": "uri",
-        "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
-      },
-      "method": {
-        "type": "string",
-        "enum": [
-          "GET"
-        ]
-      },
-      "expiresAt": {
-        "type": "string",
-        "format": "date-time",
-        "pattern": "Z$"
-      }
-    }
-  },
-  "CreateArtifactResponse": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "id",
-      "state",
-      "upload"
-    ],
-    "properties": {
-      "id": {
-        "type": "string",
-        "format": "uuid",
-        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-      },
-      "state": {
-        "type": "string",
-        "enum": [
-          "reserved"
-        ]
-      },
-      "upload": {
+    "oneOf": [
+      {
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -424,6 +298,217 @@ export const schemas = {
             "pattern": "Z$"
           }
         }
+      },
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "method",
+          "headers",
+          "expiresAt"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "PUT"
+            ]
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x-ms-blob-type",
+              "Content-Type"
+            ],
+            "properties": {
+              "x-ms-blob-type": {
+                "type": "string",
+                "enum": [
+                  "BlockBlob"
+                ]
+              },
+              "Content-Type": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 127,
+                "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+              }
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        }
+      }
+    ]
+  },
+  "DownloadSas": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "url",
+      "method",
+      "expiresAt"
+    ],
+    "properties": {
+      "url": {
+        "type": "string",
+        "format": "uri",
+        "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
+      },
+      "method": {
+        "type": "string",
+        "enum": [
+          "GET"
+        ]
+      },
+      "expiresAt": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "Z$"
+      }
+    }
+  },
+  "CreateArtifactResponse": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "state",
+      "upload"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "state": {
+        "type": "string",
+        "enum": [
+          "reserved",
+          "uploaded"
+        ]
+      },
+      "upload": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "url",
+              "method",
+              "headers",
+              "expiresAt"
+            ],
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "PUT"
+                ]
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x-ms-blob-type",
+                  "If-None-Match",
+                  "Content-Type"
+                ],
+                "properties": {
+                  "x-ms-blob-type": {
+                    "type": "string",
+                    "enum": [
+                      "BlockBlob"
+                    ]
+                  },
+                  "If-None-Match": {
+                    "type": "string",
+                    "enum": [
+                      "*"
+                    ]
+                  },
+                  "Content-Type": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 127,
+                    "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+                  }
+                }
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "Z$"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "url",
+              "method",
+              "headers",
+              "expiresAt"
+            ],
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "PUT"
+                ]
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x-ms-blob-type",
+                  "Content-Type"
+                ],
+                "properties": {
+                  "x-ms-blob-type": {
+                    "type": "string",
+                    "enum": [
+                      "BlockBlob"
+                    ]
+                  },
+                  "Content-Type": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 127,
+                    "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+                  }
+                }
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "Z$"
+              }
+            }
+          }
+        ]
       }
     }
   },
@@ -1497,5 +1582,245 @@ export const schemas = {
         }
       }
     ]
+  },
+  "CreateOnlyUploadSas": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "url",
+      "method",
+      "headers",
+      "expiresAt"
+    ],
+    "properties": {
+      "url": {
+        "type": "string",
+        "format": "uri",
+        "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
+      },
+      "method": {
+        "type": "string",
+        "enum": [
+          "PUT"
+        ]
+      },
+      "headers": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "x-ms-blob-type",
+          "If-None-Match",
+          "Content-Type"
+        ],
+        "properties": {
+          "x-ms-blob-type": {
+            "type": "string",
+            "enum": [
+              "BlockBlob"
+            ]
+          },
+          "If-None-Match": {
+            "type": "string",
+            "enum": [
+              "*"
+            ]
+          },
+          "Content-Type": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 127,
+            "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+          }
+        }
+      },
+      "expiresAt": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "Z$"
+      }
+    }
+  },
+  "WritableUploadSas": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "url",
+      "method",
+      "headers",
+      "expiresAt"
+    ],
+    "properties": {
+      "url": {
+        "type": "string",
+        "format": "uri",
+        "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
+      },
+      "method": {
+        "type": "string",
+        "enum": [
+          "PUT"
+        ]
+      },
+      "headers": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "x-ms-blob-type",
+          "Content-Type"
+        ],
+        "properties": {
+          "x-ms-blob-type": {
+            "type": "string",
+            "enum": [
+              "BlockBlob"
+            ]
+          },
+          "Content-Type": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 127,
+            "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+          }
+        }
+      },
+      "expiresAt": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "Z$"
+      }
+    }
+  },
+  "NewArtifactResponse": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "state",
+      "upload"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "state": {
+        "type": "string",
+        "enum": [
+          "reserved"
+        ]
+      },
+      "upload": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "url",
+              "method",
+              "headers",
+              "expiresAt"
+            ],
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "PUT"
+                ]
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x-ms-blob-type",
+                  "If-None-Match",
+                  "Content-Type"
+                ],
+                "properties": {
+                  "x-ms-blob-type": {
+                    "type": "string",
+                    "enum": [
+                      "BlockBlob"
+                    ]
+                  },
+                  "If-None-Match": {
+                    "type": "string",
+                    "enum": [
+                      "*"
+                    ]
+                  },
+                  "Content-Type": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 127,
+                    "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+                  }
+                }
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "Z$"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "url",
+              "method",
+              "headers",
+              "expiresAt"
+            ],
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "PUT"
+                ]
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x-ms-blob-type",
+                  "Content-Type"
+                ],
+                "properties": {
+                  "x-ms-blob-type": {
+                    "type": "string",
+                    "enum": [
+                      "BlockBlob"
+                    ]
+                  },
+                  "Content-Type": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 127,
+                    "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+                  }
+                }
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "Z$"
+              }
+            }
+          }
+        ]
+      }
+    }
   }
 } as const

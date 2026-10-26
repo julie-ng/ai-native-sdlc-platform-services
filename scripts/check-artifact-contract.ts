@@ -34,18 +34,17 @@ interface RequestExample {
 interface ArtifactRef {
   runId: string
   producerStepId: string
-  producerAttemptId: string
   name: string
 }
 interface CallerContext {
   runId: string
   stepId: string
-  attemptId: string
   inputs: ArtifactRef[]
   outputs: ArtifactRef[]
 }
 interface Examples {
   requests: RequestExample[]
+  sasExamples: { id: string, schema: string, value: { url: string, method: string, headers: Record<string, string> } }[]
   negativeExamples: {
     id: string
     operationId: string
@@ -63,7 +62,6 @@ interface ContextExamples {
   workflowIdentities: {
     runs: { id: string }[]
     steps: { id: string, runId: string }[]
-    attempts: { id: string, stepId: string, attemptNumber: number }[]
   }
   artifactIdentities: { id: string, reference: ArtifactRef }[]
 }
@@ -134,10 +132,8 @@ const fixtures: ContextExamples = JSON.parse(await readFile(new URL('caller-cont
 assert.equal(fixtures.testOnly, true)
 const runs = new Set(fixtures.workflowIdentities.runs.map(run => run.id))
 const steps = new Map(fixtures.workflowIdentities.steps.map(step => [step.id, step]))
-const attempts = new Map(fixtures.workflowIdentities.attempts.map(attempt => [attempt.id, attempt]))
 assert.equal(runs.size, fixtures.workflowIdentities.runs.length, 'Duplicate run identity')
 assert.equal(steps.size, fixtures.workflowIdentities.steps.length, 'Duplicate step identity')
-assert.equal(attempts.size, fixtures.workflowIdentities.attempts.length, 'Duplicate attempt identity')
 for (const run of fixtures.workflowIdentities.runs) {
   check(spec.components.schemas.Uuid, run.id, 'workflow run ID')
 }
@@ -145,23 +141,12 @@ for (const step of steps.values()) {
   check(spec.components.schemas.Uuid, step.id, 'workflow step ID')
   assert(runs.has(step.runId), 'Unknown run in seed data')
 }
-const executionNumbers = new Set<string>()
-for (const attempt of attempts.values()) {
-  check(spec.components.schemas.Uuid, attempt.id, 'workflow attempt ID')
-  assert(steps.has(attempt.stepId), 'Unknown step in seed data')
-  assert(Number.isInteger(attempt.attemptNumber) && attempt.attemptNumber >= 1)
-  const execution = `${attempt.stepId}:${attempt.attemptNumber}`
-  assert(!executionNumbers.has(execution), 'Duplicate execution in seed data')
-  executionNumbers.add(execution)
-}
 function checkReference(reference: ArtifactRef) {
   check(spec.components.schemas.ArtifactRef, reference, 'trusted reference')
-  assert.equal(attempts.get(reference.producerAttemptId)?.stepId, reference.producerStepId)
   assert.equal(steps.get(reference.producerStepId)?.runId, reference.runId)
 }
 for (const [name, context] of Object.entries(fixtures.contexts)) {
   check(spec.components.schemas.CallerContext, context, name)
-  assert.equal(attempts.get(context.attemptId)?.stepId, context.stepId)
   assert.equal(steps.get(context.stepId)?.runId, context.runId)
   for (const reference of [...context.inputs, ...context.outputs]) {
     checkReference(reference)
@@ -169,10 +154,16 @@ for (const [name, context] of Object.entries(fixtures.contexts)) {
   }
   for (const reference of context.outputs) {
     assert.equal(reference.producerStepId, context.stepId)
-    assert.equal(reference.producerAttemptId, context.attemptId)
   }
 }
+const artifactIds = new Set<string>()
+const artifactKeys = new Set<string>()
 for (const artifact of fixtures.artifactIdentities) {
+  const key = `${artifact.reference.producerStepId}:${artifact.reference.name}`
+  assert(!artifactIds.has(artifact.id), 'Duplicate artifact ID')
+  assert(!artifactKeys.has(key), 'More than one artifact for the same step/name')
+  artifactIds.add(artifact.id)
+  artifactKeys.add(key)
   check(spec.components.schemas.Uuid, artifact.id, 'seed artifact ID')
   checkReference(artifact.reference)
 }
@@ -225,9 +216,47 @@ for (const example of examples.invalidContexts) {
 for (const example of examples.policyCases) {
   assert(fixtures.contexts[example.context], example.id)
   assert(['create', 'read', 'update'].includes(example.action))
-  assert.equal(example.expected, false)
+  assert.equal(typeof example.expected, 'boolean')
   check(spec.components.schemas.ArtifactRef, example.reference, example.id)
 }
+for (const example of examples.sasExamples) {
+  assert(['WritableUploadSas', 'CreateOnlyUploadSas'].includes(example.schema))
+  check(spec.components.schemas[example.schema], example.value, example.id)
+  const url = new URL(example.value.url)
+  const createOnly = example.schema === 'CreateOnlyUploadSas'
+  assert.equal(url.searchParams.get('sp'), createOnly ? 'c' : 'w')
+  assert.equal(url.searchParams.get('sr'), 'b')
+  assert.equal(url.searchParams.get('spr'), 'https')
+  assert(!url.pathname.includes('/attempts/'), 'Blob key must be step-owned')
+}
+const first = examples.requests.find(example => example.id === 'planner-registers-local-plan')
+assert(first && first.response && typeof first.response === 'object' && 'id' in first.response)
+for (const name of ['planner-requests-fresh-sas-after-upload', 'later-execution-reuses-step-artifact']) {
+  const example = examples.requests.find(example => example.id === name)
+  assert(example && example.response && typeof example.response === 'object' && 'id' in example.response)
+  assert.equal(example.response.id, first.response.id, 'Repeat writes must retain artifact ID')
+}
+for (const example of examples.requests.filter(example => example.operationId === 'createArtifact')) {
+  // These shapes were schema-validated above; check cross-example relationships.
+  const body = example.body as { name: string }
+  const response = example.response as { id: string, upload: { url: string, headers: Record<string, string> } }
+  const caller = fixtures.contexts[example.context]
+  const reference = caller.outputs.find(output => output.name === body.name)
+  assert(reference, 'Registration must use a trusted own-output binding')
+  const seed = fixtures.artifactIdentities.find(artifact => artifact.id === response.id)
+  assert.deepEqual(seed?.reference, reference, 'Registration ID must match its step-owned artifact')
+  const url = new URL(response.upload.url)
+  const expectedPath = `/artifacts/v1/runs/${reference.runId}/steps/${reference.producerStepId}/artifacts/${reference.name}`
+  assert.equal(url.pathname, expectedPath, 'Uploads and renewals must use the same step-owned key')
+  assert.equal(url.searchParams.get('sp'), response.upload.headers['If-None-Match'] === '*' ? 'c' : 'w')
+}
+const revised = examples.requests.find(example => example.id === 'planner-reports-revised-plan')
+const latest = examples.requests.find(example => example.id === 'coder-reads-latest-plan-metadata')
+assert(revised && latest)
+const completion = revised.body as { sizeBytes: number, sha256: string }
+const metadata = latest.response as { sizeBytes: number, sha256: string }
+assert.equal(metadata.sizeBytes, completion.sizeBytes, 'Latest metadata must reflect the last report')
+assert.equal(metadata.sha256, completion.sha256, 'Latest metadata must reflect the last report')
 // Generated constants provide schema-derived design types. Verify freshness so
 // contract edits cannot silently leave the adapter types stale.
 const generated = `/* eslint-disable */\n// Mechanical schema output; TypeScript and Ajv validate it.\n// Generated by npm run generate:artifact-schemas. Do not edit.\nexport const schemas = ${JSON.stringify(spec.components.schemas, null, 2)} as const\n`

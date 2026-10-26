@@ -1,12 +1,10 @@
 # Workflow service — implementation plan
 
 > [!IMPORTANT]
-> **Reference plan, not adopted implementation.** Imported from [the issue-pinned snapshot](https://github.com/julie-ng/ai-native-sdlc-platform-services/blob/67c4f98d81c2a96d4f80c0bc8ecaf25a985ede6e/docs/plans/workflow-service.md). Its proposals and historical validation claims are retained as reference, not independently verified here. For the artifact slice, the [issue #5 contract](../api/README.md) proposes the concrete minimal identity/FK/export and test-context prerequisite. That explicitly scoped proposal supersedes this sketch's open UUID/assignment choices and illustrative cascade deletes **only for the artifact prerequisite**: UUID v4, trusted middleware caller context, one-based fixture attempts and RESTRICT identity links. Broader workflow behavior remains outside this PR. External ADRs and infrastructure files are background, not required inputs or evidence of a deployed database.
+> **Reference plan, not an artifact implementation requirement.** Imported from [the issue-pinned snapshot](https://github.com/julie-ng/ai-native-sdlc-platform-services/blob/67c4f98d81c2a96d4f80c0bc8ecaf25a985ede6e/docs/plans/workflow-service.md). Historical proposals and validation claims are retained as background, not independently verified or adopted here. The architect has replaced attempt-owned/create-only artifacts with [step-owned current artifacts](./artifact-service.md). This POC requires only workflow-owned run/step identities, not attempt tracking or workflow endpoints.
 
-> [!NOTE]
-> **Plan in progress.** Items under [Agreed](#agreed) are decided; the remaining proposals and open choices will be refined before implementation. Design authority stays with the [architecture docs and ADRs](https://github.com/julie-ng/ai-native-sdlc/tree/main/architecture) — mainly [ADR-003](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/003-platform-services-vs-agent-pods.md), [ADR-004](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/004-orchestration-argo-workflows.md), [ADR-005](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/005-state-and-artifacts.md), [ADR-009](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/decisions/009-stop-conditions.md) and [04 · Workflow](https://github.com/julie-ng/ai-native-sdlc/blob/main/architecture/04-workflow.md).
-
-Implementation handoff for the workflow service. Responsibilities, reporting policy and schema proposals are contained here; endpoint contracts and open choices still need agreement before implementation.
+- The [artifact contract](../api/README.md) records current caller context, permissions, references and repeat-write behavior.
+  - Its [implementation prerequisite](../api/implementation.md#persistence-and-workflow-ownership) replaces the old artifact-to-attempt FK with a proposed step FK. External infrastructure and ADR links below are background, not required inputs or proof of a deployed database.
 
 ## Context
 
@@ -40,15 +38,21 @@ Architect answers, 2026-10-25.
 - **Different kinds of cap**, not one cap with several names — see [Caps](#caps).
 - Where the 2026-10-21 workflow comparison handoff conflicts with ADR-009, ADR-009 applies.
 
-## Assignment and handoff contract
+## Artifact handoff for this POC
 
-- Workflow/platform code establishes a trusted assignment: `runId`, `stepId`, `attemptId`, `taskType`, plus exact `inputs` and `outputs` references. Credentials or validated identity resolve to that assignment; the reporting agent cannot supply a replacement assignment.
-- An artifact reference is `{ runId, producerStepId, producerAttemptId, name }`. References identify resources; they contain no Blob path, SAS URL or credential.
-- When a producer is retried, trusted workflow/platform code records the execution whose outputs are passed downstream in `steps.outputAttemptId`. That attempt must belong to the same step. Input references identify that exact execution, not just its role or filename.
-- The workflow orders production before consumption. The producer reports upload completion to the artifact service after Azure responds successfully; downstream steps then receive the completed output references.
-- The artifact service consumes trusted assignments and applies its own artifact policy. Workflow code establishes bindings; an agent cannot expand them. How assignments are made available—shared server code/database access or an internal API—is open. Splitting the documents does not select separate deployments or databases.
+- Trusted middleware supplies artifact caller context `{ runId, stepId, taskType, inputs, outputs }`.
+  - The artifact service does not authenticate the caller, accept replacement HTTP grants or require an attempt ID.
+- Artifact references are `{ runId, producerStepId, name }`, pointing to a step's current artifact.
+  - A retry or later execution of the same step keeps the same artifact ID/blob. `steps.outputAttemptId` in the broader sketch below is not an artifact version selector or a dependency of this slice.
+- Workflow code owns step/run identity and binding creation, and orders consumption after production.
+  - Assume one active writer per step and no overlapping executions. The planner can overwrite its own plan under policy; a different step cannot inherit that access by default.
+- Artifact persistence imports workflow-owned `steps`; proposed FK: `producerStepId -> steps(id)`.
+  - The old `producerAttemptId -> step_attempts(id)` requirement is withdrawn. Minimal run/step migrations and seeds suffice; no full workflow service or attempts table is needed for this artifact task.
 
-The [artifact service handoff](./artifact-service.md) owns artifact tables and access behavior. This document supplies the identity/binding contract its implementer needs. Its proposed foreign keys reference workflow-owned `step_attempts(id)`; preserve that integration when coordinating migrations.
+<details>
+<summary>Broader historical workflow proposal — outside the artifact POC</summary>
+
+The remaining schema/reporting ideas describe possible workflow features, including attempt records. They are not required by issue #5. Earlier output-attempt selection or retention references must not be interpreted as per-attempt artifact storage, logging or versioning in this POC.
 
 ## Data model — proposal
 
@@ -571,5 +575,7 @@ Target flow: GitHub webhook → workflow service creates the run → workflow se
 - A requested redelivery carries the same header value as the original delivery. The proposed unique constraint helps recognize an already-recorded notification so the service can avoid starting another run for it. [GitHub: use the delivery header](https://docs.github.com/en/webhooks/using-webhooks/best-practices-for-using-webhooks#use-the-x-github-delivery-header).
 - GitHub generates this identifier; the workflow service generates our run UUID. CLI-triggered runs have no GitHub delivery ID.
 - Later implementation work: webhook authentication/filtering, duplicate-delivery handling, and whether to store the raw payload or extracted fields. None is required for the initial CLI release.
+
+</details>
 
 </details>

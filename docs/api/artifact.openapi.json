@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Artifact service contract proposal",
-    "version": "0.2.0",
-    "description": "Resource-based API. Trusted middleware supplies event.context.caller; authentication is outside this slice. The service derives access from that context, never HTTP claims. Contracts/examples only; no routes or integrations are implemented."
+    "version": "0.3.0",
+    "description": "Step-owned current artifacts: one ID/blob per producing step/name. Middleware supplies event.context.caller; authentication is outside this slice. Planner may create/update its own plan; consumers read after production. No attempts, revision history or overlapping-writer coordination. Contracts/examples only; no routes or integrations are implemented."
   },
   "x-caller-context": {
     "location": "event.context.caller",
@@ -15,7 +15,7 @@
     "/api/artifacts": {
       "post": {
         "operationId": "createArtifact",
-        "summary": "Register a local artifact and receive an upload SAS URL",
+        "summary": "Register a step-owned artifact, or obtain fresh upload SAS for the same artifact",
         "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented.",
         "responses": {
           "201": {
@@ -33,7 +33,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateArtifactResponse"
+                  "$ref": "#/components/schemas/NewArtifactResponse"
                 },
                 "examples": {
                   "example": {
@@ -41,11 +41,10 @@
                       "id": "40000000-0000-4000-8000-000000000001",
                       "state": "reserved",
                       "upload": {
-                        "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
+                        "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=w&sig=DOCUMENTATION-ONLY",
                         "method": "PUT",
                         "headers": {
                           "x-ms-blob-type": "BlockBlob",
-                          "If-None-Match": "*",
                           "Content-Type": "text/markdown"
                         },
                         "expiresAt": "2026-10-26T10:05:00Z"
@@ -79,11 +78,10 @@
                       "id": "40000000-0000-4000-8000-000000000001",
                       "state": "reserved",
                       "upload": {
-                        "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
+                        "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=w&sig=DOCUMENTATION-ONLY",
                         "method": "PUT",
                         "headers": {
                           "x-ms-blob-type": "BlockBlob",
-                          "If-None-Match": "*",
                           "Content-Type": "text/markdown"
                         },
                         "expiresAt": "2026-10-26T10:05:00Z"
@@ -205,7 +203,7 @@
     "/api/artifacts/{id}": {
       "put": {
         "operationId": "completeArtifact",
-        "summary": "Report successful upload; update completion status only",
+        "summary": "Record the latest successful upload; retain no completion history",
         "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented.",
         "responses": {
           "200": {
@@ -392,7 +390,7 @@
                 "examples": {
                   "example": {
                     "value": {
-                      "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=r&sig=DOCUMENTATION-ONLY",
+                      "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=r&sig=DOCUMENTATION-ONLY",
                       "method": "GET",
                       "expiresAt": "2026-10-26T10:05:00Z"
                     }
@@ -484,7 +482,6 @@
         "required": [
           "runId",
           "producerStepId",
-          "producerAttemptId",
           "name"
         ],
         "properties": {
@@ -492,9 +489,6 @@
             "$ref": "#/components/schemas/Uuid"
           },
           "producerStepId": {
-            "$ref": "#/components/schemas/Uuid"
-          },
-          "producerAttemptId": {
             "$ref": "#/components/schemas/Uuid"
           },
           "name": {
@@ -508,7 +502,6 @@
         "required": [
           "runId",
           "stepId",
-          "attemptId",
           "taskType",
           "inputs",
           "outputs"
@@ -518,9 +511,6 @@
             "$ref": "#/components/schemas/Uuid"
           },
           "stepId": {
-            "$ref": "#/components/schemas/Uuid"
-          },
-          "attemptId": {
             "$ref": "#/components/schemas/Uuid"
           },
           "taskType": {
@@ -605,56 +595,14 @@
         }
       },
       "UploadSas": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "url",
-          "method",
-          "headers",
-          "expiresAt"
-        ],
-        "properties": {
-          "url": {
-            "type": "string",
-            "format": "uri",
-            "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CreateOnlyUploadSas"
           },
-          "method": {
-            "type": "string",
-            "enum": [
-              "PUT"
-            ]
-          },
-          "headers": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "x-ms-blob-type",
-              "If-None-Match",
-              "Content-Type"
-            ],
-            "properties": {
-              "x-ms-blob-type": {
-                "type": "string",
-                "enum": [
-                  "BlockBlob"
-                ]
-              },
-              "If-None-Match": {
-                "type": "string",
-                "enum": [
-                  "*"
-                ]
-              },
-              "Content-Type": {
-                "$ref": "#/components/schemas/ContentType"
-              }
-            }
-          },
-          "expiresAt": {
-            "$ref": "#/components/schemas/UtcInstant"
+          {
+            "$ref": "#/components/schemas/WritableUploadSas"
           }
-        }
+        ]
       },
       "DownloadSas": {
         "type": "object",
@@ -696,7 +644,8 @@
           "state": {
             "type": "string",
             "enum": [
-              "reserved"
+              "reserved",
+              "uploaded"
             ]
           },
           "upload": {
@@ -1175,6 +1124,126 @@
             "$ref": "#/components/schemas/Error503"
           }
         ]
+      },
+      "CreateOnlyUploadSas": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "method",
+          "headers",
+          "expiresAt"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "PUT"
+            ]
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x-ms-blob-type",
+              "If-None-Match",
+              "Content-Type"
+            ],
+            "properties": {
+              "x-ms-blob-type": {
+                "type": "string",
+                "enum": [
+                  "BlockBlob"
+                ]
+              },
+              "If-None-Match": {
+                "type": "string",
+                "enum": [
+                  "*"
+                ]
+              },
+              "Content-Type": {
+                "$ref": "#/components/schemas/ContentType"
+              }
+            }
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/UtcInstant"
+          }
+        }
+      },
+      "WritableUploadSas": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "method",
+          "headers",
+          "expiresAt"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "PUT"
+            ]
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x-ms-blob-type",
+              "Content-Type"
+            ],
+            "properties": {
+              "x-ms-blob-type": {
+                "type": "string",
+                "enum": [
+                  "BlockBlob"
+                ]
+              },
+              "Content-Type": {
+                "$ref": "#/components/schemas/ContentType"
+              }
+            }
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/UtcInstant"
+          }
+        }
+      },
+      "NewArtifactResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "state",
+          "upload"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "reserved"
+            ]
+          },
+          "upload": {
+            "$ref": "#/components/schemas/UploadSas"
+          }
+        }
       }
     },
     "responses": {

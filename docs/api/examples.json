@@ -9,11 +9,10 @@
         "id": "40000000-0000-4000-8000-000000000001",
         "state": "reserved",
         "upload": {
-          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
+          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=w&sig=DOCUMENTATION-ONLY",
           "method": "PUT",
           "headers": {
             "x-ms-blob-type": "BlockBlob",
-            "If-None-Match": "*",
             "Content-Type": "text/markdown"
           },
           "expiresAt": "2026-10-26T10:05:00Z"
@@ -36,14 +35,13 @@
         "id": "40000000-0000-4000-8000-000000000001",
         "state": "reserved",
         "upload": {
-          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
+          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=w&sig=DOCUMENTATION-ONLY",
           "method": "PUT",
           "headers": {
             "x-ms-blob-type": "BlockBlob",
-            "If-None-Match": "*",
             "Content-Type": "text/markdown"
           },
-          "expiresAt": "2026-10-26T10:05:00Z"
+          "expiresAt": "2026-10-26T10:05:30Z"
         }
       },
       "body": {
@@ -205,9 +203,101 @@
       "context": "coder-c1",
       "responseStatus": 200,
       "response": {
-        "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=r&sig=DOCUMENTATION-ONLY",
+        "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=r&sig=DOCUMENTATION-ONLY",
         "method": "GET",
         "expiresAt": "2026-10-26T10:05:00Z"
+      },
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000001"
+      }
+    },
+    {
+      "id": "planner-requests-fresh-sas-after-upload",
+      "operationId": "createArtifact",
+      "context": "planner-p1",
+      "responseStatus": 200,
+      "response": {
+        "id": "40000000-0000-4000-8000-000000000001",
+        "state": "uploaded",
+        "upload": {
+          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=w&sig=DOCUMENTATION-ONLY",
+          "method": "PUT",
+          "headers": {
+            "x-ms-blob-type": "BlockBlob",
+            "Content-Type": "text/markdown"
+          },
+          "expiresAt": "2026-10-26T10:10:00Z"
+        }
+      },
+      "body": {
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice."
+      }
+    },
+    {
+      "id": "later-execution-reuses-step-artifact",
+      "operationId": "createArtifact",
+      "context": "planner-p1-later-execution",
+      "responseStatus": 200,
+      "response": {
+        "id": "40000000-0000-4000-8000-000000000001",
+        "state": "uploaded",
+        "upload": {
+          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=w&sig=DOCUMENTATION-ONLY",
+          "method": "PUT",
+          "headers": {
+            "x-ms-blob-type": "BlockBlob",
+            "Content-Type": "text/markdown"
+          },
+          "expiresAt": "2026-10-26T10:15:00Z"
+        }
+      },
+      "body": {
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice."
+      }
+    },
+    {
+      "id": "planner-reports-revised-plan",
+      "operationId": "completeArtifact",
+      "context": "planner-p1-later-execution",
+      "responseStatus": 200,
+      "response": {
+        "id": "40000000-0000-4000-8000-000000000001",
+        "state": "uploaded"
+      },
+      "body": {
+        "state": "uploaded",
+        "sizeBytes": 13,
+        "sha256": "f4a90b9259644af654e832b9cf06ea6010fff56543282188118ba91351511644"
+      },
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000001"
+      }
+    },
+    {
+      "id": "coder-reads-latest-plan-metadata",
+      "operationId": "getArtifact",
+      "context": "coder-c1",
+      "responseStatus": 200,
+      "response": {
+        "id": "40000000-0000-4000-8000-000000000001",
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
+        "state": "uploaded",
+        "createdAt": "2026-10-26T10:00:00Z",
+        "sizeBytes": 13,
+        "sha256": "f4a90b9259644af654e832b9cf06ea6010fff56543282188118ba91351511644",
+        "uploadedAt": "2026-10-26T10:10:10Z"
       },
       "parameters": {
         "id": "40000000-0000-4000-8000-000000000001"
@@ -252,14 +342,12 @@
         "caller": {
           "runId": "10000000-0000-4000-8000-000000000001",
           "stepId": "20000000-0000-4000-8000-000000000001",
-          "attemptId": "30000000-0000-4000-8000-000000000001",
           "taskType": "planner",
           "inputs": [],
           "outputs": [
             {
               "runId": "10000000-0000-4000-8000-000000000001",
               "producerStepId": "20000000-0000-4000-8000-000000000001",
-              "producerAttemptId": "30000000-0000-4000-8000-000000000001",
               "name": "plan"
             }
           ]
@@ -320,13 +408,12 @@
         "reference": {
           "runId": "10000000-0000-4000-8000-000000000002",
           "producerStepId": "20000000-0000-4000-8000-000000000005",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000005",
           "name": "plan"
         }
       }
     },
     {
-      "id": "client-supplied-producerAttemptId",
+      "id": "client-supplied-producerStepId",
       "operationId": "createArtifact",
       "part": "body",
       "value": {
@@ -335,7 +422,7 @@
         "kind": "notes",
         "title": "Implementation plan",
         "description": "Plan for the first artifact-service slice.",
-        "producerAttemptId": "30000000-0000-4000-8000-000000000005"
+        "producerStepId": "20000000-0000-4000-8000-000000000005"
       }
     },
     {
@@ -584,7 +671,7 @@
         "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
         "uploadedAt": "2026-10-26T10:00:10Z",
         "sas": {
-          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=r&sig=DOCUMENTATION-ONLY",
+          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=r&sig=DOCUMENTATION-ONLY",
           "method": "GET",
           "expiresAt": "2026-10-26T10:05:00Z"
         }
@@ -607,7 +694,7 @@
         "sizeBytes": 5,
         "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
         "uploadedAt": "2026-10-26T10:00:10Z",
-        "producerAttemptId": "30000000-0000-4000-8000-000000000001"
+        "producerStepId": "20000000-0000-4000-8000-000000000001"
       },
       "responseStatus": 200
     },
@@ -630,17 +717,50 @@
         "id": "40000000-0000-4000-8000-000000000001",
         "state": "reserved",
         "upload": {
-          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
+          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=w&sig=DOCUMENTATION-ONLY",
           "method": "GET",
           "headers": {
             "x-ms-blob-type": "BlockBlob",
-            "If-None-Match": "*",
             "Content-Type": "text/markdown"
           },
           "expiresAt": "2026-10-26T10:05:00Z"
         }
       },
       "responseStatus": 201
+    },
+    {
+      "id": "caller-cannot-add-upload-headers",
+      "operationId": "createArtifact",
+      "part": "response",
+      "responseStatus": 200,
+      "value": {
+        "id": "40000000-0000-4000-8000-000000000001",
+        "state": "uploaded",
+        "upload": {
+          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=w&sig=DOCUMENTATION-ONLY",
+          "method": "PUT",
+          "headers": {
+            "x-ms-blob-type": "BlockBlob",
+            "Content-Type": "text/markdown",
+            "If-None-Match": "*",
+            "x-role": "planner"
+          },
+          "expiresAt": "2026-10-26T10:05:00Z"
+        }
+      }
+    },
+    {
+      "id": "caller-cannot-select-upload-mode",
+      "operationId": "createArtifact",
+      "part": "body",
+      "value": {
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
+        "uploadMode": "create-or-update"
+      }
     }
   ],
   "accessCases": [
@@ -660,15 +780,6 @@
       "expectedStatus": 404,
       "parameters": {
         "id": "40000000-0000-4000-8000-000000000002"
-      }
-    },
-    {
-      "id": "other-producer-execution",
-      "operationId": "getArtifactSas",
-      "context": "coder-c1",
-      "expectedStatus": 404,
-      "parameters": {
-        "id": "40000000-0000-4000-8000-000000000004"
       }
     },
     {
@@ -738,16 +849,15 @@
   ],
   "policyCases": [
     {
-      "id": "update-is-never-granted",
+      "id": "planner-can-update-own-step-plan",
       "context": "planner-p1",
       "reference": {
         "runId": "10000000-0000-4000-8000-000000000001",
         "producerStepId": "20000000-0000-4000-8000-000000000001",
-        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
         "name": "plan"
       },
       "action": "update",
-      "expected": false
+      "expected": true
     },
     {
       "id": "a-reference-is-not-a-permission",
@@ -755,10 +865,53 @@
       "reference": {
         "runId": "10000000-0000-4000-8000-000000000002",
         "producerStepId": "20000000-0000-4000-8000-000000000005",
-        "producerAttemptId": "30000000-0000-4000-8000-000000000005",
         "name": "plan"
       },
       "action": "read",
+      "expected": false
+    },
+    {
+      "id": "another-step-cannot-update-the-plan",
+      "context": "planner-p2",
+      "reference": {
+        "runId": "10000000-0000-4000-8000-000000000001",
+        "producerStepId": "20000000-0000-4000-8000-000000000001",
+        "name": "plan"
+      },
+      "action": "update",
+      "expected": false
+    },
+    {
+      "id": "later-execution-of-same-step-can-update",
+      "context": "planner-p1-later-execution",
+      "reference": {
+        "runId": "10000000-0000-4000-8000-000000000001",
+        "producerStepId": "20000000-0000-4000-8000-000000000001",
+        "name": "plan"
+      },
+      "action": "update",
+      "expected": true
+    },
+    {
+      "id": "planner-cannot-update-another-step",
+      "context": "planner-p1",
+      "reference": {
+        "runId": "10000000-0000-4000-8000-000000000001",
+        "producerStepId": "20000000-0000-4000-8000-000000000003",
+        "name": "plan"
+      },
+      "action": "update",
+      "expected": false
+    },
+    {
+      "id": "coder-cannot-update-consumed-plan",
+      "context": "coder-c1",
+      "reference": {
+        "runId": "10000000-0000-4000-8000-000000000001",
+        "producerStepId": "20000000-0000-4000-8000-000000000001",
+        "name": "plan"
+      },
+      "action": "update",
       "expected": false
     }
   ],
@@ -775,6 +928,52 @@
       "id": "caller-context-needs-trusted-bindings",
       "value": {
         "runId": "10000000-0000-4000-8000-000000000001"
+      }
+    },
+    {
+      "id": "attempt-is-not-part-of-artifact-context",
+      "value": {
+        "runId": "10000000-0000-4000-8000-000000000001",
+        "stepId": "20000000-0000-4000-8000-000000000001",
+        "taskType": "planner",
+        "inputs": [],
+        "outputs": [
+          {
+            "runId": "10000000-0000-4000-8000-000000000001",
+            "producerStepId": "20000000-0000-4000-8000-000000000001",
+            "name": "plan"
+          }
+        ],
+        "attemptId": "30000000-0000-4000-8000-000000000001"
+      }
+    }
+  ],
+  "sasExamples": [
+    {
+      "id": "planner-create-and-overwrite-instructions",
+      "schema": "WritableUploadSas",
+      "value": {
+        "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=w&sig=DOCUMENTATION-ONLY",
+        "method": "PUT",
+        "headers": {
+          "x-ms-blob-type": "BlockBlob",
+          "Content-Type": "text/markdown"
+        },
+        "expiresAt": "2026-10-26T10:05:00Z"
+      }
+    },
+    {
+      "id": "create-only-instructions-for-a-future-policy",
+      "schema": "CreateOnlyUploadSas",
+      "value": {
+        "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
+        "method": "PUT",
+        "headers": {
+          "x-ms-blob-type": "BlockBlob",
+          "Content-Type": "text/markdown",
+          "If-None-Match": "*"
+        },
+        "expiresAt": "2026-10-26T10:05:00Z"
       }
     }
   ]

@@ -1,7 +1,7 @@
 # Artifact implementation contract
 
 - Read the [airport model and API overview](./README.md) first.
-  - These are detailed proposals for implementing that contract, not an implemented service. Choice provenance is recorded in the overview.
+  - These are detailed proposals for implementing that contract, not an implemented service. Choice sources are recorded in the overview.
 
 ## Validation and errors
 
@@ -30,50 +30,69 @@
 
 ## Persistence and workflow ownership
 
-- Planned target: PostgreSQL 17, Drizzle, shared `workflow` database; no deployed database is assumed.
-  - Artifact fields: `id`, `producerAttemptId`, `name`, `kind`, **new proposed** `title`/`description`, `contentType`, `state`, `sizeBytes`, `sha256`, `createdAt`, `uploadedAt`.
-- Require a UUID PK, unique `(producer_attempt_id, name)` and `producer_attempt_id -> step_attempts(id) ON DELETE RESTRICT`.
-  - `contentType` is NOT NULL. Omitted kind/title/description become SQL NULL and are omitted from public responses; explicit JSON null is rejected. Registration metadata is immutable, including title/description.
-- Reserved rows have NULL size/hash/uploaded time; uploaded rows have all three values.
-  - Explicit SQL CHECKs enforce state/nullability, name/kind/content-type syntax, text lengths, size and hash limits. Drizzle enum hints alone do not enforce database checks.
-- Server clocks own `createdAt` and first `uploadedAt`; use `timestamptz`, UTC sessions and UTC `Z` strings at ports/API boundaries.
-  - No `updatedAt`, stored SAS or blob-key column is added. Completion is a producer report; the service does not HEAD/download/hash Azure content. It does not independently verify the reported size or impose a size cap on the actual Blob through SAS.
-- Workflow owns the minimal identity schema below and its migrations; artifact code imports its `stepAttempts` export.
-  - No artifact-owned competing workflow table, removed FK or full workflow endpoint implementation is needed.
+- Planned target: PostgreSQL 17 + Drizzle in the shared `workflow` database; no deployed database is assumed.
+  - Fields: `id`, `producerStepId`, `name`, `kind`, `title`, `description`, `contentType`, `state`, `sizeBytes`, `sha256`, `createdAt`, `uploadedAt`. No attempt, revision, SAS or blob-key column/table.
+- Require UUID PK, unique `(producer_step_id, name)` and `producer_step_id -> steps(id) ON DELETE RESTRICT`.
+  - This step FK replaces the original issue's withdrawn attempt FK. Join the workflow-owned step to validate run membership; the same step/name always selects one current artifact.
+- `contentType` is NOT NULL; omitted kind/title/description become SQL NULL and are omitted from public responses.
+  - Explicit JSON null is rejected. Registration metadata stays immutable; only completion fields/state change in this slice.
+- Reserved means size/hash/uploaded time are NULL; uploaded means all three are present.
+  - Use explicit SQL CHECKs for state/nullability, field patterns/lengths and size/hash limits. TypeScript enum hints do not enforce database constraints.
+- DB clocks own fixed `createdAt` and latest accepted-report `uploadedAt`; use `timestamptz`, UTC sessions and UTC `Z` strings at ports.
+  - An accepted acknowledgment updates the current size/hash/time together in one statement. Do not append a log, retain prior reports or introduce upload/attempt version numbers.
+- Workflow owns only the run/step identity prerequisite below for this slice; artifact code imports its `steps` export.
+  - Full workflow endpoints, execution tracking and an attempts table are not required. Artifact code must not create a competing owner of workflow identities.
 
 | Future `server/db/workflow.schema.ts` export | Minimum table contract |
 | --- | --- |
 | `runs` | `runs(id uuid PRIMARY KEY)` |
 | `steps` | `steps(id uuid PRIMARY KEY, run_id uuid NOT NULL REFERENCES runs(id) ON DELETE RESTRICT)` |
-| `stepAttempts` | `step_attempts(id uuid PRIMARY KEY, step_id uuid NOT NULL REFERENCES steps(id) ON DELETE RESTRICT, attempt_number integer NOT NULL CHECK (attempt_number >= 1))`, UNIQUE `(step_id, attempt_number)` |
 
-- Workflow migrations precede artifact migrations in one journal; artifact persistence must retain the real FK.
-  - These are minimum identity columns, not adoption of the broad workflow schema. Workflow extensions must preserve the seed contract or provide its updated seed helper.
-- Local tests use a disposable PostgreSQL 17 database and workflow-owned `seedArtifactWorkflowIdentities(client)` in future `tests/integration/fixtures/workflow-identities.ts`.
-  - Seed the exact runs/steps/executions in [caller-contexts.fixture.json](./caller-contexts.fixture.json). That file also names artifact IDs/references for later tests; its context names are sample labels, not credentials. `coder-no-inputs` and `unknown-task` are standalone context variants for tests, not alternate production grants.
-- Seed execution numbers are one-based; no Argo retry-number mapping is selected.
-  - Tests must prove FK insertion rejection, unique producer/name, RESTRICT deletion, concurrent reservation/completion and restart durability. Cleanup removes child artifacts first or drops the disposable database.
+- Apply workflow-owned identity migrations before artifact migrations in one journal.
+  - Seed the exact runs/steps in [caller-contexts.fixture.json](./caller-contexts.fixture.json) using future workflow-owned `seedArtifactWorkflowIdentities(client)` in `tests/integration/fixtures/workflow-identities.ts`. `planner-p1-later-execution` deliberately has the same context as P1: it is not another identity row.
+- Local PostgreSQL 17 tests must prove the real step FK, run membership, unique step/name, stable IDs, latest-report replacement and restart durability.
+  - Test data also names artifact IDs/references. Remove child artifacts first during cleanup or drop the disposable database. No concurrent-writer/attempt-history tests or locking protocol are required under the agreed operating assumption.
+
+## Repeat-write semantics
+
+- `register(reference, metadata)` atomically inserts or returns the row for that step/name; it never creates a row for a retry.
+  - A different registration content type/kind/title/description is 409. `createdAt` and artifact ID remain fixed. Only the URL expiry changes on renewal; existing upload state and completion metadata remain intact.
+- The service chooses upload mode from trusted policy, not from HTTP input.
+  - Create + update capability on the own output selects `create-or-update`, even for a newly registered artifact. Create without update selects `create-only` and may obtain renewal only while reserved; an already uploaded artifact returns 409 before signing.
+- First completion requires create permission within the caller's own-output scope.
+  - Later changed size/hash requires update permission in that same scope. For the planner this replaces the latest values, not a new artifact. An identical retry is accepted, including for create-only callers, and refreshes the last-acknowledgment time.
+- `uploadedAt` is the service's last accepted-report time, not an audit log or an independently verified Azure timestamp.
+  - The service does not HEAD/download/hash Blob content. A report can be dishonest, and SAS does not enforce the API's reported size cap on actual bytes.
+- Assume one active writer per step, no overlapping executions, and consumption after production.
+  - No leases, locks, ETags, revision IDs or compare-and-swap protocol are added. Previously issued URLs remain usable until expiry; neither metadata nor SAS issuance coordinates a read/write snapshot. Metadata can lag changed bytes until the next report.
 
 ## SAS and storage
 
-- Private runtime config: `artifactStorageAccountUrl` (HTTPS endpoint, required), `artifactStorageContainer` (default `artifacts`), `databaseUrl` (required).
-  - Azure credentials stay in the service process credential chain. Missing configuration/identity fails closed with sanitized 503; nothing is placed in `runtimeConfig.public`.
-- Derive the blob key from the **server-selected** output reference:
+- Private runtime config: `artifactStorageAccountUrl` (required HTTPS endpoint), `artifactStorageContainer` (default `artifacts`), `databaseUrl` (required).
+  - Credentials stay in the service process credential chain. Missing configuration/identity yields sanitized 503; nothing belongs in `runtimeConfig.public`.
+- Derive one blob key from the server-selected step reference, reused for all uploads:
 
 ```text
-v1/runs/{runId}/steps/{producerStepId}/attempts/{producerAttemptId}/artifacts/{name}
+v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 ```
 
-- Use validated segments verbatim; no caller prefix, filename extension or storage-key override.
-  - The Azure adapter owns this convention. Public artifact metadata identifies the artifact by ID, not by its cloud path.
-- Issue single-blob user delegation SAS, HTTPS only, expiring 300 seconds after issuance; omit `startsOn` to avoid client-clock skew.
-  - The delegation key must cover issuance through expiry. Failure is 503, not an expired/shortened URL. SAS URLs are transient bearer capabilities: never persist or log them.
-- Upload uses `sp=c`, single Put Blob, `x-ms-blob-type: BlockBlob`, declared Content-Type, `If-None-Match: *` and client-computed Content-Length.
-  - Azure [requires `w` for overwrite](https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob#user-delegation-sas). Withholding `w` is the permission mechanism preventing overwrite even if a caller omits the conditional header. Do not use multi-block helpers requiring write permission.
-- Download uses `sp=r` and GET for the same single blob, issued only by the explicit SAS read operation.
-  - No list/delete/update permission is issued. Completion does not revoke earlier SAS URLs or expand their permissions.
-- Real Azure verification requires separately supplied service identity/account permissions.
-  - See [user delegation SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas) and [JavaScript SDK flow](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blob-create-user-delegation-sas-javascript). Example signatures are deliberately nonfunctional.
+- Use validated segments verbatim; no filename suffix, attempt segment, caller prefix or key override.
+  - Public metadata uses the artifact ID. Do not create snapshots, version-named blobs or per-upload keys.
+- POC storage should have automatic Blob versioning disabled if no retained cloud revisions are desired.
+  - Azure [creates retained versions on writes when versioning is enabled](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview). This contract does not provision or change a storage account; the real-storage test must check its configuration rather than claim one key alone prevents cloud history.
+- Every URL is a single-blob user delegation SAS (`sr=b`, `spr=https`), expiring 300 seconds after issuance; omit `startsOn` to avoid client-clock skew.
+  - A delegation key must cover the full lifetime; otherwise return 503. URLs are transient bearer capabilities: never persist or log them. Unexpired planner upload URLs can be reused; repeated POST renews them for the same ID/key.
+
+| Mode | SAS / direct upload instructions |
+| --- | --- |
+| `create-or-update` | `sp=w`; PUT a BlockBlob; Content-Type + client-computed Content-Length; no `If-None-Match: *`. Creates or overwrites the same blob. |
+| `create-only` | `sp=c`; PUT a BlockBlob with the same headers plus `If-None-Match: *`. Omitting `w` prevents overwrite even if a caller drops the conditional header. |
+| Read | `sp=r`; GET the current blob, issued only by the explicit SAS read operation. No write/list/delete permission. |
+
+- Azure documents [create versus overwrite permissions for Put Blob](https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob#user-delegation-sas).
+  - Both upload modes use a single Put Blob with `x-ms-blob-type: BlockBlob`. Do not add multi-block upload flows or broaden create-only SAS to `w` as a convenience.
+- Real verification requires separately supplied service identity/account permissions.
+  - See [delegation SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas) and [JavaScript SDK flow](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blob-create-user-delegation-sas-javascript). Example signatures are deliberately nonfunctional.
 
 ## Code boundaries
 
@@ -86,10 +105,10 @@ v1/runs/{runId}/steps/{producerStepId}/attempts/{producerAttemptId}/artifacts/{n
 | --- | --- |
 | `server/utils/artifact/context.utils.ts` / `readCallerContext` | Validate `event.context.caller`; no authentication. |
 | `server/utils/artifact/policy.utils.ts` / `canAccessArtifact`, `deriveArtifactAccess` | Pure policy and exact trusted binding intersection; no server needed for unit tests. |
-| `server/db/workflow.schema.ts` / `runs`, `steps`, `stepAttempts` | Workflow-owned identity schema and migrations. |
-| `server/utils/artifact/workflow-identity.utils.ts` / `createWorkflowIdentityRepository` | Attempt → step → run lookup. |
+| `server/db/workflow.schema.ts` / `runs`, `steps` | Workflow-owned identity schema and migrations. |
+| `server/utils/artifact/workflow-identity.utils.ts` / `createWorkflowIdentityRepository` | Step → run lookup. |
 | `server/db/artifact.schema.ts` / `artifacts` | Artifact metadata and FK migration. |
-| `server/utils/artifact/metadata.utils.ts` / `createArtifactMetadataRepository` | Atomic reservation/completion; scoped discovery and ID queries. |
+| `server/utils/artifact/metadata.utils.ts` / `createArtifactMetadataRepository` | Stable step/name registration, latest completion; scoped queries. |
 | `server/utils/artifact/azure-url.utils.ts` / `createAzureArtifactUrlIssuer` | Blob-key derivation and SAS issuance; no artifact access decision. |
 | `server/utils/artifact/service.utils.ts` / `createArtifactService` | Compose trusted scope, workflow identity, metadata and signer. |
 
@@ -127,6 +146,6 @@ git diff --check
 - `check:artifact-contract` validates OpenAPI structure with Swagger Parser, compiles schemas with Ajv/formats, checks supplied examples/context-seed relationships, rejects missing/malformed context examples and typechecks the ports.
   - It checks negative example rejection and generated-schema freshness. It does not execute authorization or contact Azure/PostgreSQL; Swagger Parser is not a complete semantic OpenAPI linter.
 - `verify` includes that command; `generate:artifact-schemas` refreshes generated constants after contract edits.
-  - Later tests must execute access/state/concurrency cases, prove metadata discovery does not call the signer, and prove scope omissions return no foreign records.
-- Real Azure tests must upload the five bytes `plan\n`, report completion, obtain a separate read SAS and compare downloaded bytes/hash.
-  - Prove create-only overwrite denial even without the conditional header, plus read-only permission boundaries. A fake URL or successful build proves none of this.
+  - Later tests must execute access/repeat-write cases, prove metadata discovery does not call the signer, and prove scope omissions return no foreign records.
+- Real Azure tests must upload `plan\n`, acknowledge it, overwrite the same blob with `revised plan\n`, acknowledge again and read the latest bytes/hash via a separate SAS.
+  - Prove stable ID/key, planner overwrite success, create-only overwrite denial even without its conditional header, and read-only permission boundaries. A fake URL or successful build proves none of this.
