@@ -2,47 +2,24 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Artifact service contract proposal",
-    "version": "0.1.0",
-    "description": "Issue #5 review proposal. Contract and examples only; no API or Azure integration is implemented."
+    "version": "0.2.0",
+    "description": "Resource-based API. Trusted middleware supplies event.context.caller; authentication is outside this slice. The service derives access from that context, never HTTP claims. Contracts/examples only; no routes or integrations are implemented."
   },
-  "security": [
-    {
-      "CallerCredential": []
+  "x-caller-context": {
+    "location": "event.context.caller",
+    "schema": {
+      "$ref": "#/components/schemas/CallerContext"
     }
-  ],
+  },
   "paths": {
-    "/api/artifacts/upload-authorizations": {
+    "/api/artifacts": {
       "post": {
-        "operationId": "createUpload",
-        "summary": "Reserve own output and obtain create-only upload access",
-        "description": "Proposed contract for review; no route is implemented. See docs/api/README.md for authorization, state and failure ordering. No query parameters are accepted.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateUploadRequest"
-              },
-              "examples": {
-                "handoff": {
-                  "value": {
-                    "reference": {
-                      "runId": "10000000-0000-4000-8000-000000000001",
-                      "producerStepId": "20000000-0000-4000-8000-000000000001",
-                      "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-                      "name": "plan"
-                    },
-                    "contentType": "text/markdown",
-                    "kind": "notes"
-                  }
-                }
-              }
-            }
-          }
-        },
+        "operationId": "createArtifact",
+        "summary": "Register a local artifact and receive an upload SAS URL",
+        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented.",
         "responses": {
           "201": {
-            "description": "New reservation and upload authorization",
+            "description": "Created",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -50,24 +27,18 @@
                   "enum": [
                     "no-store"
                   ]
-                },
-                "description": "Required on all API responses"
+                }
               }
             },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateUploadResponse"
+                  "$ref": "#/components/schemas/CreateArtifactResponse"
                 },
                 "examples": {
-                  "handoff": {
+                  "example": {
                     "value": {
-                      "reference": {
-                        "runId": "10000000-0000-4000-8000-000000000001",
-                        "producerStepId": "20000000-0000-4000-8000-000000000001",
-                        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-                        "name": "plan"
-                      },
+                      "id": "40000000-0000-4000-8000-000000000001",
                       "state": "reserved",
                       "upload": {
                         "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
@@ -86,7 +57,7 @@
             }
           },
           "200": {
-            "description": "Matching reserved artifact; fresh authorization",
+            "description": "Success",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -94,24 +65,18 @@
                   "enum": [
                     "no-store"
                   ]
-                },
-                "description": "Required on all API responses"
+                }
               }
             },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateUploadResponse"
+                  "$ref": "#/components/schemas/CreateArtifactResponse"
                 },
                 "examples": {
-                  "handoff": {
+                  "example": {
                     "value": {
-                      "reference": {
-                        "runId": "10000000-0000-4000-8000-000000000001",
-                        "producerStepId": "20000000-0000-4000-8000-000000000001",
-                        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-                        "name": "plan"
-                      },
+                      "id": "40000000-0000-4000-8000-000000000001",
                       "state": "reserved",
                       "upload": {
                         "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
@@ -130,317 +95,59 @@
             }
           },
           "400": {
-            "description": "INVALID_REQUEST",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error400"
-                },
-                "examples": {
-                  "INVALID_REQUEST": {
-                    "value": {
-                      "error": {
-                        "code": "INVALID_REQUEST",
-                        "message": "invalid request",
-                        "fields": [
-                          {
-                            "path": "/reference/runId",
-                            "code": "format"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "UNAUTHENTICATED",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error401"
-                },
-                "examples": {
-                  "UNAUTHENTICATED": {
-                    "value": {
-                      "error": {
-                        "code": "UNAUTHENTICATED",
-                        "message": "unauthenticated"
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "$ref": "#/components/responses/Error400"
           },
           "403": {
-            "description": "FORBIDDEN",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error403"
-                },
-                "examples": {
-                  "FORBIDDEN": {
-                    "value": {
-                      "error": {
-                        "code": "FORBIDDEN",
-                        "message": "forbidden"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "ARTIFACT_NOT_FOUND",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error404"
-                },
-                "examples": {
-                  "ARTIFACT_NOT_FOUND": {
-                    "value": {
-                      "error": {
-                        "code": "ARTIFACT_NOT_FOUND",
-                        "message": "artifact not found"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "CONFLICT",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error409"
-                },
-                "examples": {
-                  "CONFLICT": {
-                    "value": {
-                      "error": {
-                        "code": "CONFLICT",
-                        "message": "conflict"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "REQUEST_TOO_LARGE",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error413"
-                },
-                "examples": {
-                  "REQUEST_TOO_LARGE": {
-                    "value": {
-                      "error": {
-                        "code": "REQUEST_TOO_LARGE",
-                        "message": "request too large"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "UNSUPPORTED_MEDIA_TYPE",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error415"
-                },
-                "examples": {
-                  "UNSUPPORTED_MEDIA_TYPE": {
-                    "value": {
-                      "error": {
-                        "code": "UNSUPPORTED_MEDIA_TYPE",
-                        "message": "unsupported media type"
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "$ref": "#/components/responses/Error403"
           },
           "500": {
-            "description": "INTERNAL_ERROR",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error500"
-                },
-                "examples": {
-                  "INTERNAL_ERROR": {
-                    "value": {
-                      "error": {
-                        "code": "INTERNAL_ERROR",
-                        "message": "internal error"
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "$ref": "#/components/responses/Error500"
           },
           "503": {
-            "description": "DEPENDENCY_UNAVAILABLE",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error503"
-                },
-                "examples": {
-                  "DEPENDENCY_UNAVAILABLE": {
-                    "value": {
-                      "error": {
-                        "code": "DEPENDENCY_UNAVAILABLE",
-                        "message": "dependency unavailable"
-                      }
-                    }
+            "$ref": "#/components/responses/Error503"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateArtifactRequest"
+              },
+              "examples": {
+                "example": {
+                  "value": {
+                    "name": "plan",
+                    "contentType": "text/markdown",
+                    "kind": "notes",
+                    "title": "Implementation plan",
+                    "description": "Plan for the first artifact-service slice."
                   }
                 }
               }
             }
           }
         }
-      }
-    },
-    "/api/artifacts/upload-acknowledgments": {
-      "post": {
-        "operationId": "acknowledgeUpload",
-        "summary": "Report a successful Azure upload of own output",
-        "description": "Proposed contract for review; no route is implemented. See docs/api/README.md for authorization, state and failure ordering. No query parameters are accepted.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AcknowledgeUploadRequest"
-              },
-              "examples": {
-                "handoff": {
-                  "value": {
-                    "reference": {
-                      "runId": "10000000-0000-4000-8000-000000000001",
-                      "producerStepId": "20000000-0000-4000-8000-000000000001",
-                      "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-                      "name": "plan"
-                    },
-                    "uploadSucceeded": true,
-                    "sizeBytes": 5,
-                    "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
-                  }
-                }
-              }
-            }
-          }
-        },
+      },
+      "get": {
+        "operationId": "listArtifacts",
+        "summary": "Discover artifacts readable by the middleware-established caller",
+        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented.",
         "responses": {
           "200": {
-            "description": "Completion recorded, or identical completion repeated",
+            "description": "Success",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -448,24 +155,80 @@
                   "enum": [
                     "no-store"
                   ]
-                },
-                "description": "Required on all API responses"
+                }
               }
             },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AcknowledgeUploadResponse"
+                  "$ref": "#/components/schemas/ListArtifactsResponse"
                 },
                 "examples": {
-                  "handoff": {
+                  "example": {
                     "value": {
-                      "reference": {
-                        "runId": "10000000-0000-4000-8000-000000000001",
-                        "producerStepId": "20000000-0000-4000-8000-000000000001",
-                        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-                        "name": "plan"
-                      },
+                      "artifacts": [
+                        {
+                          "id": "40000000-0000-4000-8000-000000000001",
+                          "name": "plan",
+                          "contentType": "text/markdown",
+                          "kind": "notes",
+                          "title": "Implementation plan",
+                          "description": "Plan for the first artifact-service slice.",
+                          "state": "uploaded",
+                          "createdAt": "2026-10-26T10:00:00Z",
+                          "sizeBytes": 5,
+                          "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+                          "uploadedAt": "2026-10-26T10:00:10Z"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      }
+    },
+    "/api/artifacts/{id}": {
+      "put": {
+        "operationId": "completeArtifact",
+        "summary": "Report successful upload; update completion status only",
+        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompleteArtifactResponse"
+                },
+                "examples": {
+                  "example": {
+                    "value": {
+                      "id": "40000000-0000-4000-8000-000000000001",
                       "state": "uploaded"
                     }
                   }
@@ -474,314 +237,68 @@
             }
           },
           "400": {
-            "description": "INVALID_REQUEST",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error400"
-                },
-                "examples": {
-                  "INVALID_REQUEST": {
-                    "value": {
-                      "error": {
-                        "code": "INVALID_REQUEST",
-                        "message": "invalid request",
-                        "fields": [
-                          {
-                            "path": "/reference/runId",
-                            "code": "format"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "UNAUTHENTICATED",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error401"
-                },
-                "examples": {
-                  "UNAUTHENTICATED": {
-                    "value": {
-                      "error": {
-                        "code": "UNAUTHENTICATED",
-                        "message": "unauthenticated"
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "$ref": "#/components/responses/Error400"
           },
           "403": {
-            "description": "FORBIDDEN",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error403"
-                },
-                "examples": {
-                  "FORBIDDEN": {
-                    "value": {
-                      "error": {
-                        "code": "FORBIDDEN",
-                        "message": "forbidden"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "ARTIFACT_NOT_FOUND",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error404"
-                },
-                "examples": {
-                  "ARTIFACT_NOT_FOUND": {
-                    "value": {
-                      "error": {
-                        "code": "ARTIFACT_NOT_FOUND",
-                        "message": "artifact not found"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "CONFLICT",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error409"
-                },
-                "examples": {
-                  "CONFLICT": {
-                    "value": {
-                      "error": {
-                        "code": "CONFLICT",
-                        "message": "conflict"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "REQUEST_TOO_LARGE",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error413"
-                },
-                "examples": {
-                  "REQUEST_TOO_LARGE": {
-                    "value": {
-                      "error": {
-                        "code": "REQUEST_TOO_LARGE",
-                        "message": "request too large"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "UNSUPPORTED_MEDIA_TYPE",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error415"
-                },
-                "examples": {
-                  "UNSUPPORTED_MEDIA_TYPE": {
-                    "value": {
-                      "error": {
-                        "code": "UNSUPPORTED_MEDIA_TYPE",
-                        "message": "unsupported media type"
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "$ref": "#/components/responses/Error403"
           },
           "500": {
-            "description": "INTERNAL_ERROR",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error500"
-                },
-                "examples": {
-                  "INTERNAL_ERROR": {
-                    "value": {
-                      "error": {
-                        "code": "INTERNAL_ERROR",
-                        "message": "internal error"
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "$ref": "#/components/responses/Error500"
           },
           "503": {
-            "description": "DEPENDENCY_UNAVAILABLE",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
+            "$ref": "#/components/responses/Error503"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Uuid"
             },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error503"
-                },
-                "examples": {
-                  "DEPENDENCY_UNAVAILABLE": {
-                    "value": {
-                      "error": {
-                        "code": "DEPENDENCY_UNAVAILABLE",
-                        "message": "dependency unavailable"
-                      }
-                    }
+            "example": "40000000-0000-4000-8000-000000000001"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteArtifactRequest"
+              },
+              "examples": {
+                "example": {
+                  "value": {
+                    "state": "uploaded",
+                    "sizeBytes": 5,
+                    "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
                   }
                 }
               }
             }
           }
         }
-      }
-    },
-    "/api/artifacts/read-authorizations": {
-      "post": {
-        "operationId": "readDownload",
-        "summary": "Obtain read-only access to an exact assigned artifact",
-        "description": "Proposed contract for review; no route is implemented. See docs/api/README.md for authorization, state and failure ordering. No query parameters are accepted.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReadDownloadRequest"
-              },
-              "examples": {
-                "handoff": {
-                  "value": {
-                    "reference": {
-                      "runId": "10000000-0000-4000-8000-000000000001",
-                      "producerStepId": "20000000-0000-4000-8000-000000000001",
-                      "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-                      "name": "plan"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
+      },
+      "get": {
+        "operationId": "getArtifact",
+        "summary": "Read artifact metadata without generating a SAS URL",
+        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented.",
         "responses": {
           "200": {
-            "description": "Uploaded artifact; fresh read authorization",
+            "description": "Success",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -789,32 +306,28 @@
                   "enum": [
                     "no-store"
                   ]
-                },
-                "description": "Required on all API responses"
+                }
               }
             },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReadDownloadResponse"
+                  "$ref": "#/components/schemas/ArtifactInfo"
                 },
                 "examples": {
-                  "handoff": {
+                  "example": {
                     "value": {
-                      "reference": {
-                        "runId": "10000000-0000-4000-8000-000000000001",
-                        "producerStepId": "20000000-0000-4000-8000-000000000001",
-                        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-                        "name": "plan"
-                      },
+                      "id": "40000000-0000-4000-8000-000000000001",
+                      "name": "plan",
                       "contentType": "text/markdown",
+                      "kind": "notes",
+                      "title": "Implementation plan",
+                      "description": "Plan for the first artifact-service slice.",
+                      "state": "uploaded",
+                      "createdAt": "2026-10-26T10:00:00Z",
                       "sizeBytes": 5,
                       "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
-                      "download": {
-                        "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=r&sig=DOCUMENTATION-ONLY",
-                        "method": "GET",
-                        "expiresAt": "2026-10-26T10:05:00Z"
-                      }
+                      "uploadedAt": "2026-10-26T10:00:10Z"
                     }
                   }
                 }
@@ -822,223 +335,45 @@
             }
           },
           "400": {
-            "description": "INVALID_REQUEST",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error400"
-                },
-                "examples": {
-                  "INVALID_REQUEST": {
-                    "value": {
-                      "error": {
-                        "code": "INVALID_REQUEST",
-                        "message": "invalid request",
-                        "fields": [
-                          {
-                            "path": "/reference/runId",
-                            "code": "format"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "UNAUTHENTICATED",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error401"
-                },
-                "examples": {
-                  "UNAUTHENTICATED": {
-                    "value": {
-                      "error": {
-                        "code": "UNAUTHENTICATED",
-                        "message": "unauthenticated"
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "$ref": "#/components/responses/Error400"
           },
           "403": {
-            "description": "FORBIDDEN",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error403"
-                },
-                "examples": {
-                  "FORBIDDEN": {
-                    "value": {
-                      "error": {
-                        "code": "FORBIDDEN",
-                        "message": "forbidden"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "ARTIFACT_NOT_FOUND",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error404"
-                },
-                "examples": {
-                  "ARTIFACT_NOT_FOUND": {
-                    "value": {
-                      "error": {
-                        "code": "ARTIFACT_NOT_FOUND",
-                        "message": "artifact not found"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "CONFLICT",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error409"
-                },
-                "examples": {
-                  "CONFLICT": {
-                    "value": {
-                      "error": {
-                        "code": "CONFLICT",
-                        "message": "conflict"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "REQUEST_TOO_LARGE",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error413"
-                },
-                "examples": {
-                  "REQUEST_TOO_LARGE": {
-                    "value": {
-                      "error": {
-                        "code": "REQUEST_TOO_LARGE",
-                        "message": "request too large"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "UNSUPPORTED_MEDIA_TYPE",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error415"
-                },
-                "examples": {
-                  "UNSUPPORTED_MEDIA_TYPE": {
-                    "value": {
-                      "error": {
-                        "code": "UNSUPPORTED_MEDIA_TYPE",
-                        "message": "unsupported media type"
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "$ref": "#/components/responses/Error403"
           },
           "500": {
-            "description": "INTERNAL_ERROR",
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Uuid"
+            },
+            "example": "40000000-0000-4000-8000-000000000001"
+          }
+        ]
+      }
+    },
+    "/api/artifacts/{id}/sas": {
+      "get": {
+        "operationId": "getArtifactSas",
+        "summary": "Receive a just-in-time download SAS URL",
+        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented.",
+        "responses": {
+          "200": {
+            "description": "Success",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1052,63 +387,54 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error500"
+                  "$ref": "#/components/schemas/DownloadSas"
                 },
                 "examples": {
-                  "INTERNAL_ERROR": {
+                  "example": {
                     "value": {
-                      "error": {
-                        "code": "INTERNAL_ERROR",
-                        "message": "internal error"
-                      }
+                      "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=r&sig=DOCUMENTATION-ONLY",
+                      "method": "GET",
+                      "expiresAt": "2026-10-26T10:05:00Z"
                     }
                   }
                 }
               }
             }
           },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
           "503": {
-            "description": "DEPENDENCY_UNAVAILABLE",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error503"
-                },
-                "examples": {
-                  "DEPENDENCY_UNAVAILABLE": {
-                    "value": {
-                      "error": {
-                        "code": "DEPENDENCY_UNAVAILABLE",
-                        "message": "dependency unavailable"
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "$ref": "#/components/responses/Error503"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Uuid"
+            },
+            "example": "40000000-0000-4000-8000-000000000001"
+          }
+        ]
       }
     }
   },
   "components": {
-    "securitySchemes": {
-      "CallerCredential": {
-        "type": "http",
-        "scheme": "bearer",
-        "description": "Opaque fixture tokens only in explicitly injected tests. Production credential validation is deferred; default resolver rejects all callers."
-      }
-    },
     "schemas": {
       "Uuid": {
         "type": "string",
@@ -1125,6 +451,32 @@
         "type": "string",
         "format": "date-time",
         "pattern": "Z$"
+      },
+      "ContentType": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 127,
+        "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+      },
+      "SizeBytes": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 104857600
+      },
+      "Sha256": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "Title": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160,
+        "pattern": "^[^\\r\\n]+$"
+      },
+      "Description": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
       },
       "ArtifactRef": {
         "type": "object",
@@ -1150,63 +502,98 @@
           }
         }
       },
-      "ContentType": {
-        "type": "string",
-        "minLength": 3,
-        "maxLength": 127,
-        "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
-      },
-      "SizeBytes": {
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 104857600
-      },
-      "Sha256": {
-        "type": "string",
-        "pattern": "^[0-9a-f]{64}$"
-      },
-      "Kind": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 64,
-        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
-      },
-      "CreateUploadRequest": {
+      "CallerContext": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "reference",
+          "runId",
+          "stepId",
+          "attemptId",
+          "taskType",
+          "inputs",
+          "outputs"
+        ],
+        "properties": {
+          "runId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "stepId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "attemptId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "taskType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "inputs": {
+            "type": "array",
+            "maxItems": 64,
+            "items": {
+              "$ref": "#/components/schemas/ArtifactRef"
+            }
+          },
+          "outputs": {
+            "type": "array",
+            "maxItems": 64,
+            "items": {
+              "$ref": "#/components/schemas/ArtifactRef"
+            }
+          }
+        }
+      },
+      "ArtifactIdParameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          }
+        }
+      },
+      "CreateArtifactRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
           "contentType"
         ],
         "properties": {
-          "reference": {
-            "$ref": "#/components/schemas/ArtifactRef"
+          "name": {
+            "$ref": "#/components/schemas/Name"
           },
           "contentType": {
             "$ref": "#/components/schemas/ContentType"
           },
           "kind": {
-            "$ref": "#/components/schemas/Kind"
+            "$ref": "#/components/schemas/Name"
+          },
+          "title": {
+            "$ref": "#/components/schemas/Title"
+          },
+          "description": {
+            "$ref": "#/components/schemas/Description"
           }
         }
       },
-      "AcknowledgeUploadRequest": {
+      "CompleteArtifactRequest": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "reference",
-          "uploadSucceeded",
+          "state",
           "sizeBytes",
           "sha256"
         ],
         "properties": {
-          "reference": {
-            "$ref": "#/components/schemas/ArtifactRef"
-          },
-          "uploadSucceeded": {
-            "type": "boolean",
+          "state": {
+            "type": "string",
             "enum": [
-              true
+              "uploaded"
             ]
           },
           "sizeBytes": {
@@ -1217,19 +604,7 @@
           }
         }
       },
-      "ReadDownloadRequest": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "reference"
-        ],
-        "properties": {
-          "reference": {
-            "$ref": "#/components/schemas/ArtifactRef"
-          }
-        }
-      },
-      "UploadAuthorization": {
+      "UploadSas": {
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -1281,7 +656,7 @@
           }
         }
       },
-      "DownloadAuthorization": {
+      "DownloadSas": {
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -1306,17 +681,17 @@
           }
         }
       },
-      "CreateUploadResponse": {
+      "CreateArtifactResponse": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "reference",
+          "id",
           "state",
           "upload"
         ],
         "properties": {
-          "reference": {
-            "$ref": "#/components/schemas/ArtifactRef"
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
           },
           "state": {
             "type": "string",
@@ -1325,20 +700,20 @@
             ]
           },
           "upload": {
-            "$ref": "#/components/schemas/UploadAuthorization"
+            "$ref": "#/components/schemas/UploadSas"
           }
         }
       },
-      "AcknowledgeUploadResponse": {
+      "CompleteArtifactResponse": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "reference",
+          "id",
           "state"
         ],
         "properties": {
-          "reference": {
-            "$ref": "#/components/schemas/ArtifactRef"
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
           },
           "state": {
             "type": "string",
@@ -1348,22 +723,86 @@
           }
         }
       },
-      "ReadDownloadResponse": {
+      "ReservedArtifactInfo": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "reference",
+          "id",
+          "name",
           "contentType",
-          "sizeBytes",
-          "sha256",
-          "download"
+          "createdAt",
+          "state"
         ],
         "properties": {
-          "reference": {
-            "$ref": "#/components/schemas/ArtifactRef"
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "name": {
+            "$ref": "#/components/schemas/Name"
           },
           "contentType": {
             "$ref": "#/components/schemas/ContentType"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Name"
+          },
+          "title": {
+            "$ref": "#/components/schemas/Title"
+          },
+          "description": {
+            "$ref": "#/components/schemas/Description"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/UtcInstant"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "reserved"
+            ]
+          }
+        }
+      },
+      "UploadedArtifactInfo": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "contentType",
+          "createdAt",
+          "state",
+          "sizeBytes",
+          "sha256",
+          "uploadedAt"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "name": {
+            "$ref": "#/components/schemas/Name"
+          },
+          "contentType": {
+            "$ref": "#/components/schemas/ContentType"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Name"
+          },
+          "title": {
+            "$ref": "#/components/schemas/Title"
+          },
+          "description": {
+            "$ref": "#/components/schemas/Description"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/UtcInstant"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "uploaded"
+            ]
           },
           "sizeBytes": {
             "$ref": "#/components/schemas/SizeBytes"
@@ -1371,8 +810,34 @@
           "sha256": {
             "$ref": "#/components/schemas/Sha256"
           },
-          "download": {
-            "$ref": "#/components/schemas/DownloadAuthorization"
+          "uploadedAt": {
+            "$ref": "#/components/schemas/UtcInstant"
+          }
+        }
+      },
+      "ArtifactInfo": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ReservedArtifactInfo"
+          },
+          {
+            "$ref": "#/components/schemas/UploadedArtifactInfo"
+          }
+        ]
+      },
+      "ListArtifactsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "artifacts"
+        ],
+        "properties": {
+          "artifacts": {
+            "type": "array",
+            "maxItems": 128,
+            "items": {
+              "$ref": "#/components/schemas/ArtifactInfo"
+            }
           }
         }
       },
@@ -1397,48 +862,6 @@
               "range",
               "unknown_field"
             ]
-          }
-        }
-      },
-      "Assignment": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "runId",
-          "stepId",
-          "attemptId",
-          "taskType",
-          "inputs",
-          "outputs"
-        ],
-        "properties": {
-          "runId": {
-            "$ref": "#/components/schemas/Uuid"
-          },
-          "stepId": {
-            "$ref": "#/components/schemas/Uuid"
-          },
-          "attemptId": {
-            "$ref": "#/components/schemas/Uuid"
-          },
-          "taskType": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64
-          },
-          "inputs": {
-            "type": "array",
-            "maxItems": 64,
-            "items": {
-              "$ref": "#/components/schemas/ArtifactRef"
-            }
-          },
-          "outputs": {
-            "type": "array",
-            "maxItems": 64,
-            "items": {
-              "$ref": "#/components/schemas/ArtifactRef"
-            }
           }
         }
       },
@@ -1476,36 +899,6 @@
                 "items": {
                   "$ref": "#/components/schemas/FieldError"
                 }
-              }
-            }
-          }
-        }
-      },
-      "Error401": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "error"
-        ],
-        "properties": {
-          "error": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "code",
-              "message"
-            ],
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "UNAUTHENTICATED"
-                ]
-              },
-              "message": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
               }
             }
           }
@@ -1560,6 +953,36 @@
                 "type": "string",
                 "enum": [
                   "ARTIFACT_NOT_FOUND"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            }
+          }
+        }
+      },
+      "Error405": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "METHOD_NOT_ALLOWED"
                 ]
               },
               "message": {
@@ -1709,37 +1132,8 @@
               "code": {
                 "type": "string",
                 "enum": [
+                  "CALLER_CONTEXT_UNAVAILABLE",
                   "DEPENDENCY_UNAVAILABLE"
-                ]
-              },
-              "message": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              }
-            }
-          }
-        }
-      },
-      "Error405": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "error"
-        ],
-        "properties": {
-          "error": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "code",
-              "message"
-            ],
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "METHOD_NOT_ALLOWED"
                 ]
               },
               "message": {
@@ -1757,13 +1151,13 @@
             "$ref": "#/components/schemas/Error400"
           },
           {
-            "$ref": "#/components/schemas/Error401"
-          },
-          {
             "$ref": "#/components/schemas/Error403"
           },
           {
             "$ref": "#/components/schemas/Error404"
+          },
+          {
+            "$ref": "#/components/schemas/Error405"
           },
           {
             "$ref": "#/components/schemas/Error409"
@@ -1779,25 +1173,14 @@
           },
           {
             "$ref": "#/components/schemas/Error503"
-          },
-          {
-            "$ref": "#/components/schemas/Error405"
           }
         ]
       }
     },
     "responses": {
-      "MethodNotAllowed": {
-        "description": "Other methods on these known paths return 405; this documents framework-level behavior without defining extra operations.",
+      "Error400": {
+        "description": "INVALID_REQUEST",
         "headers": {
-          "Allow": {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "POST"
-              ]
-            }
-          },
           "Cache-Control": {
             "schema": {
               "type": "string",
@@ -1810,14 +1193,270 @@
         "content": {
           "application/json": {
             "schema": {
+              "$ref": "#/components/schemas/Error400"
+            },
+            "examples": {
+              "example": {
+                "value": {
+                  "error": {
+                    "code": "INVALID_REQUEST",
+                    "message": "invalid request",
+                    "fields": [
+                      {
+                        "path": "/id",
+                        "code": "format"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error403": {
+        "description": "FORBIDDEN",
+        "headers": {
+          "Cache-Control": {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error403"
+            },
+            "examples": {
+              "example": {
+                "value": {
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "forbidden"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error404": {
+        "description": "ARTIFACT_NOT_FOUND",
+        "headers": {
+          "Cache-Control": {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error404"
+            },
+            "examples": {
+              "example": {
+                "value": {
+                  "error": {
+                    "code": "ARTIFACT_NOT_FOUND",
+                    "message": "artifact not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error405": {
+        "description": "METHOD_NOT_ALLOWED",
+        "headers": {
+          "Cache-Control": {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          },
+          "Allow": {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "GET, POST",
+                "GET, PUT",
+                "GET"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
               "$ref": "#/components/schemas/Error405"
             },
             "examples": {
-              "method": {
+              "example": {
                 "value": {
                   "error": {
                     "code": "METHOD_NOT_ALLOWED",
-                    "message": "Use POST"
+                    "message": "method not allowed"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error409": {
+        "description": "CONFLICT",
+        "headers": {
+          "Cache-Control": {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error409"
+            },
+            "examples": {
+              "example": {
+                "value": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "conflict"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error413": {
+        "description": "REQUEST_TOO_LARGE",
+        "headers": {
+          "Cache-Control": {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error413"
+            },
+            "examples": {
+              "example": {
+                "value": {
+                  "error": {
+                    "code": "REQUEST_TOO_LARGE",
+                    "message": "request too large"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error415": {
+        "description": "UNSUPPORTED_MEDIA_TYPE",
+        "headers": {
+          "Cache-Control": {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error415"
+            },
+            "examples": {
+              "example": {
+                "value": {
+                  "error": {
+                    "code": "UNSUPPORTED_MEDIA_TYPE",
+                    "message": "unsupported media type"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error500": {
+        "description": "INTERNAL_ERROR",
+        "headers": {
+          "Cache-Control": {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error500"
+            },
+            "examples": {
+              "example": {
+                "value": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "internal error"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error503": {
+        "description": "CALLER_CONTEXT_UNAVAILABLE, DEPENDENCY_UNAVAILABLE",
+        "headers": {
+          "Cache-Control": {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "no-store"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error503"
+            },
+            "examples": {
+              "example": {
+                "value": {
+                  "error": {
+                    "code": "CALLER_CONTEXT_UNAVAILABLE",
+                    "message": "caller context unavailable"
                   }
                 }
               }

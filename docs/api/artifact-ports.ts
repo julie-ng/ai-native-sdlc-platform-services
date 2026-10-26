@@ -1,124 +1,104 @@
-// Design contracts only. Future ownership: shared/types/artifact.ts and
-// server/utils/artifact/ports.ts, as described in README.md. No implementation.
+// Design contracts only; future ownership is documented in README.md.
 import type { FromSchema } from 'json-schema-to-ts'
 import type { schemas } from './artifact-schemas.js'
 
 export type ArtifactRef = FromSchema<typeof schemas.ArtifactRef>
-export type CreateUploadRequest = FromSchema<typeof schemas.CreateUploadRequest>
-export type AcknowledgeUploadRequest = FromSchema<typeof schemas.AcknowledgeUploadRequest>
-export type ReadDownloadRequest = FromSchema<typeof schemas.ReadDownloadRequest>
-export type CreateUploadResponse = FromSchema<typeof schemas.CreateUploadResponse>
-export type AcknowledgeUploadResponse = FromSchema<typeof schemas.AcknowledgeUploadResponse>
-export type ReadDownloadResponse = FromSchema<typeof schemas.ReadDownloadResponse>
-export type UploadAuthorization = FromSchema<typeof schemas.UploadAuthorization>
-export type DownloadAuthorization = FromSchema<typeof schemas.DownloadAuthorization>
+export type CallerContext = FromSchema<typeof schemas.CallerContext>
+export type CreateArtifactRequest = FromSchema<typeof schemas.CreateArtifactRequest>
+export type CompleteArtifactRequest = FromSchema<typeof schemas.CompleteArtifactRequest>
+export type CreateArtifactResponse = FromSchema<typeof schemas.CreateArtifactResponse>
+export type CompleteArtifactResponse = FromSchema<typeof schemas.CompleteArtifactResponse>
+export type ArtifactInfo = FromSchema<typeof schemas.ArtifactInfo>
+export type ListArtifactsResponse = FromSchema<typeof schemas.ListArtifactsResponse>
+export type UploadSas = FromSchema<typeof schemas.UploadSas>
+export type DownloadSas = FromSchema<typeof schemas.DownloadSas>
 export type ErrorResponse = FromSchema<typeof schemas.ErrorResponse>
 export type ArtifactAction = 'create' | 'read' | 'update'
 
-export type Assignment = FromSchema<typeof schemas.Assignment>
+// Middleware owns this field. The HTTP body/query/headers cannot replace it.
+export interface ArtifactEventContext {
+  caller: CallerContext
+}
 
 export type Result<T, E extends string>
   = | { ok: true, value: T }
     | { ok: false, error: E }
 
-export interface AssignmentResolver {
-  // Undefined, absent or unknown credentials fail closed. No policy from HTTP.
-  resolve(credential: string | undefined): Promise<Result<Assignment, 'unauthenticated' | 'unavailable'>>
+// Validate the middleware field and fail closed; no authentication or token work.
+export type ReadCallerContext = (eventContext: unknown) => Result<CallerContext, 'context_unavailable'>
+export type CanAccessArtifact = (caller: CallerContext, reference: ArtifactRef, action: ArtifactAction) => boolean
+export interface ArtifactAccess {
+  readable: readonly ArtifactRef[]
+  creatable: readonly ArtifactRef[]
 }
-
-export type CreateRejectingAssignmentResolver = () => AssignmentResolver
-// The factory also checks NODE_ENV=test; never called by the default application.
-export type CreateFixtureAssignmentResolver = (
-  assignments: Readonly<Record<string, Assignment>>,
-) => AssignmentResolver
-export type CanAccessArtifact = (
-  assignment: Assignment,
-  reference: ArtifactRef,
-  action: ArtifactAction,
-) => boolean
+// Unknown task => forbidden. Known task with no bindings => empty sets.
+export type DeriveArtifactAccess = (caller: CallerContext) => Result<ArtifactAccess, 'forbidden'>
 
 export interface WorkflowIdentity {
   runId: string
   stepId: string
   attemptId: string
 }
-
 export interface WorkflowIdentityRepository {
-  // Workflow-owned lookup. Service compares all three IDs to requested reference.
   findAttempt(attemptId: string): Promise<Result<WorkflowIdentity, 'not_found' | 'unavailable'>>
 }
 
+export type ArtifactMetadata = Omit<CreateArtifactRequest, 'name'>
 interface ArtifactBase {
   id: string
   reference: ArtifactRef
-  contentType: string
-  kind: string | null
-  createdAt: string // UTC ISO instant; no Date objects cross ports.
+  metadata: ArtifactMetadata
+  createdAt: string // UTC ISO instant at adapter boundaries.
 }
-
 export interface ReservedArtifact extends ArtifactBase {
   state: 'reserved'
   sizeBytes: null
   sha256: null
   uploadedAt: null
 }
-
 export interface UploadedArtifact extends ArtifactBase {
   state: 'uploaded'
   sizeBytes: number
   sha256: string
   uploadedAt: string
 }
-
 export type ArtifactRecord = ReservedArtifact | UploadedArtifact
-export type MetadataFailure = 'not_found' | 'forbidden' | 'conflict' | 'unavailable'
-export type Completion = Pick<AcknowledgeUploadRequest, 'sizeBytes' | 'sha256'>
+export type MetadataFailure = 'not_found' | 'conflict' | 'unavailable'
+export type Completion = Pick<CompleteArtifactRequest, 'sizeBytes' | 'sha256'>
 
 export interface ArtifactMetadataRepository {
-  // Authorized, linkage-verified own reference; kind omission becomes null.
-  // Atomic insert-or-match. Existing uploaded or different metadata => conflict.
-  reserve(input: CreateUploadRequest): Promise<Result<{
+  // reference comes from the caller's trusted own-output binding, never HTTP IDs.
+  reserve(reference: ArtifactRef, metadata: ArtifactMetadata): Promise<Result<{
     record: ReservedArtifact
     created: boolean
   }, MetadataFailure>>
-  // Lookup joins producer identity so wrong run/step cannot alias another row.
-  find(reference: ArtifactRef): Promise<Result<ArtifactRecord, MetadataFailure>>
-  // Atomic compare/transition. Identical repeat returns unchanged uploaded row.
-  acknowledge(reference: ArtifactRef, completion: Completion): Promise<Result<UploadedArtifact, MetadataFailure>>
+  // These operations constrain the query to authorized references before lookup.
+  // Missing AND foreign IDs both return not_found. No unrestricted findById port.
+  listWithinScope(references: readonly ArtifactRef[]): Promise<Result<ArtifactRecord[], 'unavailable'>>
+  findWithinScope(id: string, references: readonly ArtifactRef[]): Promise<Result<ArtifactRecord, 'not_found' | 'unavailable'>>
+  // Atomic transition or identical repeat, constrained to creatable own outputs.
+  acknowledgeWithinScope(id: string, ownOutputs: readonly ArtifactRef[], completion: Completion): Promise<Result<UploadedArtifact, MetadataFailure>>
 }
-
 export interface ArtifactUrlIssuer {
-  // Issuer derives key from record.reference. Fixed 300-second lifetime; no caller TTL.
-  issueUpload(record: ReservedArtifact): Promise<Result<UploadAuthorization, 'unavailable'>>
-  issueDownload(record: UploadedArtifact): Promise<Result<DownloadAuthorization, 'unavailable'>>
+  issueUpload(record: ReservedArtifact): Promise<Result<UploadSas, 'unavailable'>>
+  issueDownload(record: UploadedArtifact): Promise<Result<DownloadSas, 'unavailable'>>
 }
-
 export interface ArtifactServiceDependencies {
-  assignments: AssignmentResolver
   identities: WorkflowIdentityRepository
   metadata: ArtifactMetadataRepository
   urls: ArtifactUrlIssuer
-  canAccessArtifact: CanAccessArtifact
+  deriveArtifactAccess: DeriveArtifactAccess
 }
-
-export type ServiceFailure
-  = | 'unauthenticated'
-    | 'forbidden'
-    | 'not_found'
-    | 'conflict'
-    | 'unavailable'
-    | 'internal_error'
-
+export type ServiceFailure = 'forbidden' | 'not_found' | 'conflict' | 'unavailable' | 'internal_error'
 export interface ArtifactService {
-  resolveCaller(credential: string | undefined): Promise<Result<Assignment, 'unauthenticated' | 'unavailable'>>
-  // HTTP layer validates unknown input before calling these typed methods.
-  // Credential resolution must precede payload error disclosure in the handler.
-  createUpload(assignment: Assignment, request: CreateUploadRequest): Promise<Result<{
+  // Only middleware-established context reaches these methods. No authN adapter.
+  createArtifact(caller: CallerContext, request: CreateArtifactRequest): Promise<Result<{
     status: 200 | 201
-    body: CreateUploadResponse
+    body: CreateArtifactResponse
   }, ServiceFailure>>
-  acknowledgeUpload(assignment: Assignment, request: AcknowledgeUploadRequest): Promise<Result<AcknowledgeUploadResponse, ServiceFailure>>
-  readDownload(assignment: Assignment, request: ReadDownloadRequest): Promise<Result<ReadDownloadResponse, ServiceFailure>>
+  completeArtifact(caller: CallerContext, id: string, request: CompleteArtifactRequest): Promise<Result<CompleteArtifactResponse, ServiceFailure>>
+  listArtifacts(caller: CallerContext): Promise<Result<ListArtifactsResponse, ServiceFailure>>
+  getArtifact(caller: CallerContext, id: string): Promise<Result<ArtifactInfo, ServiceFailure>>
+  getArtifactSas(caller: CallerContext, id: string): Promise<Result<DownloadSas, ServiceFailure>>
 }
-
 export type CreateArtifactService = (dependencies: ArtifactServiceDependencies) => ArtifactService

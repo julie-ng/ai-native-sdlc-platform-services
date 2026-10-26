@@ -1,26 +1,12 @@
 {
-  "handoff": [
+  "requests": [
     {
-      "id": "createUpload-201",
-      "operationId": "createUpload",
-      "request": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
-        "contentType": "text/markdown",
-        "kind": "notes"
-      },
+      "id": "planner-registers-local-plan",
+      "operationId": "createArtifact",
+      "context": "planner-p1",
       "responseStatus": 201,
       "response": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
+        "id": "40000000-0000-4000-8000-000000000001",
         "state": "reserved",
         "upload": {
           "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
@@ -33,30 +19,21 @@
           "expiresAt": "2026-10-26T10:05:00Z"
         }
       },
-      "caller": "fixture-planner-p1-e1",
-      "expectedPolicy": "allow"
+      "body": {
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice."
+      }
     },
     {
-      "id": "createUpload-200",
-      "operationId": "createUpload",
-      "request": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
-        "contentType": "text/markdown",
-        "kind": "notes"
-      },
+      "id": "planner-repeats-registration",
+      "operationId": "createArtifact",
+      "context": "planner-p1",
       "responseStatus": 200,
       "response": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
+        "id": "40000000-0000-4000-8000-000000000001",
         "state": "reserved",
         "upload": {
           "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
@@ -69,394 +46,511 @@
           "expiresAt": "2026-10-26T10:05:00Z"
         }
       },
-      "caller": "fixture-planner-p1-e1",
-      "expectedPolicy": "allow"
+      "body": {
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice."
+      }
     },
     {
-      "id": "acknowledgeUpload-200",
-      "operationId": "acknowledgeUpload",
-      "request": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
-        "uploadSucceeded": true,
+      "id": "planner-reports-upload-complete",
+      "operationId": "completeArtifact",
+      "context": "planner-p1",
+      "responseStatus": 200,
+      "response": {
+        "id": "40000000-0000-4000-8000-000000000001",
+        "state": "uploaded"
+      },
+      "body": {
+        "state": "uploaded",
         "sizeBytes": 5,
         "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
       },
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000001"
+      }
+    },
+    {
+      "id": "planner-repeats-completion",
+      "operationId": "completeArtifact",
+      "context": "planner-p1",
       "responseStatus": 200,
       "response": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
+        "id": "40000000-0000-4000-8000-000000000001",
         "state": "uploaded"
       },
-      "caller": "fixture-planner-p1-e1",
-      "expectedPolicy": "allow"
+      "body": {
+        "state": "uploaded",
+        "sizeBytes": 5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
+      },
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000001"
+      }
     },
     {
-      "id": "readDownload-200",
-      "operationId": "readDownload",
-      "request": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        }
-      },
+      "id": "coder-discovers-inputs",
+      "operationId": "listArtifacts",
+      "context": "coder-c1",
       "responseStatus": 200,
       "response": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
-        "contentType": "text/markdown",
-        "sizeBytes": 5,
-        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
-        "download": {
-          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=r&sig=DOCUMENTATION-ONLY",
-          "method": "GET",
-          "expiresAt": "2026-10-26T10:05:00Z"
-        }
-      },
-      "caller": "fixture-coder-c1-e1",
-      "expectedPolicy": "allow"
-    }
-  ],
-  "schemaCases": [
-    {
-      "id": "bad-uuid",
-      "operationId": "readDownload",
-      "schema": "ReadDownloadRequest",
-      "valid": false,
-      "value": {
-        "reference": {
-          "runId": "not-a-uuid",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        }
-      }
-    },
-    {
-      "id": "uppercase-uuid",
-      "operationId": "readDownload",
-      "schema": "ReadDownloadRequest",
-      "valid": false,
-      "value": {
-        "reference": {
-          "runId": "A0000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        }
-      }
-    },
-    {
-      "id": "non-v4-uuid",
-      "operationId": "readDownload",
-      "schema": "ReadDownloadRequest",
-      "valid": false,
-      "value": {
-        "reference": {
-          "runId": "10000000-0000-7000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        }
-      }
-    },
-    {
-      "id": "caller-taskType",
-      "operationId": "createUpload",
-      "schema": "CreateUploadRequest",
-      "valid": false,
-      "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
-        "contentType": "text/markdown",
-        "kind": "notes",
-        "taskType": "planner"
-      }
-    },
-    {
-      "id": "caller-permissions",
-      "operationId": "createUpload",
-      "schema": "CreateUploadRequest",
-      "valid": false,
-      "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
-        "contentType": "text/markdown",
-        "kind": "notes",
-        "permissions": [
-          "artifact/plan:create"
+        "artifacts": [
+          {
+            "id": "40000000-0000-4000-8000-000000000001",
+            "name": "plan",
+            "contentType": "text/markdown",
+            "kind": "notes",
+            "title": "Implementation plan",
+            "description": "Plan for the first artifact-service slice.",
+            "state": "uploaded",
+            "createdAt": "2026-10-26T10:00:00Z",
+            "sizeBytes": 5,
+            "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+            "uploadedAt": "2026-10-26T10:00:10Z"
+          }
         ]
       }
     },
     {
-      "id": "caller-assignment",
-      "operationId": "createUpload",
-      "schema": "CreateUploadRequest",
-      "valid": false,
-      "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
+      "id": "coder-discovers-several-inputs",
+      "operationId": "listArtifacts",
+      "context": "coder-multiple-inputs",
+      "responseStatus": 200,
+      "response": {
+        "artifacts": [
+          {
+            "id": "40000000-0000-4000-8000-000000000001",
+            "name": "plan",
+            "contentType": "text/markdown",
+            "kind": "notes",
+            "title": "Implementation plan",
+            "description": "Plan for the first artifact-service slice.",
+            "state": "uploaded",
+            "createdAt": "2026-10-26T10:00:00Z",
+            "sizeBytes": 5,
+            "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+            "uploadedAt": "2026-10-26T10:00:10Z"
+          },
+          {
+            "id": "40000000-0000-4000-8000-000000000002",
+            "name": "plan",
+            "contentType": "text/markdown",
+            "kind": "notes",
+            "title": "Alternative implementation plan",
+            "description": "Plan for the first artifact-service slice.",
+            "state": "uploaded",
+            "createdAt": "2026-10-26T10:00:00Z",
+            "sizeBytes": 5,
+            "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+            "uploadedAt": "2026-10-26T10:00:10Z"
+          }
+        ]
+      }
+    },
+    {
+      "id": "coder-has-no-available-inputs",
+      "operationId": "listArtifacts",
+      "context": "coder-no-inputs",
+      "responseStatus": 200,
+      "response": {
+        "artifacts": []
+      }
+    },
+    {
+      "id": "coder-reads-plan-metadata",
+      "operationId": "getArtifact",
+      "context": "coder-c1",
+      "responseStatus": 200,
+      "response": {
+        "id": "40000000-0000-4000-8000-000000000001",
+        "name": "plan",
         "contentType": "text/markdown",
         "kind": "notes",
-        "assignment": {
-          "runId": "10000000-0000-4000-8000-000000000002"
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
+        "state": "uploaded",
+        "createdAt": "2026-10-26T10:00:00Z",
+        "sizeBytes": 5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+        "uploadedAt": "2026-10-26T10:00:10Z"
+      },
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000001"
+      }
+    },
+    {
+      "id": "coder-inspects-reserved-plan",
+      "operationId": "getArtifact",
+      "context": "coder-c1",
+      "responseStatus": 200,
+      "response": {
+        "id": "40000000-0000-4000-8000-000000000001",
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
+        "state": "reserved",
+        "createdAt": "2026-10-26T10:00:00Z"
+      },
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000001"
+      }
+    },
+    {
+      "id": "coder-requests-download-url",
+      "operationId": "getArtifactSas",
+      "context": "coder-c1",
+      "responseStatus": 200,
+      "response": {
+        "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=r&sig=DOCUMENTATION-ONLY",
+        "method": "GET",
+        "expiresAt": "2026-10-26T10:05:00Z"
+      },
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000001"
+      }
+    }
+  ],
+  "negativeExamples": [
+    {
+      "id": "malformed-id",
+      "operationId": "getArtifact",
+      "part": "parameters",
+      "value": {
+        "id": "not-a-uuid"
+      }
+    },
+    {
+      "id": "uppercase-id",
+      "operationId": "getArtifact",
+      "part": "parameters",
+      "value": {
+        "id": "A0000000-0000-4000-8000-000000000001"
+      }
+    },
+    {
+      "id": "non-v4-id",
+      "operationId": "getArtifact",
+      "part": "parameters",
+      "value": {
+        "id": "40000000-0000-7000-8000-000000000001"
+      }
+    },
+    {
+      "id": "client-supplied-caller",
+      "operationId": "createArtifact",
+      "part": "body",
+      "value": {
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
+        "caller": {
+          "runId": "10000000-0000-4000-8000-000000000001",
+          "stepId": "20000000-0000-4000-8000-000000000001",
+          "attemptId": "30000000-0000-4000-8000-000000000001",
+          "taskType": "planner",
+          "inputs": [],
+          "outputs": [
+            {
+              "runId": "10000000-0000-4000-8000-000000000001",
+              "producerStepId": "20000000-0000-4000-8000-000000000001",
+              "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+              "name": "plan"
+            }
+          ]
         }
       }
     },
     {
-      "id": "caller-storageKey",
-      "operationId": "createUpload",
-      "schema": "CreateUploadRequest",
-      "valid": false,
+      "id": "client-supplied-taskType",
+      "operationId": "createArtifact",
+      "part": "body",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
+        "name": "plan",
         "contentType": "text/markdown",
         "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
+        "taskType": "planner"
+      }
+    },
+    {
+      "id": "client-supplied-permissions",
+      "operationId": "createArtifact",
+      "part": "body",
+      "value": {
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
+        "permissions": [
+          "read-all"
+        ]
+      }
+    },
+    {
+      "id": "client-supplied-runId",
+      "operationId": "createArtifact",
+      "part": "body",
+      "value": {
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
+        "runId": "10000000-0000-4000-8000-000000000002"
+      }
+    },
+    {
+      "id": "client-supplied-reference",
+      "operationId": "createArtifact",
+      "part": "body",
+      "value": {
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
+        "reference": {
+          "runId": "10000000-0000-4000-8000-000000000002",
+          "producerStepId": "20000000-0000-4000-8000-000000000005",
+          "producerAttemptId": "30000000-0000-4000-8000-000000000005",
+          "name": "plan"
+        }
+      }
+    },
+    {
+      "id": "client-supplied-producerAttemptId",
+      "operationId": "createArtifact",
+      "part": "body",
+      "value": {
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
+        "producerAttemptId": "30000000-0000-4000-8000-000000000005"
+      }
+    },
+    {
+      "id": "client-supplied-storageKey",
+      "operationId": "createArtifact",
+      "part": "body",
+      "value": {
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
         "storageKey": "elsewhere"
       }
     },
     {
-      "id": "caller-expiresIn",
-      "operationId": "createUpload",
-      "schema": "CreateUploadRequest",
-      "valid": false,
+      "id": "client-supplied-expiresIn",
+      "operationId": "createArtifact",
+      "part": "body",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
+        "name": "plan",
         "contentType": "text/markdown",
         "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
         "expiresIn": 3600
       }
     },
     {
-      "id": "name-8",
-      "operationId": "createUpload",
-      "schema": "CreateUploadRequest",
-      "valid": false,
+      "id": "invalid-name-0",
+      "operationId": "createArtifact",
+      "part": "body",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "../plan"
-        },
+        "name": "../plan",
         "contentType": "text/markdown",
-        "kind": "notes"
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice."
       }
     },
     {
-      "id": "name-9",
-      "operationId": "createUpload",
-      "schema": "CreateUploadRequest",
-      "valid": false,
+      "id": "invalid-name-1",
+      "operationId": "createArtifact",
+      "part": "body",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan.md"
-        },
+        "name": "plan.md",
         "contentType": "text/markdown",
-        "kind": "notes"
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice."
       }
     },
     {
-      "id": "name-10",
-      "operationId": "createUpload",
-      "schema": "CreateUploadRequest",
-      "valid": false,
+      "id": "invalid-name-2",
+      "operationId": "createArtifact",
+      "part": "body",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "Plan"
-        },
+        "name": "Plan",
         "contentType": "text/markdown",
-        "kind": "notes"
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice."
       }
     },
     {
-      "id": "name-11",
-      "operationId": "createUpload",
-      "schema": "CreateUploadRequest",
-      "valid": false,
+      "id": "invalid-name-3",
+      "operationId": "createArtifact",
+      "part": "body",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan/secret"
-        },
+        "name": "plan/secret",
         "contentType": "text/markdown",
-        "kind": "notes"
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice."
       }
     },
     {
-      "id": "name-12",
-      "operationId": "createUpload",
-      "schema": "CreateUploadRequest",
-      "valid": false,
+      "id": "invalid-name-4",
+      "operationId": "createArtifact",
+      "part": "body",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": ""
-        },
+        "name": "",
         "contentType": "text/markdown",
-        "kind": "notes"
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice."
       }
     },
     {
-      "id": "name-13",
-      "operationId": "createUpload",
-      "schema": "CreateUploadRequest",
-      "valid": false,
+      "id": "invalid-name-5",
+      "operationId": "createArtifact",
+      "part": "body",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        },
+        "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "contentType": "text/markdown",
-        "kind": "notes"
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice."
       }
     },
     {
-      "id": "ack-14",
-      "operationId": "acknowledgeUpload",
-      "schema": "AcknowledgeUploadRequest",
-      "valid": false,
+      "id": "invalid-title-17",
+      "operationId": "createArtifact",
+      "part": "body",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
-        "uploadSucceeded": true,
-        "sizeBytes": 104857601,
-        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "description": "Plan for the first artifact-service slice."
       }
     },
     {
-      "id": "ack-15",
-      "operationId": "acknowledgeUpload",
-      "schema": "AcknowledgeUploadRequest",
-      "valid": false,
+      "id": "invalid-description-18",
+      "operationId": "createArtifact",
+      "part": "body",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
-        "uploadSucceeded": true,
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "id": "invalid-title-19",
+      "operationId": "createArtifact",
+      "part": "body",
+      "value": {
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "two\nlines",
+        "description": "Plan for the first artifact-service slice."
+      }
+    },
+    {
+      "id": "invalid-contentType-20",
+      "operationId": "createArtifact",
+      "part": "body",
+      "value": {
+        "name": "plan",
+        "contentType": "text/markdown; charset=utf-8",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice."
+      }
+    },
+    {
+      "id": "invalid-completion-21",
+      "operationId": "completeArtifact",
+      "part": "body",
+      "value": {
+        "state": "uploaded",
         "sizeBytes": -1,
         "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
       }
     },
     {
-      "id": "ack-16",
-      "operationId": "acknowledgeUpload",
-      "schema": "AcknowledgeUploadRequest",
-      "valid": false,
+      "id": "invalid-completion-22",
+      "operationId": "completeArtifact",
+      "part": "body",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
-        "uploadSucceeded": true,
+        "state": "uploaded",
+        "sizeBytes": 104857601,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
+      }
+    },
+    {
+      "id": "invalid-completion-23",
+      "operationId": "completeArtifact",
+      "part": "body",
+      "value": {
+        "state": "uploaded",
         "sizeBytes": 1.5,
         "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
       }
     },
     {
-      "id": "ack-17",
-      "operationId": "acknowledgeUpload",
-      "schema": "AcknowledgeUploadRequest",
-      "valid": false,
+      "id": "invalid-completion-24",
+      "operationId": "completeArtifact",
+      "part": "body",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
-        "uploadSucceeded": true,
+        "state": "uploaded",
         "sizeBytes": 5,
         "sha256": "not-a-hash"
       }
     },
     {
-      "id": "ack-18",
-      "operationId": "acknowledgeUpload",
-      "schema": "AcknowledgeUploadRequest",
-      "valid": false,
+      "id": "invalid-completion-25",
+      "operationId": "completeArtifact",
+      "part": "body",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
-        "uploadSucceeded": false,
+        "state": "reserved",
         "sizeBytes": 5,
         "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
       }
     },
     {
-      "id": "ack-19",
-      "operationId": "acknowledgeUpload",
-      "schema": "AcknowledgeUploadRequest",
-      "valid": false,
+      "id": "invalid-completion-26",
+      "operationId": "completeArtifact",
+      "part": "body",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
-        "uploadSucceeded": true,
+        "state": "uploaded",
+        "sizeBytes": 5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+        "title": "Change metadata"
+      }
+    },
+    {
+      "id": "invalid-completion-27",
+      "operationId": "completeArtifact",
+      "part": "body",
+      "value": {
+        "state": "uploaded",
         "sizeBytes": 5,
         "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
         "uploadedAt": "2026-10-26T10:00:00Z"
@@ -464,32 +558,76 @@
     },
     {
       "id": "write-response-leaks-metadata",
-      "operationId": "acknowledgeUpload",
-      "schema": "AcknowledgeUploadResponse",
-      "valid": false,
+      "operationId": "completeArtifact",
+      "part": "response",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
+        "id": "40000000-0000-4000-8000-000000000001",
         "state": "uploaded",
         "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
-      }
+      },
+      "responseStatus": 200
     },
     {
-      "id": "upload-method",
-      "operationId": "createUpload",
-      "schema": "CreateUploadResponse",
-      "valid": false,
+      "id": "metadata-response-includes-sas",
+      "operationId": "getArtifact",
+      "part": "response",
       "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
+        "id": "40000000-0000-4000-8000-000000000001",
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
+        "state": "uploaded",
+        "createdAt": "2026-10-26T10:00:00Z",
+        "sizeBytes": 5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+        "uploadedAt": "2026-10-26T10:00:10Z",
+        "sas": {
+          "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=r&sig=DOCUMENTATION-ONLY",
+          "method": "GET",
+          "expiresAt": "2026-10-26T10:05:00Z"
+        }
+      },
+      "responseStatus": 200
+    },
+    {
+      "id": "metadata-response-includes-owner",
+      "operationId": "getArtifact",
+      "part": "response",
+      "value": {
+        "id": "40000000-0000-4000-8000-000000000001",
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice.",
+        "state": "uploaded",
+        "createdAt": "2026-10-26T10:00:00Z",
+        "sizeBytes": 5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+        "uploadedAt": "2026-10-26T10:00:10Z",
+        "producerAttemptId": "30000000-0000-4000-8000-000000000001"
+      },
+      "responseStatus": 200
+    },
+    {
+      "id": "download-url-must-use-https",
+      "operationId": "getArtifactSas",
+      "part": "response",
+      "value": {
+        "url": "http://example.com/?sig=bad",
+        "method": "GET",
+        "expiresAt": "2026-10-26T10:05:00Z"
+      },
+      "responseStatus": 200
+    },
+    {
+      "id": "upload-method-must-be-put",
+      "operationId": "createArtifact",
+      "part": "response",
+      "value": {
+        "id": "40000000-0000-4000-8000-000000000001",
         "state": "reserved",
         "upload": {
           "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/attempts/30000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
@@ -501,127 +639,143 @@
           },
           "expiresAt": "2026-10-26T10:05:00Z"
         }
-      }
-    },
-    {
-      "id": "insecure-url",
-      "operationId": "readDownload",
-      "schema": "ReadDownloadResponse",
-      "valid": false,
-      "value": {
-        "reference": {
-          "runId": "10000000-0000-4000-8000-000000000001",
-          "producerStepId": "20000000-0000-4000-8000-000000000001",
-          "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-          "name": "plan"
-        },
-        "contentType": "text/markdown",
-        "sizeBytes": 5,
-        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
-        "download": {
-          "url": "http://example.com/?sig=bad",
-          "method": "GET",
-          "expiresAt": "2026-10-26T10:05:00Z"
-        }
-      }
+      },
+      "responseStatus": 201
     }
   ],
-  "policyDenials": [
+  "accessCases": [
     {
-      "id": "changed-runId",
-      "caller": "fixture-coder-c1-e1",
-      "operationId": "readDownload",
-      "reference": {
-        "runId": "10000000-0000-4000-8000-000000000002",
-        "producerStepId": "20000000-0000-4000-8000-000000000001",
-        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-        "name": "plan"
-      },
-      "expectedStatus": 403
+      "id": "other-run",
+      "operationId": "getArtifactSas",
+      "context": "coder-c1",
+      "expectedStatus": 404,
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000003"
+      }
     },
     {
-      "id": "changed-producerStepId",
-      "caller": "fixture-coder-c1-e1",
-      "operationId": "readDownload",
-      "reference": {
-        "runId": "10000000-0000-4000-8000-000000000001",
-        "producerStepId": "20000000-0000-4000-8000-000000000002",
-        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-        "name": "plan"
-      },
-      "expectedStatus": 403
+      "id": "other-producer",
+      "operationId": "getArtifactSas",
+      "context": "coder-c1",
+      "expectedStatus": 404,
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000002"
+      }
     },
     {
-      "id": "changed-producerAttemptId",
-      "caller": "fixture-coder-c1-e1",
-      "operationId": "readDownload",
-      "reference": {
-        "runId": "10000000-0000-4000-8000-000000000001",
-        "producerStepId": "20000000-0000-4000-8000-000000000001",
-        "producerAttemptId": "30000000-0000-4000-8000-000000000003",
-        "name": "plan"
-      },
-      "expectedStatus": 403
+      "id": "other-producer-execution",
+      "operationId": "getArtifactSas",
+      "context": "coder-c1",
+      "expectedStatus": 404,
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000004"
+      }
     },
     {
-      "id": "changed-name",
-      "caller": "fixture-coder-c1-e1",
-      "operationId": "readDownload",
-      "reference": {
-        "runId": "10000000-0000-4000-8000-000000000001",
-        "producerStepId": "20000000-0000-4000-8000-000000000001",
-        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-        "name": "other"
+      "id": "unknown-artifact",
+      "operationId": "getArtifactSas",
+      "context": "coder-c1",
+      "expectedStatus": 404,
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000099"
+      }
+    },
+    {
+      "id": "same-task-cannot-complete-another-producer",
+      "operationId": "completeArtifact",
+      "context": "planner-p2",
+      "expectedStatus": 404,
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000001"
       },
-      "expectedStatus": 403
+      "body": {
+        "state": "uploaded",
+        "sizeBytes": 5,
+        "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
+      }
+    },
+    {
+      "id": "planner-cannot-read-own-write-only-artifact",
+      "operationId": "getArtifact",
+      "context": "planner-p1",
+      "expectedStatus": 404,
+      "parameters": {
+        "id": "40000000-0000-4000-8000-000000000001"
+      }
     },
     {
       "id": "coder-cannot-create-plan",
-      "caller": "fixture-coder-c1-e1",
-      "operationId": "createUpload",
-      "reference": {
-        "runId": "10000000-0000-4000-8000-000000000001",
-        "producerStepId": "20000000-0000-4000-8000-000000000001",
-        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-        "name": "plan"
-      },
+      "operationId": "createArtifact",
+      "context": "coder-c1",
+      "expectedStatus": 403,
+      "body": {
+        "name": "plan",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice."
+      }
+    },
+    {
+      "id": "unknown-task-is-denied",
+      "operationId": "listArtifacts",
+      "context": "unknown-task",
       "expectedStatus": 403
     },
     {
-      "id": "planner-has-no-read-grant",
-      "caller": "fixture-planner-p1-e1",
-      "operationId": "readDownload",
+      "id": "ungranted-name-is-denied",
+      "operationId": "createArtifact",
+      "context": "planner-p1",
+      "expectedStatus": 403,
+      "body": {
+        "name": "other",
+        "contentType": "text/markdown",
+        "kind": "notes",
+        "title": "Implementation plan",
+        "description": "Plan for the first artifact-service slice."
+      }
+    }
+  ],
+  "policyCases": [
+    {
+      "id": "update-is-never-granted",
+      "context": "planner-p1",
       "reference": {
         "runId": "10000000-0000-4000-8000-000000000001",
         "producerStepId": "20000000-0000-4000-8000-000000000001",
         "producerAttemptId": "30000000-0000-4000-8000-000000000001",
         "name": "plan"
       },
-      "expectedStatus": 403
+      "action": "update",
+      "expected": false
     },
     {
-      "id": "same-task-different-owner",
-      "caller": "fixture-planner-p2-e1",
-      "operationId": "createUpload",
+      "id": "a-reference-is-not-a-permission",
+      "context": "coder-c1",
       "reference": {
-        "runId": "10000000-0000-4000-8000-000000000001",
-        "producerStepId": "20000000-0000-4000-8000-000000000001",
-        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
+        "runId": "10000000-0000-4000-8000-000000000002",
+        "producerStepId": "20000000-0000-4000-8000-000000000005",
+        "producerAttemptId": "30000000-0000-4000-8000-000000000005",
         "name": "plan"
       },
-      "expectedStatus": 403
+      "action": "read",
+      "expected": false
+    }
+  ],
+  "invalidContexts": [
+    {
+      "id": "missing-middleware-context",
+      "value": null
     },
     {
-      "id": "unknown-task",
-      "caller": "fixture-unknown-task",
-      "operationId": "readDownload",
-      "reference": {
-        "runId": "10000000-0000-4000-8000-000000000001",
-        "producerStepId": "20000000-0000-4000-8000-000000000001",
-        "producerAttemptId": "30000000-0000-4000-8000-000000000001",
-        "name": "plan"
-      },
-      "expectedStatus": 403
+      "id": "caller-context-cannot-be-a-role-string",
+      "value": "planner"
+    },
+    {
+      "id": "caller-context-needs-trusted-bindings",
+      "value": {
+        "runId": "10000000-0000-4000-8000-000000000001"
+      }
     }
   ]
 }

@@ -18,6 +18,32 @@ export const schemas = {
     "format": "date-time",
     "pattern": "Z$"
   },
+  "ContentType": {
+    "type": "string",
+    "minLength": 3,
+    "maxLength": 127,
+    "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+  },
+  "SizeBytes": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 104857600
+  },
+  "Sha256": {
+    "type": "string",
+    "pattern": "^[0-9a-f]{64}$"
+  },
+  "Title": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 160,
+    "pattern": "^[^\\r\\n]+$"
+  },
+  "Description": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 2000
+  },
   "ArtifactRef": {
     "type": "object",
     "additionalProperties": false,
@@ -51,537 +77,7 @@ export const schemas = {
       }
     }
   },
-  "ContentType": {
-    "type": "string",
-    "minLength": 3,
-    "maxLength": 127,
-    "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
-  },
-  "SizeBytes": {
-    "type": "integer",
-    "minimum": 0,
-    "maximum": 104857600
-  },
-  "Sha256": {
-    "type": "string",
-    "pattern": "^[0-9a-f]{64}$"
-  },
-  "Kind": {
-    "type": "string",
-    "minLength": 1,
-    "maxLength": 64,
-    "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
-  },
-  "CreateUploadRequest": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "reference",
-      "contentType"
-    ],
-    "properties": {
-      "reference": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "runId",
-          "producerStepId",
-          "producerAttemptId",
-          "name"
-        ],
-        "properties": {
-          "runId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "producerStepId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "producerAttemptId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
-          }
-        }
-      },
-      "contentType": {
-        "type": "string",
-        "minLength": 3,
-        "maxLength": 127,
-        "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
-      },
-      "kind": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 64,
-        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
-      }
-    }
-  },
-  "AcknowledgeUploadRequest": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "reference",
-      "uploadSucceeded",
-      "sizeBytes",
-      "sha256"
-    ],
-    "properties": {
-      "reference": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "runId",
-          "producerStepId",
-          "producerAttemptId",
-          "name"
-        ],
-        "properties": {
-          "runId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "producerStepId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "producerAttemptId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
-          }
-        }
-      },
-      "uploadSucceeded": {
-        "type": "boolean",
-        "enum": [
-          true
-        ]
-      },
-      "sizeBytes": {
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 104857600
-      },
-      "sha256": {
-        "type": "string",
-        "pattern": "^[0-9a-f]{64}$"
-      }
-    }
-  },
-  "ReadDownloadRequest": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "reference"
-    ],
-    "properties": {
-      "reference": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "runId",
-          "producerStepId",
-          "producerAttemptId",
-          "name"
-        ],
-        "properties": {
-          "runId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "producerStepId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "producerAttemptId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
-          }
-        }
-      }
-    }
-  },
-  "UploadAuthorization": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "url",
-      "method",
-      "headers",
-      "expiresAt"
-    ],
-    "properties": {
-      "url": {
-        "type": "string",
-        "format": "uri",
-        "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
-      },
-      "method": {
-        "type": "string",
-        "enum": [
-          "PUT"
-        ]
-      },
-      "headers": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "x-ms-blob-type",
-          "If-None-Match",
-          "Content-Type"
-        ],
-        "properties": {
-          "x-ms-blob-type": {
-            "type": "string",
-            "enum": [
-              "BlockBlob"
-            ]
-          },
-          "If-None-Match": {
-            "type": "string",
-            "enum": [
-              "*"
-            ]
-          },
-          "Content-Type": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 127,
-            "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
-          }
-        }
-      },
-      "expiresAt": {
-        "type": "string",
-        "format": "date-time",
-        "pattern": "Z$"
-      }
-    }
-  },
-  "DownloadAuthorization": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "url",
-      "method",
-      "expiresAt"
-    ],
-    "properties": {
-      "url": {
-        "type": "string",
-        "format": "uri",
-        "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
-      },
-      "method": {
-        "type": "string",
-        "enum": [
-          "GET"
-        ]
-      },
-      "expiresAt": {
-        "type": "string",
-        "format": "date-time",
-        "pattern": "Z$"
-      }
-    }
-  },
-  "CreateUploadResponse": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "reference",
-      "state",
-      "upload"
-    ],
-    "properties": {
-      "reference": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "runId",
-          "producerStepId",
-          "producerAttemptId",
-          "name"
-        ],
-        "properties": {
-          "runId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "producerStepId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "producerAttemptId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
-          }
-        }
-      },
-      "state": {
-        "type": "string",
-        "enum": [
-          "reserved"
-        ]
-      },
-      "upload": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "url",
-          "method",
-          "headers",
-          "expiresAt"
-        ],
-        "properties": {
-          "url": {
-            "type": "string",
-            "format": "uri",
-            "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
-          },
-          "method": {
-            "type": "string",
-            "enum": [
-              "PUT"
-            ]
-          },
-          "headers": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "x-ms-blob-type",
-              "If-None-Match",
-              "Content-Type"
-            ],
-            "properties": {
-              "x-ms-blob-type": {
-                "type": "string",
-                "enum": [
-                  "BlockBlob"
-                ]
-              },
-              "If-None-Match": {
-                "type": "string",
-                "enum": [
-                  "*"
-                ]
-              },
-              "Content-Type": {
-                "type": "string",
-                "minLength": 3,
-                "maxLength": 127,
-                "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
-              }
-            }
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "Z$"
-          }
-        }
-      }
-    }
-  },
-  "AcknowledgeUploadResponse": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "reference",
-      "state"
-    ],
-    "properties": {
-      "reference": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "runId",
-          "producerStepId",
-          "producerAttemptId",
-          "name"
-        ],
-        "properties": {
-          "runId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "producerStepId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "producerAttemptId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
-          }
-        }
-      },
-      "state": {
-        "type": "string",
-        "enum": [
-          "uploaded"
-        ]
-      }
-    }
-  },
-  "ReadDownloadResponse": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "reference",
-      "contentType",
-      "sizeBytes",
-      "sha256",
-      "download"
-    ],
-    "properties": {
-      "reference": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "runId",
-          "producerStepId",
-          "producerAttemptId",
-          "name"
-        ],
-        "properties": {
-          "runId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "producerStepId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "producerAttemptId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
-          }
-        }
-      },
-      "contentType": {
-        "type": "string",
-        "minLength": 3,
-        "maxLength": 127,
-        "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
-      },
-      "sizeBytes": {
-        "type": "integer",
-        "minimum": 0,
-        "maximum": 104857600
-      },
-      "sha256": {
-        "type": "string",
-        "pattern": "^[0-9a-f]{64}$"
-      },
-      "download": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "url",
-          "method",
-          "expiresAt"
-        ],
-        "properties": {
-          "url": {
-            "type": "string",
-            "format": "uri",
-            "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
-          },
-          "method": {
-            "type": "string",
-            "enum": [
-              "GET"
-            ]
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "Z$"
-          }
-        }
-      }
-    }
-  },
-  "FieldError": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "path",
-      "code"
-    ],
-    "properties": {
-      "path": {
-        "type": "string",
-        "maxLength": 256
-      },
-      "code": {
-        "type": "string",
-        "enum": [
-          "required",
-          "type",
-          "format",
-          "range",
-          "unknown_field"
-        ]
-      }
-    }
-  },
-  "Assignment": {
+  "CallerContext": {
     "type": "object",
     "additionalProperties": false,
     "required": [
@@ -689,6 +185,713 @@ export const schemas = {
       }
     }
   },
+  "ArtifactIdParameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      }
+    }
+  },
+  "CreateArtifactRequest": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "name",
+      "contentType"
+    ],
+    "properties": {
+      "name": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      },
+      "contentType": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 127,
+        "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+      },
+      "kind": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      },
+      "title": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160,
+        "pattern": "^[^\\r\\n]+$"
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      }
+    }
+  },
+  "CompleteArtifactRequest": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "state",
+      "sizeBytes",
+      "sha256"
+    ],
+    "properties": {
+      "state": {
+        "type": "string",
+        "enum": [
+          "uploaded"
+        ]
+      },
+      "sizeBytes": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 104857600
+      },
+      "sha256": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    }
+  },
+  "UploadSas": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "url",
+      "method",
+      "headers",
+      "expiresAt"
+    ],
+    "properties": {
+      "url": {
+        "type": "string",
+        "format": "uri",
+        "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
+      },
+      "method": {
+        "type": "string",
+        "enum": [
+          "PUT"
+        ]
+      },
+      "headers": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "x-ms-blob-type",
+          "If-None-Match",
+          "Content-Type"
+        ],
+        "properties": {
+          "x-ms-blob-type": {
+            "type": "string",
+            "enum": [
+              "BlockBlob"
+            ]
+          },
+          "If-None-Match": {
+            "type": "string",
+            "enum": [
+              "*"
+            ]
+          },
+          "Content-Type": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 127,
+            "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+          }
+        }
+      },
+      "expiresAt": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "Z$"
+      }
+    }
+  },
+  "DownloadSas": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "url",
+      "method",
+      "expiresAt"
+    ],
+    "properties": {
+      "url": {
+        "type": "string",
+        "format": "uri",
+        "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
+      },
+      "method": {
+        "type": "string",
+        "enum": [
+          "GET"
+        ]
+      },
+      "expiresAt": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "Z$"
+      }
+    }
+  },
+  "CreateArtifactResponse": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "state",
+      "upload"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "state": {
+        "type": "string",
+        "enum": [
+          "reserved"
+        ]
+      },
+      "upload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "method",
+          "headers",
+          "expiresAt"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://[^/?#]+/[^?#]+\\?[^#]+$"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "PUT"
+            ]
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x-ms-blob-type",
+              "If-None-Match",
+              "Content-Type"
+            ],
+            "properties": {
+              "x-ms-blob-type": {
+                "type": "string",
+                "enum": [
+                  "BlockBlob"
+                ]
+              },
+              "If-None-Match": {
+                "type": "string",
+                "enum": [
+                  "*"
+                ]
+              },
+              "Content-Type": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 127,
+                "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+              }
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        }
+      }
+    }
+  },
+  "CompleteArtifactResponse": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "state"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "state": {
+        "type": "string",
+        "enum": [
+          "uploaded"
+        ]
+      }
+    }
+  },
+  "ReservedArtifactInfo": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "name",
+      "contentType",
+      "createdAt",
+      "state"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      },
+      "contentType": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 127,
+        "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+      },
+      "kind": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      },
+      "title": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160,
+        "pattern": "^[^\\r\\n]+$"
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      },
+      "createdAt": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "Z$"
+      },
+      "state": {
+        "type": "string",
+        "enum": [
+          "reserved"
+        ]
+      }
+    }
+  },
+  "UploadedArtifactInfo": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "name",
+      "contentType",
+      "createdAt",
+      "state",
+      "sizeBytes",
+      "sha256",
+      "uploadedAt"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      },
+      "contentType": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 127,
+        "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+      },
+      "kind": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      },
+      "title": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160,
+        "pattern": "^[^\\r\\n]+$"
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      },
+      "createdAt": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "Z$"
+      },
+      "state": {
+        "type": "string",
+        "enum": [
+          "uploaded"
+        ]
+      },
+      "sizeBytes": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 104857600
+      },
+      "sha256": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "uploadedAt": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "Z$"
+      }
+    }
+  },
+  "ArtifactInfo": {
+    "oneOf": [
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "contentType",
+          "createdAt",
+          "state"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          },
+          "contentType": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 127,
+            "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "pattern": "^[^\\r\\n]+$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "reserved"
+            ]
+          }
+        }
+      },
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "contentType",
+          "createdAt",
+          "state",
+          "sizeBytes",
+          "sha256",
+          "uploadedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          },
+          "contentType": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 127,
+            "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160,
+            "pattern": "^[^\\r\\n]+$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "uploaded"
+            ]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 104857600
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "uploadedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        }
+      }
+    ]
+  },
+  "ListArtifactsResponse": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "artifacts"
+    ],
+    "properties": {
+      "artifacts": {
+        "type": "array",
+        "maxItems": 128,
+        "items": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "name",
+                "contentType",
+                "createdAt",
+                "state"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                },
+                "contentType": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 127,
+                  "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+                },
+                "kind": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160,
+                  "pattern": "^[^\\r\\n]+$"
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "Z$"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "reserved"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "name",
+                "contentType",
+                "createdAt",
+                "state",
+                "sizeBytes",
+                "sha256",
+                "uploadedAt"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                },
+                "contentType": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 127,
+                  "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+                },
+                "kind": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160,
+                  "pattern": "^[^\\r\\n]+$"
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "Z$"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "uploaded"
+                  ]
+                },
+                "sizeBytes": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 104857600
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "uploadedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "Z$"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "FieldError": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "path",
+      "code"
+    ],
+    "properties": {
+      "path": {
+        "type": "string",
+        "maxLength": 256
+      },
+      "code": {
+        "type": "string",
+        "enum": [
+          "required",
+          "type",
+          "format",
+          "range",
+          "unknown_field"
+        ]
+      }
+    }
+  },
   "Error400": {
     "type": "object",
     "additionalProperties": false,
@@ -749,36 +952,6 @@ export const schemas = {
       }
     }
   },
-  "Error401": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "error"
-    ],
-    "properties": {
-      "error": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "code",
-          "message"
-        ],
-        "properties": {
-          "code": {
-            "type": "string",
-            "enum": [
-              "UNAUTHENTICATED"
-            ]
-          },
-          "message": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256
-          }
-        }
-      }
-    }
-  },
   "Error403": {
     "type": "object",
     "additionalProperties": false,
@@ -828,6 +1001,36 @@ export const schemas = {
             "type": "string",
             "enum": [
               "ARTIFACT_NOT_FOUND"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        }
+      }
+    }
+  },
+  "Error405": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "error"
+    ],
+    "properties": {
+      "error": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "METHOD_NOT_ALLOWED"
             ]
           },
           "message": {
@@ -977,37 +1180,8 @@ export const schemas = {
           "code": {
             "type": "string",
             "enum": [
+              "CALLER_CONTEXT_UNAVAILABLE",
               "DEPENDENCY_UNAVAILABLE"
-            ]
-          },
-          "message": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256
-          }
-        }
-      }
-    }
-  },
-  "Error405": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "error"
-    ],
-    "properties": {
-      "error": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "code",
-          "message"
-        ],
-        "properties": {
-          "code": {
-            "type": "string",
-            "enum": [
-              "METHOD_NOT_ALLOWED"
             ]
           },
           "message": {
@@ -1099,36 +1273,6 @@ export const schemas = {
               "code": {
                 "type": "string",
                 "enum": [
-                  "UNAUTHENTICATED"
-                ]
-              },
-              "message": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              }
-            }
-          }
-        }
-      },
-      {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "error"
-        ],
-        "properties": {
-          "error": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "code",
-              "message"
-            ],
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
                   "FORBIDDEN"
                 ]
               },
@@ -1160,6 +1304,36 @@ export const schemas = {
                 "type": "string",
                 "enum": [
                   "ARTIFACT_NOT_FOUND"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "METHOD_NOT_ALLOWED"
                 ]
               },
               "message": {
@@ -1309,37 +1483,8 @@ export const schemas = {
               "code": {
                 "type": "string",
                 "enum": [
+                  "CALLER_CONTEXT_UNAVAILABLE",
                   "DEPENDENCY_UNAVAILABLE"
-                ]
-              },
-              "message": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              }
-            }
-          }
-        }
-      },
-      {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "error"
-        ],
-        "properties": {
-          "error": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "code",
-              "message"
-            ],
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "METHOD_NOT_ALLOWED"
                 ]
               },
               "message": {

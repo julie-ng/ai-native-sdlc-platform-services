@@ -44,6 +44,6 @@ Project knowledge belongs in repository documentation. Personal memories and oth
 
 ## Artifact service planning
 
-Issue #5 provides the proposed [artifact contract](./docs/api/README.md), [artifact plan](./docs/plans/artifact-service.md) and [workflow identity reference](./docs/plans/workflow-service.md). The contract includes OpenAPI, positive/negative examples, exact adapter interfaces and verification instructions. Its provenance table distinguishes requirements and inherited proposals from new choices awaiting PR review. No product routes, database or Azure integration are implemented.
+Issue #5 provides the proposed [artifact contract](./docs/api/README.md), [artifact plan](./docs/plans/artifact-service.md) and [workflow identity reference](./docs/plans/workflow-service.md). The contract includes OpenAPI, positive/negative examples, exact adapter interfaces and verification instructions. Its airport analogy explains server-owned access and discovery; trusted caller context comes from middleware, with authentication outside this slice. Its provenance table distinguishes requirements and inherited proposals from new choices awaiting PR review. No product routes, database or Azure integration are implemented.
 
 `npm run check:artifact-contract` checks OpenAPI structure, all supplied schemas/examples, generated schema freshness and design-port types on Node 24. It is included in `verify`. Use `npm run generate:artifact-schemas` after editing the contract. Application behavioral tests and full application typechecking remain future implementation work.

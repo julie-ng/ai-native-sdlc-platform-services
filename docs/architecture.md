@@ -35,7 +35,7 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 
 - Review the [artifact contract proposal](./api/README.md), including its labeled new choices. The pinned [artifact](./plans/artifact-service.md) and [workflow](./plans/workflow-service.md) plans are reference material, not acceptance of their proposals.
 - For the artifact slice, this PR proposes PostgreSQL 17/Drizzle/node-postgres, Ajv runtime validation, native Node tests and exact interfaces/fixtures. Only contract-check tooling is installed. No runtime/schema/client is provisioned by documentation.
-- Production caller authentication, real credentials and cluster assignment delivery remain deferred. Broader workflow/product choices remain outside this slice.
+- Caller authentication is outside this task: upstream middleware supplies trusted `event.context.caller`. The artifact contract defines its shape and scoped resource access; real credentials and cluster context delivery remain deferred. Broader workflow/product choices remain outside this slice.
 
 ## Decision log
 
@@ -45,9 +45,10 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 | 2026-10-25 / coding preferences | Use PascalCase components and adapt utility/composable conventions to TypeScript. Do not inherit another application's domain model, credentials, or service choices. |
 | 2026-10-25 / agent portability | Author rules once in root/nested `AGENTS.md` and workflows in standard `SKILL.md` files. Client adapters are separate; repo docs must support fresh sessions independently of personal memory. |
 | 2026-10-25 / continuous integration | Use the official Nuxt ESLint module with flat configuration and stylistic rules to check framework code and existing conventions together. Make lint, guidance checks, and a single production build required CI steps through `verify`. Keep npm audit informational, including high and critical advisory details in the job summary; audit failures do not block delivery. Defer tests and explicit typechecking until introduced separately. |
+| 2026-10-26 / artifact review direction | Model the API as artifacts, with discovery and separate metadata/SAS reads. Apply the airport analogy: trusted middleware supplies caller context; the service owns access and an artifact ID cannot grant it. Authentication is outside this slice. Exact new contract choices remain labeled proposals for PR review. |
 
 ## Contract review record
 
 | Date / status | Proposal and review boundary |
 | --- | --- |
-| 2026-10-26 / issue #5, proposed | [Artifact baseline](./plans/artifact-service.md), [workflow reference](./plans/workflow-service.md) and [HTTP/adapter contract](./api/README.md) make the next implementation self-contained. [Provenance](./api/README.md#choice-provenance) labels choices absent from the pinned plans. This branch proposes them for PR review; they are not recorded as previously accepted decisions. Installed contract checks establish schema/example/type consistency, not an implemented API or Azure handoff. |
+| 2026-10-26 / issue #5, proposed | [Artifact baseline](./plans/artifact-service.md), [workflow reference](./plans/workflow-service.md) and [HTTP/adapter contract](./api/README.md) make the next implementation self-contained. [Provenance](./api/README.md#choice-provenance) labels choices absent from the pinned plans. This branch proposes them for PR review; they are not recorded as previously accepted decisions. The revised resource contract follows architect feedback: server-owned discovery, metadata without implicit SAS issuance, and middleware-supplied context without authN implementation. Installed checks establish schema/example/type consistency, not an implemented API or Azure handoff. |
