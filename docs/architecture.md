@@ -5,9 +5,9 @@
 Platform Services is a Nuxt 4 application being developed to expose RESTful APIs. The initial release has no product UI.
 
 - The application is currently the Nuxt minimal starter, including its welcome page. No product API endpoints, authentication, database schema, or migrations are implemented.
-- Installed runtime dependencies include Nuxt/Vue, Ajv/formats, Drizzle/node-postgres and Azure Identity/Blob packages; [package.json](../package.json) and [package-lock.json](../package-lock.json) are authoritative for versions.
+- Installed runtime dependencies include Nuxt/Vue, Zod, Drizzle/node-postgres and Azure Identity/Blob packages; [package.json](../package.json) and [package-lock.json](../package-lock.json) are authoritative for versions.
 - Node.js 24 and npm are the development baseline. Nuxt project references are configured in [tsconfig.json](../tsconfig.json).
-- Shared generated artifact schemas/types and runtime validators are implemented, along with server context/policy/storage-key utilities and adapter interfaces. No service orchestration, routes, authentication, database schema/migrations or live storage adapters exist. Test-only fixtures and scoped fakes live under `tests/support/`.
+- Handwritten shared Zod schemas with inferred TypeScript types and runtime parsing are implemented, along with server context/policy/storage-key utilities and adapter interfaces. No service orchestration, routes, authentication, database schema/migrations or live storage adapters exist. Test-only fixtures and scoped fakes live under `tests/support/`.
 - `npm run check:guidance` validates local Markdown file references and shared skill metadata. Nuxt ESLint checks JavaScript, TypeScript, and Vue with stylistic rules matching repository conventions. `npm run check:artifact-contract` validates OpenAPI/examples and typechecks the exported ports. `npm run verify` runs lint, guidance checks, the artifact contract check, unit tests, typechecking and the Nuxt production build. `npm run test:unit` executes offline native Node tests; `npm run typecheck` covers Nuxt plus standalone tests/support. Both are included in `verify`.
 - GitHub Actions runs verification on pull requests targeting `main` and pushes to `main`, with manual dispatch available. A non-blocking npm audit includes development dependencies and summarizes high and critical findings in the job summary.
 
@@ -34,7 +34,7 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 ## Open decisions
 
 - Implement routes and real adapters against the merged [artifact contract](./api/README.md). The pinned [workflow reference](./plans/workflow-service.md) does not expand this slice.
-- PostgreSQL 17/Drizzle/node-postgres, Ajv validation, native Node tests and adapter interfaces follow the merged contract. Packages and pure utilities are installed; database schema, runtime clients and actual cloud transfer remain future work.
+- PostgreSQL 17/Drizzle/node-postgres, Zod validation, native Node tests and adapter interfaces follow the merged contract. Packages and pure utilities are installed; database schema, runtime clients and actual cloud transfer remain future work.
 - Caller authentication is outside this task: upstream middleware supplies trusted `event.context.caller`. The artifact contract defines its shape and scoped resource access; real credentials and cluster context delivery remain deferred. Broader workflow/product choices remain outside this slice.
 
 ## Decision log
@@ -49,6 +49,7 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 | 2026-10-26 / POC ownership simplification | Artifacts belong to a logical step, not an attempt. Repeated writes and retries use the same artifact ID/blob; planner may create/update its own plan. A different step cannot overwrite by default. Keep only latest completion size/hash/time, assume one active writer per step, and consume after production. Remove artifact attempt identity/history and overlapping-writer coordination; authentication remains upstream. These architect decisions supersede conflicting issue #5 requirements. |
 | 2026-10-26 / inline artifact review | Default to 404 for missing artifacts or no effective access; return 403 only when an existing artifact is within some granted scope but the requested action is denied. Include `createdAt` and `updatedAt`; define explicit acknowledgment updates and keep SAS renewals/read-only operations timestamp-neutral. |
 | 2026-10-26 / issue #6 implementation | Follow merged PR #12 as the authoritative contract, including its refined scope. Move schema-derived payload types to shared code and adapter ports to server code, preserving design entry points as re-exports. Use strict Ajv validation, native Node 24 offline tests and Nuxt/standalone typechecking; install the agreed database/Azure dependency baseline without constructing adapters. Authentication and token/assignment resolution remain excluded. |
+| 2026-10-26 / interactive schema review | The architect chose handwritten Zod domain schemas with comments as the source of truth, superseding PR #12's OpenAPI-first/Ajv runtime tooling choice. Runtime validation uses strict Zod schemas and payload types use `z.infer`; OpenAPI is generated from those schemas plus handwritten TypeScript HTTP definitions. Use Zod's built-in OpenAPI 3.0 schema export without another generator dependency; retain Ajv/formats only as independent development-time checks of generated examples. Preserve the HTTP shapes, permissions, adapter signatures and fixtures. |
 
 ## Contract review record
 

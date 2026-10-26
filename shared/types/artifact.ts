@@ -1,15 +1,15 @@
-import type { FromSchema } from 'json-schema-to-ts'
-import type { schemas } from '../utils/artifact-schemas/schemas.ts'
+import type { z } from 'zod'
+import type { artifactSchemas } from '../utils/zod-schemas/index.ts'
 
-export type ArtifactRef = FromSchema<typeof schemas.ArtifactRef>
-export type CallerContext = FromSchema<typeof schemas.CallerContext>
-export type CreateArtifactRequest = FromSchema<typeof schemas.CreateArtifactRequest>
-export type CompleteArtifactRequest = FromSchema<typeof schemas.CompleteArtifactRequest>
-export type CreateArtifactResponse = FromSchema<typeof schemas.CreateArtifactResponse>
-export type NewArtifactResponse = FromSchema<typeof schemas.NewArtifactResponse>
-export type CompleteArtifactResponse = FromSchema<typeof schemas.CompleteArtifactResponse>
-export type ArtifactInfo = FromSchema<typeof schemas.ArtifactInfo>
-export type ListArtifactsResponse = FromSchema<typeof schemas.ListArtifactsResponse>
-export type UploadSas = FromSchema<typeof schemas.UploadSas>
-export type DownloadSas = FromSchema<typeof schemas.DownloadSas>
-export type ErrorResponse = FromSchema<typeof schemas.ErrorResponse>
+export type ArtifactRef = z.infer<typeof artifactSchemas.ArtifactRef>
+export type CallerContext = z.infer<typeof artifactSchemas.CallerContext>
+export type CreateArtifactRequest = z.infer<typeof artifactSchemas.CreateArtifactRequest>
+export type CompleteArtifactRequest = z.infer<typeof artifactSchemas.CompleteArtifactRequest>
+export type CreateArtifactResponse = z.infer<typeof artifactSchemas.CreateArtifactResponse>
+export type NewArtifactResponse = z.infer<typeof artifactSchemas.NewArtifactResponse>
+export type CompleteArtifactResponse = z.infer<typeof artifactSchemas.CompleteArtifactResponse>
+export type ArtifactInfo = z.infer<typeof artifactSchemas.ArtifactInfo>
+export type ListArtifactsResponse = z.infer<typeof artifactSchemas.ListArtifactsResponse>
+export type UploadSas = z.infer<typeof artifactSchemas.UploadSas>
+export type DownloadSas = z.infer<typeof artifactSchemas.DownloadSas>
+export type ErrorResponse = z.infer<typeof artifactSchemas.ErrorResponse>

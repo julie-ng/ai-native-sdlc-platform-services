@@ -2,21 +2,67 @@
 
 Issue #6 implements the merged PR #12 contract. The [overview](./README.md) and [implementation details](./implementation.md) remain the behavioral specification. No routes, service composition, authentication, migrations or live adapters are supplied here.
 
+## Schema workflow
+
+```text
+EDIT BY HAND
+shared/utils/zod-schemas/*.schema.ts   Data shapes and validation rules
+scripts/artifact-openapi.ts            HTTP methods, paths, statuses and examples
+                |
+                +--> Runtime: schema.safeParse(input)
+                +--> Types: z.infer<typeof schema>
+                |
+                v
+npm run generate:artifact-openapi
+                |
+                v
+docs/api/artifact.openapi.json          GENERATED; review and commit, never hand edit
+                |
+                v
+npm run verify                         Freshness, examples, tests, types and build
+```
+
+- Edit the Zod domain schemas when fields or constraints change. Update affected examples in `docs/api/examples.json`, contexts in `docs/api/caller-contexts.fixture.json` and behavior tests as needed; these are handwritten test data.
+- Edit `scripts/artifact-openapi.ts` when paths, methods, statuses, headers or HTTP documentation change. Zod schemas cannot infer that operation metadata.
+- Run `npm run generate:artifact-openapi`, review the generated diff, then run `npm run verify` and `git diff --check`. The contract check fails if generated OpenAPI is stale.
+- JSON is an output format for OpenAPI, not the schema authoring format. No TypeScript schema constants or payload type files are generated.
+
 ## Export ownership
 
 | Module | Exports / downstream use |
 | --- | --- |
-| `shared/utils/artifact-schemas/schemas.ts` | `schemas`, generated from OpenAPI; one schema source for runtime and types |
-| `shared/utils/artifact-schemas/validation.utils.ts` | `artifactValidator`, `isArtifactValue`; strict Ajv/formats validation, cached validators, no coercion/defaults/field removal |
-| `shared/types/artifact.ts` | Schema-derived requests, acknowledgments, metadata, caller context and references |
-| `server/utils/artifact/ports.ts` | `WorkflowIdentityRepository`, `ArtifactMetadataRepository`, `ArtifactUrlIssuer`, `ArtifactServiceDependencies`, `ArtifactService`, discriminated `Result` and failure types; signatures retained from the merged contract |
-| `server/utils/artifact/context.utils.ts` | `readCallerContext`; validates only middleware's caller field and binding ownership/run constraints; failure is `context_unavailable` |
-| `server/utils/artifact/policy.utils.ts` | `deriveArtifactAccess`, `canAccessArtifact`, `sameArtifactReference`, `visibleArtifactReferences`; exact binding intersection and de-duplicated any-action visibility |
-| `server/utils/artifact/storage-key.utils.ts` | `artifactStorageKey`; validates the complete server-selected reference and derives the stable key, rejecting overrides |
+| `shared/utils/zod-schemas/common.schema.ts` | Reusable UUID, slug, timestamp and metadata constraints |
+| `shared/utils/zod-schemas/caller-context.schema.ts` | `artifactRefSchema`, `callerContextSchema`; middleware context shape, separate from HTTP claims |
+| `shared/utils/zod-schemas/artifact.schema.ts` | Registration/completion requests, write acknowledgments, metadata/list responses and ID parameters |
+| `shared/utils/zod-schemas/sas.schema.ts` | Upload/download capability responses and closed header allowlists |
+| `shared/utils/zod-schemas/error.schema.ts` | Error envelopes and field categories |
+| `shared/utils/zod-schemas/index.ts` | `artifactSchemas`; named components for generation and checked examples |
+| `shared/types/artifact.ts` | Payload/context types inferred with `z.infer`; no duplicate field definitions |
+| `server/utils/artifact/ports.ts` | `WorkflowIdentityRepository`, `ArtifactMetadataRepository`, `ArtifactUrlIssuer`, `ArtifactServiceDependencies`, `ArtifactService`, discriminated `Result` and failure types; adapter signatures retained |
+| `server/utils/artifact/context.utils.ts` | `readCallerContext`; validates middleware context shape and binding ownership/run constraints |
+| `server/utils/artifact/policy.utils.ts` | Exact task/binding policy and de-duplicated visibility scopes |
+| `server/utils/artifact/storage-key.utils.ts` | `artifactStorageKey`; validates the complete server-selected reference and derives the stable key |
 
-The design files `docs/api/artifact-ports.ts` and `docs/api/artifact-schemas.ts` re-export production-owned definitions for compatibility. Database/Azure adapters must import `server/utils/artifact/ports.ts`; payload consumers use `shared/types/artifact.ts`. Pure modules use explicit relative `.ts` imports because Node's native tests execute them outside Nuxt's alias loader. Nuxt route code should use the repository's normal aliases.
+`docs/api/artifact-ports.ts` re-exports production-owned interfaces for compatibility. Adapters import `server/utils/artifact/ports.ts`; payload consumers use `shared/types/artifact.ts`. Pure modules use explicit relative `.ts` imports so native Node tests can execute them without Nuxt's alias loader. Nuxt route code should use the repository's normal aliases.
 
-`artifactValidator(name)` exposes Ajv validation errors for future request parsing. `isArtifactValue` narrows caller/reference/request types after validation; other schemas return a boolean. HTTP error sanitization, body/media/query limits and response serialization belong to future route/service work.
+## Runtime validation
+
+Import the domain schema and call `safeParse` on unknown input. For example:
+
+```ts
+const parsed = createArtifactRequestSchema.safeParse(body)
+if (parsed.success) {
+  // parsed.data has the inferred request type.
+}
+else {
+  // parsed.error.issues describes validation failures.
+  // Future HTTP code must sanitize these into the contract's error envelope.
+}
+```
+
+Every object uses `z.strictObject` so unknown fields are rejected, including nested fields. Schemas do not coerce, trim, fill defaults or transform input. `readCallerContext` additionally checks same-run bindings and own-step outputs; shape validation does not authenticate a caller or grant resource access. HTTP validation/error shaping and response serialization remain future route/service work.
+
+Zod's built-in JSON Schema export targets OpenAPI 3.0. Schema definitions use representable constraints; cross-field ownership and authorization stay in explicit functions and tests. Ajv/formats are development-only dependencies used by the contract checker to independently validate generated OpenAPI examples. Production validation uses Zod directly.
 
 ## Offline verification and support
 
@@ -28,4 +74,7 @@ The design files `docs/api/artifact-ports.ts` and `docs/api/artifact-schemas.ts`
 
 ## Remaining implementation
 
-Routes/service composition must enforce scoped existence before action checks and sign only after authorization. Real metadata adapters must implement stable registration, latest-report/timestamp updates and database constraints; scoped fakes do not prove persistence behavior. Real Azure tests must prove overwrite and permission behavior. Installed SDKs and nonfunctional example URLs establish neither a Blob handoff nor authentication.
+- Routes/service composition must enforce scoped existence before action checks and sign only after authorization.
+- Real metadata adapters must implement stable registration, latest-report/timestamp updates and database constraints; scoped fakes do not prove persistence behavior.
+- Real Azure tests must prove overwrite and permission behavior.
+- Installed SDKs and nonfunctional example URLs establish neither a Blob handoff nor authentication.

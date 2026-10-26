@@ -1,9 +1,11 @@
-import { isArtifactValue } from '../../../shared/utils/artifact-schemas/validation.utils.ts'
+import { artifactRefSchema } from '../../../shared/utils/zod-schemas/caller-context.schema.ts'
 
 // Accept a server-selected reference, never an HTTP path or key override.
 export function artifactStorageKey(reference: unknown): string {
-  if (!isArtifactValue('ArtifactRef', reference)) {
+  const parsed = artifactRefSchema.safeParse(reference)
+  if (!parsed.success) {
     throw new TypeError('Invalid artifact reference')
   }
-  return `v1/runs/${reference.runId}/steps/${reference.producerStepId}/artifacts/${reference.name}`
+  const { runId, producerStepId, name } = parsed.data
+  return `v1/runs/${runId}/steps/${producerStepId}/artifacts/${name}`
 }

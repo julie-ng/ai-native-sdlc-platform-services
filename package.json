@@ -12,30 +12,30 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "verify": "npm run lint && npm run check:guidance && npm run check:artifact-contract && npm run test:unit && npm run typecheck && npm run build",
-    "generate:artifact-schemas": "node scripts/check-artifact-contract.ts --write",
-    "check:artifact-contract": "node scripts/check-artifact-contract.ts && tsc --ignoreConfig --noEmit --allowImportingTsExtensions --strict --skipLibCheck --module nodenext --target es2023 docs/api/artifact-ports.ts",
+    "check:artifact-contract": "node scripts/generate-artifact-openapi.ts && node scripts/check-artifact-contract.ts && tsc --ignoreConfig --noEmit --allowImportingTsExtensions --strict --skipLibCheck --module preserve --moduleResolution bundler --target es2023 docs/api/artifact-ports.ts",
     "test:unit": "node --test --test-isolation=none \"shared/**/*.test.ts\" \"server/**/*.test.ts\"",
-    "typecheck": "nuxt typecheck && tsc -p tsconfig.unit.json"
+    "typecheck": "nuxt typecheck && tsc -p tsconfig.unit.json",
+    "generate:artifact-openapi": "node scripts/generate-artifact-openapi.ts --write"
   },
   "dependencies": {
     "@azure/identity": "4.14.0",
     "@azure/storage-blob": "12.34.0",
-    "ajv": "8.20.0",
-    "ajv-formats": "3.0.1",
     "drizzle-orm": "0.45.4",
     "nuxt": "^4.6.2",
     "pg": "8.23.1",
     "vue": "^3.5.44",
-    "vue-router": "^5.4.0"
+    "vue-router": "^5.4.0",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "13.1.0",
     "@nuxt/eslint": "^1.17.0",
     "@types/node": "24.19.2",
     "@types/pg": "8.23.1",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "drizzle-kit": "0.31.11",
     "eslint": "^10.13.0",
-    "json-schema-to-ts": "3.1.1",
     "typescript": "^6.0.3",
     "vue-tsc": "3.3.13"
   }

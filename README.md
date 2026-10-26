@@ -17,7 +17,8 @@ The development server defaults to `http://localhost:3000`.
 
 ```bash
 npm run check:guidance  # Local documentation links and portable skill metadata
-npm run check:artifact-contract # OpenAPI, examples and exported port types
+npm run generate:artifact-openapi # Generate OpenAPI after editing Zod/HTTP definitions
+npm run check:artifact-contract # Generated OpenAPI freshness, examples and port types
 npm run lint            # ESLint checks; warnings fail
 npm run lint:fix        # Apply available ESLint fixes
 npm run test:unit       # Offline native Node tests
@@ -50,6 +51,6 @@ Project knowledge belongs in repository documentation. Personal memories and oth
 
 ## Artifact service foundation
 
-The merged [artifact contract](./docs/api/README.md), [artifact plan](./docs/plans/artifact-service.md) and [workflow identity reference](./docs/plans/workflow-service.md) define the API. Runtime schemas, trusted-context validation, pure policy and stable storage-key derivation are implemented. Artifacts belong to steps, retain one ID/blob across retries, and permit planner updates to their own bound plan. Authentication stays upstream. No routes, service orchestration, database schema/migrations or Azure integration are implemented.
+The merged [artifact contract](./docs/api/README.md), [artifact plan](./docs/plans/artifact-service.md) and [workflow identity reference](./docs/plans/workflow-service.md) define the API. Handwritten Zod schemas, trusted-context validation, pure policy and stable storage-key derivation are implemented. Artifacts belong to steps, retain one ID/blob across retries, and permit planner updates to their own bound plan. Authentication stays upstream. No routes, service orchestration, database schema/migrations or Azure integration are implemented.
 
-`npm run check:artifact-contract` checks OpenAPI, supplied examples, generated schema freshness and exported port types. `npm run generate:artifact-schemas` refreshes shared constants after contract edits. Unit tests exercise the runtime validators and context/policy functions; scoped port probes check the contract's denial examples without an HTTP server. See the [adapter handoff](./docs/api/foundation.md) for exports, test support and remaining work.
+`shared/utils/zod-schemas/` contains the schema source of truth, grouped by domain with comments. Runtime code uses `safeParse`; TypeScript types use `z.infer`. `npm run generate:artifact-openapi` generates `docs/api/artifact.openapi.json` from those schemas and handwritten HTTP definitions in `scripts/artifact-openapi.ts`. Edit those TypeScript sources, not the generated JSON. `npm run check:artifact-contract` checks generated OpenAPI freshness, supplied examples and exported port types. Ajv/formats are development-only generated-contract checkers. Unit tests exercise the runtime validators and context/policy functions; scoped port probes check the contract's denial examples without an HTTP server. See the [adapter handoff](./docs/api/foundation.md) for exports, test support and remaining work.

@@ -1,9 +1,16 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import spec from '../../../docs/api/artifact.openapi.json' with { type: 'json' }
-import { examples } from '../../../tests/support/artifact-fixtures.ts'
-import { artifactValidator, isArtifactValue } from './validation.utils.ts'
-import type { ArtifactSchemaName } from './validation.utils.ts'
+import { contexts, examples } from '../../../tests/support/artifact-fixtures.ts'
+import { callerContextSchema } from './caller-context.schema.ts'
+import { createArtifactRequestSchema } from './artifact.schema.ts'
+import { titleSchema, utcInstantSchema } from './common.schema.ts'
+import { artifactSchemas } from './index.ts'
+import type { ArtifactSchemaName } from './index.ts'
+
+function isArtifactValue(name: ArtifactSchemaName, value: unknown): boolean {
+  return artifactSchemas[name].safeParse(value).success
+}
 
 interface Media {
   schema: { $ref: string }
@@ -122,8 +129,32 @@ test('boundary values and malformed IDs, names, metadata and states', () => {
   }
 })
 
-test('all generated schemas compile once and validators are reused', () => {
-  for (const name of Object.keys(spec.components.schemas) as ArtifactSchemaName[]) {
-    assert.equal(artifactValidator(name), artifactValidator(name))
+test('named schema registry covers every generated OpenAPI component', () => {
+  assert.deepEqual(Object.keys(artifactSchemas).sort(), Object.keys(spec.components.schemas).sort())
+})
+
+test('direct Zod parsing retains valid wire values and rejects unknown nested context fields', () => {
+  const input = { name: 'plan', contentType: 'text/markdown', title: 'Implementation plan' }
+  const result = createArtifactRequestSchema.safeParse(input)
+  assert(result.success)
+  assert.deepEqual(result.data, input)
+
+  const caller = contexts['planner-p1']!
+  const invalid = { ...caller, outputs: [{ ...caller.outputs[0]!, permissions: ['read-all'] }] }
+  const parsed = callerContextSchema.safeParse(invalid)
+  assert(!parsed.success)
+  assert(parsed.error.issues.some(issue => issue.code === 'unrecognized_keys' && issue.path[0] === 'outputs'))
+  assert('permissions' in invalid.outputs[0]!)
+})
+
+test('Unicode metadata length limits count code points', () => {
+  assert(titleSchema.safeParse('😀'.repeat(160)).success)
+  assert(!titleSchema.safeParse('😀'.repeat(161)).success)
+})
+
+test('UTC timestamp validation rejects impossible dates and non-UTC representations', () => {
+  assert(utcInstantSchema.safeParse('2028-02-29T10:00:00.123Z').success)
+  for (const instant of ['2026-02-29T10:00:00Z', '2026-10-26T10:00:00+00:00', '2026-10-26T10:00:00', 'yesterday']) {
+    assert(!utcInstantSchema.safeParse(instant).success)
   }
 })
