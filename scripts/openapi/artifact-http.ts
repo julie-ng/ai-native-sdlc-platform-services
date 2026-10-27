@@ -32,8 +32,6 @@ function errors(...statuses: number[]) {
   return Object.fromEntries(statuses.map(status => [status, { $ref: `#/components/responses/Error${status}` }]))
 }
 
-const accessDescription = 'Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented. Artifact lookup uses the union of trusted read/create/update grants: missing or no access is 404; existing with some access but wrong action is 403. Discovery filters to readable records and returns an empty list when none are readable.'
-
 // The caller receives an independent tree through buildArtifactOpenApi().
 // There is no filesystem access, server validation or test-runner dependency.
 export function buildArtifactHttpContract() {
@@ -51,7 +49,7 @@ export function buildArtifactHttpContract() {
     'info': {
       title: 'Artifact service contract',
       version: '0.3.1',
-      description: 'Step-owned current artifacts: one ID/blob per producing step/name. Middleware supplies event.context.caller; authentication is outside this slice. Planner may create/update its own plan; consumers read after production. No attempts, revision history or overlapping-writer coordination. Generated from Zod schemas and TypeScript HTTP definitions; no routes or integrations are implemented.',
+      description: 'One current artifact per producing step/name. Trusted middleware supplies event.context.caller; task policy and exact bindings determine access. Missing or no access is 404; some access but wrong action is 403. Planners write their own plan; coders read bound plans. Assume one plan per consumer, one active writer per step, and reads after production. No history or planner recovery. Unsupported methods return 405 with Allow. Generated contract; routes and integrations are not implemented.',
     },
     'x-caller-context': { location: 'event.context.caller', schema: { $ref: '#/components/schemas/CallerContext' } },
     'paths': {
@@ -59,7 +57,7 @@ export function buildArtifactHttpContract() {
         post: {
           operationId: 'createArtifact',
           summary: 'Create an upload SAS for a step-owned artifact',
-          description: `${accessDescription} Each permitted POST creates a fresh upload SAS and creates the metadata record if needed. Repeated requests reuse the artifact ID/blob, preserve the original kind/title/description and ignore omitted or changed descriptive fields. A changed content type is 409. SAS URLs are never persisted; no previous-URL lookup or renewal protocol is required.`,
+          description: 'Register metadata if absent and issue a fresh upload SAS for the same ID/blob. First kind/title/description wins; later descriptive changes are ignored. Changed content type returns 409.',
           requestBody: requestBody('CreateArtifactRequest', first.body),
           responses: {
             200: response('CreateArtifactResponse', first.response),
@@ -70,7 +68,7 @@ export function buildArtifactHttpContract() {
         get: {
           operationId: 'listArtifacts',
           summary: 'Discover artifacts readable by the middleware-established caller',
-          description: accessDescription,
+          description: 'List readable reserved/uploaded metadata, ordered by createdAt then id ascending. Return an empty collection if none; never issue SAS URLs.',
           responses: {
             200: response('ListArtifactsResponse', example('coder-discovers-inputs').response),
             ...errors(400, 500, 503),
@@ -81,7 +79,7 @@ export function buildArtifactHttpContract() {
         put: {
           operationId: 'completeArtifact',
           summary: 'Record the latest successful upload; retain no completion history',
-          description: accessDescription,
+          description: 'After Azure upload succeeds, report size and SHA-256. Every accepted report replaces the latest values and acknowledgment timestamps, including identical retries. Maximum reported size: 1,000,000 bytes; uploaded bytes are not verified.',
           parameters: idParameter,
           requestBody: requestBody('CompleteArtifactRequest', completed.body),
           responses: {
@@ -92,11 +90,11 @@ export function buildArtifactHttpContract() {
         get: {
           operationId: 'getArtifact',
           summary: 'Read artifact metadata without generating a SAS URL',
-          description: accessDescription,
+          description: 'Return reserved or uploaded metadata without a SAS URL.',
           parameters: idParameter,
           responses: {
             200: response('ArtifactInfo', example('coder-reads-plan-metadata').response),
-            ...errors(400, 403, 404, 409, 500, 503),
+            ...errors(400, 403, 404, 500, 503),
           },
         },
       },
@@ -104,7 +102,7 @@ export function buildArtifactHttpContract() {
         get: {
           operationId: 'getArtifactSas',
           summary: 'Receive a just-in-time download SAS URL',
-          description: accessDescription,
+          description: 'Issue a read SAS for the current blob; return 409 if upload has not been acknowledged.',
           parameters: idParameter,
           responses: {
             200: response('DownloadSas', example('coder-requests-download-url').response),

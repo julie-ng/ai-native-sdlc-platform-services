@@ -17,10 +17,10 @@ test('validation does not coerce, trim, strip or default HTTP data', () => {
 })
 
 test('completion boundaries, invalid states and malformed descriptive metadata', () => {
-  for (const sizeBytes of [-1, 0.5, 104857601, null]) {
+  for (const sizeBytes of [-1, 0.5, 1000001, null]) {
     expect(completeArtifactRequestSchema.safeParse({ state: 'uploaded', sizeBytes, sha256: 'a'.repeat(64) }).success).toBe(false)
   }
-  for (const sizeBytes of [0, 104857600]) {
+  for (const sizeBytes of [0, 1000000]) {
     expect(completeArtifactRequestSchema.safeParse({ state: 'uploaded', sizeBytes, sha256: 'a'.repeat(64) }).success).toBe(true)
   }
   for (const state of ['reserved', 'complete', null]) {

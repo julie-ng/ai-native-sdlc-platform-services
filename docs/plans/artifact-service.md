@@ -1,7 +1,7 @@
 # Artifact service — POC contract
 
 > [!IMPORTANT]
-> Merged contract; an [executable foundation](../api/foundation.md) exists, with no product API or live integration yet. The architect's review decisions below supersede the original issue's attempt-specific, universally create-only requirements. The pinned plans are references; [choice sources](../api/README.md#choice-sources) distinguish agreed rules from new proposals.
+> The [API contract](../api/README.md) defines the current POC; [implementation details](../api/implementation.md) cover persistence and storage. Schemas and policy utilities exist; routes and live adapters remain unimplemented. Accepted refinements are recorded in the [decision log](../architecture.md#decision-log).
 
 ## Ontology
 

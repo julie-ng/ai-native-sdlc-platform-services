@@ -599,7 +599,7 @@
       "part": "body",
       "value": {
         "state": "uploaded",
-        "sizeBytes": 104857601,
+        "sizeBytes": 1000001,
         "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
       }
     },
