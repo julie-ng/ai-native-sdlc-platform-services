@@ -2,6 +2,10 @@
 
 Shared instructions for every coding agent working in this repository.
 
+## Git & GitHub Configuration
+
+Before doing anything, see [docs/git-workflow.md](./docs/git-workflow.md) to configure your git credentials to be able to access the github CLI for full context.
+
 ## Project and reading order
 
 - Nuxt 4 application for RESTful platform APIs. TypeScript is the default; UI work follows the initial release.
