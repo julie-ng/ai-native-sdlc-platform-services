@@ -33,6 +33,7 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 | `npm run lint` | Check JavaScript, TypeScript, and Vue with ESLint; warnings fail |
 | `npm run lint:fix` | Apply available ESLint fixes |
 | `npm run build` | Build the application |
+| `npm run test:contract` | Check generated OpenAPI freshness, structure and deterministic generation |
 | `npm run test:unit` | Run offline native Node unit tests |
 | `npm run typecheck` | Check Nuxt application and standalone unit/support TypeScript |
 | `npm run verify` | Run lint, guidance/contract checks, unit tests, typechecking and build |

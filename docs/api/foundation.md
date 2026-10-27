@@ -24,7 +24,7 @@ npm run verify                         Freshness, examples, tests, types and bui
 
 - Edit the Zod domain schemas when fields or constraints change. Update affected examples in `docs/api/examples.json`, contexts in `docs/api/caller-contexts.fixture.json` and behavior tests as needed; these are handwritten test data.
 - Edit `scripts/artifact-openapi.ts` when paths, methods, statuses, headers or HTTP documentation change. Zod schemas cannot infer that operation metadata.
-- Run `npm run generate:artifact-openapi`, review the generated diff, then run `npm run verify` and `git diff --check`. The contract check fails if generated OpenAPI is stale.
+- Run `npm run generate:artifact-openapi`, review the generated diff, then run `npm run verify` and `git diff --check`. Named contract tests fail if generated OpenAPI is stale.
 - JSON is an output format for OpenAPI, not the schema authoring format. No TypeScript schema constants or payload type files are generated.
 
 ## Export ownership
@@ -73,6 +73,8 @@ Tests inject fixed server-owned context directly. Production authentication and 
 Persistence integrity remains required: metadata adapters enforce the producing-step foreign key and validate its run membership. That database responsibility is independent of authenticating the caller.
 
 ## Offline verification and support
+
+- `npm run test:contract` checks generated-file freshness, OpenAPI structure and deterministic isolated generation. The generation CLI only writes the document; it never runs tests.
 
 - `npm run test:unit` runs native Node 24 tests in one process, without aliases, a server, credentials or a database. Tests must avoid shared environment mutations.
 - `npm run typecheck` runs `nuxt typecheck` and the strict standalone `tsconfig.unit.json`, including tests and support modules. `npm run verify` includes both commands.

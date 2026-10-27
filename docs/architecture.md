@@ -57,6 +57,8 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 
 | 2026-10-27 / human SAS request simplification | Each permitted POST creates a fresh upload SAS for a stable step/name artifact. No URL renewal protocol, previous-URL lookup or SAS persistence. First descriptive metadata wins; repeated POSTs ignore omitted/changed kind/title/description without requiring replay. Keep content type consistent (409 on mismatch), timestamps and latest completion unchanged. This supersedes exact descriptive-metadata matching in PR #12. |
 
+| 2026-10-27 / contract tooling separation | Build OpenAPI through a pure function with fresh per-call state. The explicit generation CLI only writes output; named native Node contract tests own freshness, deterministic generation and OpenAPI structure checks. Other legacy assertions migrate separately. |
+
 ## Contract review record
 
 | Date / status | Proposal and review boundary |

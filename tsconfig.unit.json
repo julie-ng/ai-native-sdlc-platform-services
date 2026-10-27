@@ -17,6 +17,8 @@
     "tests/support/**/*.ts",
     "docs/api/artifact-ports.ts",
     "scripts/artifact-openapi.ts",
-    "scripts/generate-artifact-openapi.ts"
+    "scripts/generate-artifact-openapi.ts",
+    "scripts/openapi/**/*.ts",
+    "tests/contract/**/*.ts"
   ]
 }
