@@ -10,7 +10,7 @@ Agents run under a separate identity from host.
 
 ### In a Dev Container (default)
 
-- **Git**: See [credential setup](./.agents/instructions/dev-container/git-setup-user-gpg-key.md) to configure your git credentials to be able to access the github CLI for full context.
+- **Git**: See [credential setup](./.agents/instructions/git-setup-user-github.md) to configure your git credentials to be able to access the github CLI for full context.
 
 
 ### In Host environment

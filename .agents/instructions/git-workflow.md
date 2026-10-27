@@ -15,7 +15,7 @@ GitHub enforces these restrictions on the agent identity; they do not prevent lo
 
 - Pushes are limited to `agent/**/*`, `claude/**/*`, and `codex/**/*`.
 - The agent cannot push to remote `main` or merge PRs.
-- Workflow updates are limited by the agent token's permissions; see [credential setup](./dev-container/git-setup-user-gpg-key.md).
+- Workflow updates are limited by the agent token's permissions; see [credential setup](./git-setup-user-github.md).
 
 ## Branches and worktrees
 
