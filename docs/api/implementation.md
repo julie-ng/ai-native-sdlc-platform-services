@@ -27,10 +27,10 @@
   - A planner with write access to an existing plan gets 403 on metadata/download reads; a coder with read access gets 403 when completing/writing it. Return no artifact fields with the error. A readable but never-acknowledged artifact returns 409 for a download SAS, after permission succeeds.
 - Discovery queries only readable scope and returns 200 with an empty list if none exists.
   - It neither returns write-only records nor fails the whole collection with 403. Having a raw binding without an effective policy capability grants no visibility.
-- Registration targets the caller's own step/name, derived server-side; an input with the same name is a different target.
-  - If that target is outside any-action scope, return 404 without lookup. If visible, use `findReferenceWithinScope` before deciding permission: missing + create grant allows insertion; missing without create is 404; existing + missing required action is 403. Upload SAS issuance requires both create and update capability on the own output, regardless of upload state. Only permitted requests reach metadata comparison/registration or signing.
+- Each POST requests a fresh upload SAS for the caller's own step/name, derived server-side; an input with the same name is a different target.
+  - If that target is outside any-action scope, return 404 without lookup. If visible, use `findReferenceWithinScope` before deciding permission: missing + create grant allows insertion; missing without create is 404; existing + missing required action is 403. Upload SAS issuance requires both create and update capability on the own output, regardless of upload state. Only permitted requests reach metadata find-or-create or signing.
 - Completion first looks up the ID within any-action scope, then checks own-output create/update permissions.
-  - Read-only access produces 403 for an existing artifact, not 404. A changed completion without update permission is also 403; a metadata mismatch on an otherwise permitted registration remains 409.
+  - Read-only access produces 403 for an existing artifact, not 404. A changed completion without update permission is also 403; a changed content type on an otherwise permitted POST remains 409.
 
 | Field | Validation / ownership |
 | --- | --- |
@@ -49,13 +49,13 @@
 - Require UUID PK, unique `(producer_step_id, name)` and `producer_step_id -> steps(id) ON DELETE RESTRICT`.
   - This step FK replaces the original issue's withdrawn attempt FK. The metadata adapter joins the workflow-owned step to validate run membership as persistence integrity, independently of caller authentication; the same step/name always selects one current artifact.
 - `contentType` is NOT NULL; omitted kind/title/description become SQL NULL and are omitted from public responses.
-  - Explicit JSON null is rejected. Registration metadata stays immutable; only completion fields/state change in this slice.
+  - Explicit JSON null is rejected. The first POST establishes descriptive metadata. Repeated POSTs ignore kind/title/description and leave the row unchanged; a changed content type returns 409. Only completion fields/state change in this slice.
 - Reserved means size/hash/uploaded time are NULL; uploaded means all three are present.
   - Use explicit SQL CHECKs for state/nullability, field patterns/lengths and size/hash limits. TypeScript enum hints do not enforce database constraints.
 - Require `created_at` and `updated_at` as NOT NULL `timestamptz`, both defaulting to PostgreSQL `CURRENT_TIMESTAMP` at registration.
   - They start at the same instant. Keep `createdAt` fixed. On each accepted acknowledgment explicitly set `updated_at = CURRENT_TIMESTAMP` and `uploaded_at = CURRENT_TIMESTAMP` in the same SQL UPDATE as size/hash/state. Both use one [DB transaction timestamp](https://www.postgresql.org/docs/17/functions-datetime.html#FUNCTIONS-DATETIME-CURRENT), including identical report retries; UTC sessions/serialization yield `Z` strings.
-- SAS renewal matches the existing row without changing it; reads, failures and denied requests do not update timestamps.
-  - Do not attach an automatic ORM on-update hook or blanket trigger that would make a no-op registration/URL refresh advance `updatedAt`. No general metadata editing exists yet. Do not append history or introduce upload/attempt version numbers.
+- A repeated POST returns the existing row without changing it; reads, failures and denied requests do not update timestamps.
+  - Do not attach an automatic ORM on-update hook or blanket trigger that would make a repeated POST advance `updatedAt`. No general metadata editing exists yet. Do not append history or introduce upload/attempt version numbers.
 - Workflow owns only the run/step identity prerequisite below for this slice; artifact code imports its `steps` export.
   - Full workflow endpoints, execution tracking and an attempts table are not required. Artifact code must not create a competing owner of workflow identities.
 
@@ -66,13 +66,15 @@
 
 - Apply workflow-owned identity migrations before artifact migrations in one journal.
   - Seed the exact runs/steps in [caller-contexts.fixture.json](./caller-contexts.fixture.json) using future workflow-owned `seedArtifactWorkflowIdentities(client)` in `tests/integration/fixtures/workflow-identities.ts`. `planner-p1-later-execution` deliberately has the same context as P1: it is not another identity row.
-- Local PostgreSQL 17 tests must prove the real step FK, run membership, unique step/name, stable IDs, latest-report replacement, initial timestamp equality, acknowledgment updates and unchanged timestamps on renewal/denial, plus restart durability.
+- Local PostgreSQL 17 tests must prove the real step FK, run membership, unique step/name, stable IDs, latest-report replacement, initial timestamp equality, acknowledgment updates and unchanged timestamps on repeated POST/denial, plus restart durability.
   - Test data also names artifact IDs/references. Remove child artifacts first during cleanup or drop the disposable database. No concurrent-writer/attempt-history tests or locking protocol are required under the agreed operating assumption.
 
 ## Repeat-write semantics
 
-- `register(reference, metadata)` atomically inserts or returns the row for that step/name; it never creates a row for a retry.
-  - A different registration content type/kind/title/description is 409. `createdAt` and artifact ID remain fixed. Only the URL expiry changes on renewal; existing upload state and completion metadata remain intact.
+- `findOrCreate(reference, metadata)` atomically inserts or returns the row for that step/name; it never creates another row for a retry.
+  - First descriptive metadata wins. Ignore omitted or changed kind/title/description on repeats; do not compare them or require replay. Keep contentType consistent: a different value is 409. Artifact ID, timestamps, upload state and latest completion metadata remain intact.
+- Each permitted POST issues a fresh upload SAS using the stored content type.
+  - No previous-URL lookup, expiry check, renewal operation or URL persistence is needed. SAS creation does not update artifact metadata or timestamps.
 - The POC issues one upload capability: create or overwrite the own output.
   - Require both create and update permission before signing, even for a new artifact. No create-only producer, mode selector or conditional-upload protocol is implemented.
 - First completion requires create permission within the caller's own-output scope.
@@ -97,7 +99,7 @@ v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 - POC storage should have automatic Blob versioning disabled if no retained cloud revisions are desired.
   - Azure [creates retained versions on writes when versioning is enabled](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview). This contract does not provision or change a storage account; the real-storage test must check its configuration rather than claim one key alone prevents cloud history.
 - Every URL is a single-blob user delegation SAS (`sr=b`, `spr=https`), expiring 300 seconds after issuance; omit `startsOn` to avoid client-clock skew.
-  - A delegation key must cover the full lifetime; otherwise return 503. URLs are transient bearer capabilities: never persist or log them. Unexpired planner upload URLs can be reused; repeated POST renews them for the same ID/key.
+  - A delegation key must cover the full lifetime; otherwise return 503. URLs are transient bearer capabilities: never persist or log them. Unexpired planner upload URLs can be reused; each permitted POST creates a fresh URL for the same ID/key.
 
 | Mode | SAS / direct upload instructions |
 | --- | --- |

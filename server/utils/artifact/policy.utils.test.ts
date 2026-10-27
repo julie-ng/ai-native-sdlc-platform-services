@@ -88,7 +88,7 @@ for (const example of examples.accessCases) {
   })
 }
 
-test('discovery scope includes only readable bindings, de-duplicates and omits unregistered inputs', async () => {
+test('discovery scope includes only readable bindings, de-duplicates and omits unfindOrCreateed inputs', async () => {
   const metadata = createMetadataFake(artifactRecords())
   for (const [name, count] of [['planner-p1', 0], ['coder-c1', 1], ['coder-multiple-inputs', 2], ['coder-no-inputs', 0], ['unknown-task', 0]] as const) {
     const result = await metadata.listWithinScope(deriveArtifactAccess(contexts[name]!).readable)
@@ -107,7 +107,7 @@ test('discovery scope includes only readable bindings, de-duplicates and omits u
 test('test ports retain discriminated failures and never fake completed uploads', async () => {
   const metadata = createMetadataFake([])
   const ref = contexts['planner-p1']!.outputs[0]!
-  assert.deepEqual(await metadata.register(ref, { contentType: 'text/markdown' }), { ok: false, error: 'unavailable' })
+  assert.deepEqual(await metadata.findOrCreate(ref, { contentType: 'text/markdown' }), { ok: false, error: 'unavailable' })
   assert.deepEqual(await metadata.findReferenceWithinScope(ref, [ref]), { ok: false, error: 'not_found' })
   const urls = createUrlIssuerSpy()
   assert.deepEqual(await urls.issueUpload(artifactRecords()[0]!), { ok: false, error: 'unavailable' })

@@ -21,7 +21,7 @@
 
 | Request | Result |
 | --- | --- |
-| `POST /api/artifacts` | Register a local file, or obtain fresh upload SAS for the same artifact. |
+| `POST /api/artifacts` | Create a fresh upload SAS; create the artifact metadata record if needed. |
 | `PUT <Azure SAS URL>` | Upload directly; planner may overwrite its own plan. |
 | `PUT /api/artifacts/{id}` | Record the latest successful upload's size/hash/time. |
 | `GET /api/artifacts` | Discover readable artifact metadata, without SAS URLs. |
@@ -29,7 +29,7 @@
 | `GET /api/artifacts/{id}/sas` | Obtain a just-in-time read SAS for the current blob. |
 | `GET <Azure SAS URL>` | Download directly from Azure. |
 
-- Planner P1 writes a local file, registers `plan`, uploads it and reports completion. It may repeat the write/report cycle using the same artifact ID and blob.
+- Planner P1 writes a local file, requests an upload SAS for `plan`, uploads it and reports completion. It may repeat the write/report cycle using the same artifact ID and blob.
   - A later execution of P1 can continue editing it. A different planner step P2 does not inherit P1's write access.
 - Coder C1 reads P1's current plan after P1 finishes producing it.
   - Assume one active writer per step and no overlapping executions. No artifact history, attempt logging, version selection or concurrent-writer coordination is required.
@@ -63,37 +63,37 @@ event.context.caller = {
   - De-duplicate references. Create/update requires the caller's own output and same run/step; read requires an exact bound input/output plus read capability.
 - The selected POC map is planner `plan:create` + `plan:update`, coder `plan:read`; all other capabilities are denied.
   - Matching task types do not share ownership. Only planner own-plan writes are selected; create-only producers are deferred.
-- Registration uses `name` to select a permitted own-output slot; the service derives the full reference.
+- POST uses `name` to select a permitted own-output slot; the service derives the full reference.
   - No caller-supplied producer ID, role, permission list, blob path or SAS lifetime is accepted.
 - Determine visibility from the union of readable, creatable and updatable grants before ID lookup.
   - Repository lookups stay within that any-action scope. Missing/outside scope is 404; a found record with the wrong action is 403. List results still use readable scope only; no stored fields or SAS are returned on a permission error.
-- Writes do not imply reads. Registration/completion return small acknowledgments rather than stored rows.
+- Writes do not imply reads. POST/completion return small acknowledgments rather than stored rows.
   - A write-only planner receives no download URL or stored metadata. Policy/context unit tests run without an HTTP server; HTTP tests are separate.
 
 ## HTTP behavior
 
 | Operation | Success | Key failures |
 | --- | --- | --- |
-| Register / renew upload SAS | 201 new artifact; 200 same artifact and fresh SAS. Body: `id`, current `state`, `upload`. | 404 no access/missing step; 403 existing accessible artifact lacks create/update; 409 changed registration metadata. |
+| Create upload SAS | 201 new artifact; 200 same artifact and fresh SAS. Body: `id`, current `state`, `upload`. | 404 no access/missing step; 403 existing accessible artifact lacks create/update; 409 changed content type. |
 | Complete upload | 200; only `id`, `state: uploaded`. | 404 no access/missing; 403 existing accessible artifact lacks the required create/update action. |
 | List | 200; `{ artifacts: [...] }`, possibly empty. | Missing/malformed middleware context is 503. |
 | Metadata | 200; reserved/uploaded information. | 404 no access/missing; 403 existing artifact has only write access. |
 | Download SAS | 200; `url`, `method: GET`, `expiresAt`. | 404 no access/missing; 403 existing artifact has only write access; 409 never acknowledged. |
 
-- Registration accepts required `name`, `contentType` and optional `kind`, `title`, `description`.
-  - One row/ID per producing step/name. Repeat the same descriptive metadata to renew SAS; changing those fields is outside this slice and returns 409. After upload, the planner still receives the same ID and a write-capable SAS.
+- POST accepts required `name`, `contentType` and optional `kind`, `title`, `description`.
+  - One row/ID per producing step/name. The first POST establishes descriptive metadata; later POSTs ignore omitted or changed kind/title/description and return a fresh SAS for the same ID/blob. A different content type remains 409. No separate renewal protocol or previous-URL lookup exists.
 - Completion accepts `state: uploaded`, `sizeBytes`, `sha256`, only after Azure upload success.
   - For the planner, each accepted report replaces size/hash and refreshes `uploadedAt` and `updatedAt` together using one DB timestamp, including an identical retry. It is the last acknowledgment time, not independently verified Azure upload time; no report history is stored.
-- An unexpired planner upload SAS can be reused for multiple writes. Refreshing it does not change state, metadata, `updatedAt`, ID or blob key.
+- An unexpired planner upload SAS can be reused for multiple writes. Requesting another URL does not change state, metadata, `updatedAt`, ID or blob key. SAS URLs are never stored or logged.
   - Until another acknowledgment, metadata describes the last acknowledged upload. This POC relies on read-after-production ordering, not atomic coordination between Blob bytes and database metadata.
 - Information includes `id`, `name`, `contentType`, `state`, `createdAt`, `updatedAt` and supplied kind/title/description.
   - Uploaded records also include latest reported size/hash/`uploadedAt`; reserved records omit those fields. Responses contain no producer identity, internal reference or SAS.
 - `createdAt` is fixed at registration; `updatedAt` starts at the same instant and advances on every accepted upload acknowledgment.
-  - Descriptive metadata is immutable in this slice. Reads, denied/failed operations and SAS renewals leave timestamps unchanged. Write-only acknowledgments still omit stored timestamps/metadata.
+  - Descriptive metadata is immutable in this slice. Reads, denied/failed operations and repeated POSTs leave timestamps unchanged. Write-only acknowledgments still omit stored timestamps/metadata.
 - Discovery returns all existing readable records, reserved or uploaded, ordered by `createdAt`, then `id`, ascending.
   - At most 128 trusted bindings bound the result; no pagination or single-result assumption. Unregistered bindings do not create fake records. Metadata/discovery never calls the SAS issuer.
 - A signing failure returns 503 while preserving the artifact for retry.
-  - A planner can renew its SAS, re-upload to the same blob and then report success. Issuing a URL or recording completion does not itself upload/verify bytes or revoke previous URLs.
+  - A planner can request another SAS, re-upload to the same blob and then report success. Issuing a URL or recording completion does not itself upload/verify bytes or revoke previous URLs.
 
 ## Detailed contract and checks
 

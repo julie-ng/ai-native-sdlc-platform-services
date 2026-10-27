@@ -57,9 +57,10 @@ export type MetadataFailure = 'not_found' | 'forbidden' | 'conflict' | 'unavaila
 export type Completion = Pick<CompleteArtifactRequest, 'sizeBytes' | 'sha256'>
 
 export interface ArtifactMetadataRepository {
-  // Atomic insert-or-match by step/name. Immutable descriptive metadata must match.
-  // A repeat returns the SAME record/ID, whether reserved or uploaded.
-  register(reference: ArtifactRef, metadata: ArtifactMetadata): Promise<Result<{
+  // Atomic find-or-create by step/name. First descriptive metadata wins; repeats
+  // ignore kind/title/description and preserve the record, including timestamps.
+  // A changed contentType is a conflict. SAS URLs are never stored here.
+  findOrCreate(reference: ArtifactRef, metadata: ArtifactMetadata): Promise<Result<{
     record: ArtifactRecord
     created: boolean
   }, MetadataFailure>>

@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { contexts, examples, fixture } from '../../../tests/support/artifact-fixtures.ts'
 import { artifactStorageKey } from './storage-key.utils.ts'
 
-test('exact merged storage key, stable across renewal, overwrite and same-step later execution', () => {
+test('exact merged storage key, stable across repeated POSTs, overwrite and same-step later execution', () => {
   const reference = contexts['planner-p1']!.outputs[0]!
   const key = artifactStorageKey(reference)
   assert.equal(key, `v1/runs/${reference.runId}/steps/${reference.producerStepId}/artifacts/plan`)

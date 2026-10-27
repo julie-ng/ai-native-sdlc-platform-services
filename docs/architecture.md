@@ -55,6 +55,8 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 
 | 2026-10-27 / human POC scope reduction | Defer unused create-only uploads. The only upload SAS permits planner creation/overwrite of its own bound plan; remove the mode selector, alternate schemas and create-only retry/completion branches. Other callers remain denied under resource policy. |
 
+| 2026-10-27 / human SAS request simplification | Each permitted POST creates a fresh upload SAS for a stable step/name artifact. No URL renewal protocol, previous-URL lookup or SAS persistence. First descriptive metadata wins; repeated POSTs ignore omitted/changed kind/title/description without requiring replay. Keep content type consistent (409 on mismatch), timestamps and latest completion unchanged. This supersedes exact descriptive-metadata matching in PR #12. |
+
 ## Contract review record
 
 | Date / status | Proposal and review boundary |

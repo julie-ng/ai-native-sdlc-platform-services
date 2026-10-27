@@ -27,7 +27,7 @@
       }
     },
     {
-      "id": "planner-repeats-registration",
+      "id": "planner-requests-another-upload-sas",
       "operationId": "createArtifact",
       "context": "planner-p1",
       "responseStatus": 200,
@@ -46,10 +46,7 @@
       },
       "body": {
         "name": "plan",
-        "contentType": "text/markdown",
-        "kind": "notes",
-        "title": "Implementation plan",
-        "description": "Plan for the first artifact-service slice."
+        "contentType": "text/markdown"
       }
     },
     {
@@ -237,9 +234,9 @@
       "body": {
         "name": "plan",
         "contentType": "text/markdown",
-        "kind": "notes",
-        "title": "Implementation plan",
-        "description": "Plan for the first artifact-service slice."
+        "kind": "other-notes",
+        "title": "A different title is ignored",
+        "description": "This request does not edit stored metadata."
       }
     },
     {

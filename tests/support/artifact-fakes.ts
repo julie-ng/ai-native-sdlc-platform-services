@@ -9,7 +9,7 @@ import { sameArtifactReference } from '../../server/utils/artifact/policy.utils.
 export function createMetadataFake(records: readonly ArtifactRecord[]) {
   const within = (scope: readonly ArtifactRef[], record: ArtifactRecord) => scope.some(ref => sameArtifactReference(ref, record.reference))
   const metadata = {
-    register: mock.fn<ArtifactMetadataRepository['register']>(async () => ({ ok: false, error: 'unavailable' })),
+    findOrCreate: mock.fn<ArtifactMetadataRepository['findOrCreate']>(async () => ({ ok: false, error: 'unavailable' })),
     acknowledgeWithinScope: mock.fn<ArtifactMetadataRepository['acknowledgeWithinScope']>(async () => ({ ok: false, error: 'unavailable' })),
     listWithinScope: mock.fn<ArtifactMetadataRepository['listWithinScope']>(async scope => ({
       ok: true,

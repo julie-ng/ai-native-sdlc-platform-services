@@ -260,7 +260,7 @@ for (const example of examples.requests.filter(example => example.operationId ==
   assert.deepEqual(seed?.reference, reference, 'Registration ID must match its step-owned artifact')
   const url = new URL(response.upload.url)
   const expectedPath = `/artifacts/v1/runs/${reference.runId}/steps/${reference.producerStepId}/artifacts/${reference.name}`
-  assert.equal(url.pathname, expectedPath, 'Uploads and renewals must use the same step-owned key')
+  assert.equal(url.pathname, expectedPath, 'Repeated POSTs must use the same step-owned key')
   assert.equal(url.searchParams.get('sp'), 'w')
 }
 const revised = examples.requests.find(example => example.id === 'planner-reports-revised-plan')

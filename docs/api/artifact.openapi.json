@@ -15,7 +15,7 @@
     "/api/artifacts": {
       "post": {
         "operationId": "createArtifact",
-        "summary": "Register a step-owned artifact, or obtain fresh upload SAS for the same artifact",
+        "summary": "Create an upload SAS for a step-owned artifact",
         "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented. Artifact lookup uses the union of trusted read/create/update grants: missing or no access is 404; existing with some access but wrong action is 403. Discovery filters to readable records and returns an empty list when none are readable.",
         "responses": {
           "200": {

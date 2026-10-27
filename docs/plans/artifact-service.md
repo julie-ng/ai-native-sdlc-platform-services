@@ -14,7 +14,7 @@
 | Artifact | The current file and its metadata, with one stable ID per producing step/name. | P1's `plan`. |
 | Producer | The step that owns/creates an artifact; its executing agent writes the file. | P1 produces the plan. |
 | Consumer | A caller permitted to read that artifact. | C1 consumes P1's plan. |
-| Caller | Whoever is making the current service request, using middleware-established context. | Planner registering; coder downloading. |
+| Caller | Whoever is making the current service request, using middleware-established context. | Planner requesting upload access; coder downloading. |
 | Name | Logical artifact slot, not a filename or permission. | `plan`, not `plan.md`. |
 | SAS URL | A temporary cloud-storage capability scoped to one blob and permitted actions. | Upload or download URL. |
 
@@ -42,14 +42,14 @@
 
 | Action | Request |
 | --- | --- |
-| Register an already-local file, or renew its upload URL | `POST /api/artifacts` → same artifact ID + scoped upload SAS |
+| Request a fresh upload SAS for a local artifact | `POST /api/artifacts` → same artifact ID + scoped upload SAS |
 | Write or overwrite directly in Azure | `PUT <SAS URL>`; bytes bypass the service |
 | Report successful upload | `PUT /api/artifacts/{id}` → completion acknowledgment |
 | Discover readable artifacts | `GET /api/artifacts` → metadata list, no SAS |
 | Inspect one artifact | `GET /api/artifacts/{id}` → metadata, no SAS |
 | Obtain download access when needed | `GET /api/artifacts/{id}/sas` → read SAS |
 
-- Planner P1 in run A writes its plan locally before registering it, optionally with a title/description authored by the LLM.
+- Planner P1 in run A writes its plan locally before requesting upload access, optionally with a title/description authored by the LLM.
   - It may write that same artifact repeatedly, reusing an unexpired SAS or obtaining a fresh one. After Azure success it reports completion; coder C1 later reads the latest plan.
 - Completion reports metadata, not independently verified cloud content.
   - Missing artifacts or no granted access return 404; an existing accessible artifact with the wrong action returns 403. HTTP claims cannot replace roles, ownership or permissions from trusted context.
@@ -66,7 +66,7 @@
   - Proposed FK: `producerStepId -> steps(id)`; unique producing step/name. Workflow owns minimal run/step identities and migrations, without requiring workflow endpoints or an attempts table for this slice.
 
 - Artifacts keep `createdAt` and `updatedAt`, exposed in permitted metadata reads.
-  - Both start together; each accepted upload report refreshes `updatedAt` and `uploadedAt` with one DB timestamp. SAS renewal/read/denial does not modify the row. Mutation acknowledgments still omit stored metadata for write-only callers.
+  - Both start together; each accepted upload report refreshes `updatedAt` and `uploadedAt` with one DB timestamp. Repeated POST/read/denial does not modify the row. Mutation acknowledgments still omit stored metadata for write-only callers.
 
 ## Delivery after contract merge
 
