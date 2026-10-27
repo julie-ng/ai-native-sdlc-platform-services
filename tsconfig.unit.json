@@ -17,6 +17,7 @@
     "tests/support/**/*.ts",
     "scripts/generate-artifact-openapi.ts",
     "scripts/openapi/**/*.ts",
-    "tests/contract/**/*.ts"
+    "tests/contract/**/*.ts",
+    "vitest.config.ts"
   ]
 }

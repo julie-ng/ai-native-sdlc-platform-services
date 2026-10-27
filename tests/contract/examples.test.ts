@@ -1,9 +1,8 @@
-import assert from 'node:assert/strict'
-import { before, test } from 'node:test'
+import { assert, beforeAll, expect, test } from 'vitest'
 import { examples, loadArtifactContract } from './support/artifact-contract.utils.ts'
 
 let contract: Awaited<ReturnType<typeof loadArtifactContract>>
-before(async () => {
+beforeAll(async () => {
   contract = await loadArtifactContract()
 })
 
@@ -11,21 +10,21 @@ test('operation IDs, parameters, schemas and documented success outcomes are com
   const ids = new Set<string>()
   for (const [path, methods] of Object.entries(contract.source.paths)) {
     for (const [method, operation] of Object.entries(methods)) {
-      assert(['get', 'post', 'put'].includes(method), method)
-      assert(!ids.has(operation.operationId), 'Duplicate operation ID')
+      expect(['get', 'post', 'put'].includes(method), method).toBeTruthy()
+      expect(ids.has(operation.operationId), 'Duplicate operation ID').toBe(false)
       ids.add(operation.operationId)
       for (const parameter of operation.parameters ?? []) {
-        assert.equal(parameter.in, 'path')
-        assert(path.includes(`{${parameter.name}}`))
+        expect(parameter.in).toBe('path')
+        expect(path.includes(`{${parameter.name}}`)).toBe(true)
         assert(parameter.schema.$ref)
         contract.component(parameter.schema.$ref.split('/').at(-1)!, parameter.example, `${operation.operationId} parameter`)
       }
       for (const status of Object.keys(operation.responses).filter(status => status.startsWith('2'))) {
-        assert(examples.requests.some(example => example.operationId === operation.operationId && String(example.responseStatus) === status), `${operation.operationId}:${status}`)
+        expect(examples.requests.some(example => example.operationId === operation.operationId && String(example.responseStatus) === status), `${operation.operationId}:${status}`).toBe(true)
       }
     }
   }
-  assert.equal(ids.size, 5)
+  expect(ids.size).toBe(5)
   for (const schema of Object.values(contract.spec.components.schemas)) {
     // Compile even components not reached by an example.
     contract.compile(schema)
@@ -53,7 +52,7 @@ for (const example of examples.negativeExamples) {
       contract.media(operation.requestBody.content['application/json'], example.value, example.id, false)
     }
     else {
-      assert.equal(example.part, 'response')
+      expect(example.part).toBe('response')
       const response = operation.responses[String(example.responseStatus)]
       assert(response)
       contract.media(contract.responseMedia(response), example.value, example.id, false)
@@ -68,7 +67,7 @@ test('all HTTP documentation examples agree with runtime and exported schemas', 
       ...Object.values(operation.responses).map(contract.responseMedia),
     ]
     for (const entry of media) {
-      assert(Object.keys(entry.examples).length > 0)
+      expect(Object.keys(entry.examples).length > 0).toBeTruthy()
       for (const example of Object.values(entry.examples)) {
         contract.media(entry, example.value, operation.operationId)
       }

@@ -22,13 +22,14 @@ npm run check:artifact-contract # Alias for test:contract
 npm run test:contract   # Generated OpenAPI freshness, structure and generation
 npm run lint            # ESLint checks; warnings fail
 npm run lint:fix        # Apply available ESLint fixes
-npm run test:unit       # Offline native Node tests
+npm run test:unit       # Offline Vitest unit tests
+npm run test:watch      # Vitest watch mode
 npm run typecheck       # Nuxt and standalone tests/support TypeScript
 npm run verify          # All checks above and Nuxt production build
 npm run preview         # Preview the completed build
 ```
 
-`npm run build` is available separately. [Nuxt ESLint](https://eslint.nuxt.com/packages/module) checks JavaScript, TypeScript, and Vue using the repository's style conventions. `npm ci` generates its Nuxt configuration through the existing preparation hook. `typecheck` runs `nuxt typecheck` plus the strict standalone [test/support project](./tsconfig.unit.json). `test:unit` uses Node 24 native TypeScript support, `node:test` and `node:assert/strict`, in one process. No cloud credentials or database are needed.
+`npm run build` is available separately. [Nuxt ESLint](https://eslint.nuxt.com/packages/module) checks JavaScript, TypeScript, and Vue using the repository's style conventions. `npm ci` generates its Nuxt configuration through the existing preparation hook. `typecheck` runs `nuxt typecheck` plus the strict standalone [test/support project](./tsconfig.unit.json). `test:unit` and `test:contract` use [Vitest](https://vitest.dev/) with each test file isolated. No cloud credentials or database are needed.
 
 [CI](./.github/workflows/ci.yml) runs on pull requests targeting `main`, pushes to `main`, and manual dispatch. It installs locked dependencies with Node.js 24 from `.node-version`, then runs `npm run verify`, including lint, guidance/contract checks, unit tests, typechecking and one production build.
 

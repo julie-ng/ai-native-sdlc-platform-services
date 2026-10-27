@@ -1,6 +1,5 @@
-import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { test } from 'node:test'
+import { assert, expect, test } from 'vitest'
 import SwaggerParser from '@apidevtools/swagger-parser'
 import { artifactSchemas } from '../../shared/utils/zod-schemas/index.ts'
 import { buildArtifactOpenApi } from '../../scripts/openapi/artifact-openapi.utils.ts'
@@ -8,7 +7,7 @@ import { buildArtifactOpenApi } from '../../scripts/openapi/artifact-openapi.uti
 // Compare serialized bytes so a hand edit cannot bypass regeneration.
 test('committed OpenAPI matches freshly generated output', async () => {
   const committed = await readFile(new URL('../../docs/api/artifact.openapi.json', import.meta.url), 'utf8')
-  assert.equal(committed, `${JSON.stringify(buildArtifactOpenApi(), null, 2)}\n`, 'Run npm run generate:artifact-openapi')
+  expect(committed, 'Run npm run generate:artifact-openapi').toBe(`${JSON.stringify(buildArtifactOpenApi(), null, 2)}\n`)
 })
 
 test('OpenAPI generation is deterministic and does not retain caller mutations', async () => {
@@ -16,18 +15,18 @@ test('OpenAPI generation is deterministic and does not retain caller mutations',
   const mutable = buildArtifactOpenApi()
   Object.assign(mutable.info, { title: 'Changed by a consumer' })
   delete mutable.components.schemas.Uuid
-  assert.deepEqual(buildArtifactOpenApi(), expected)
+  expect(buildArtifactOpenApi()).toStrictEqual(expected)
   // Swagger Parser dereferences in place; it must not affect later builds.
   await SwaggerParser.validate(JSON.parse(JSON.stringify(buildArtifactOpenApi())), { resolve: { external: false } })
-  assert.deepEqual(buildArtifactOpenApi(), expected)
+  expect(buildArtifactOpenApi()).toStrictEqual(expected)
 })
 
 test('generated OpenAPI structure and internal references validate without network access', async () => {
   const document = await SwaggerParser.validate(JSON.parse(JSON.stringify(buildArtifactOpenApi())), { resolve: { external: false } })
   assert('openapi' in document)
-  assert.equal(document.openapi, '3.0.3')
+  expect(document.openapi).toBe('3.0.3')
 })
 
 test('schema registry and exported component names agree', () => {
-  assert.deepEqual(Object.keys(buildArtifactOpenApi().components.schemas).sort(), Object.keys(artifactSchemas).sort())
+  expect(Object.keys(buildArtifactOpenApi().components.schemas).sort()).toStrictEqual(Object.keys(artifactSchemas).sort())
 })

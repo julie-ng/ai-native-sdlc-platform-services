@@ -44,7 +44,7 @@ npm run verify                         Freshness, examples, tests, types and bui
 | `server/utils/artifact/policy.utils.ts` | Exact task/binding policy and de-duplicated visibility scopes |
 | `server/utils/artifact/storage-key.utils.ts` | `artifactStorageKey`; validates the complete server-selected reference and derives the stable key |
 
-Adapters import `server/utils/artifact/ports.ts`; payload consumers use `shared/types/artifact.ts`. Pure modules use explicit relative `.ts` imports so native Node tests can execute them without Nuxt's alias loader. Nuxt route code should use the repository's normal aliases.
+Adapters import `server/utils/artifact/ports.ts`; payload consumers use `shared/types/artifact.ts`. Pure modules use explicit relative `.ts` imports so unit tests can execute them without Nuxt's alias loader. Nuxt route code should use the repository's normal aliases.
 
 ## Runtime validation
 
@@ -76,7 +76,7 @@ Persistence integrity remains required: metadata adapters enforce the producing-
 ## Offline verification and support
 
 - `npm run test:contract` checks generated-file freshness, OpenAPI structure, deterministic isolated generation, examples against Zod/exported OpenAPI and fixture/scenario consistency. The generation CLI only writes the document; it never runs tests.
-- `npm run test:unit` runs native Node 24 tests in one process, without aliases, a server, credentials or a database. Tests must avoid shared environment mutations.
+- `npm run test:unit` runs Vitest tests with per-file isolation, without aliases, a server, credentials or a database. Tests must avoid shared environment mutations.
 - `npm run typecheck` runs `nuxt typecheck` and the strict standalone `tsconfig.unit.json`, including contract tests, unit tests, support modules and OpenAPI tooling. `npm run verify` runs contract tests, unit tests and typechecking once each.
 - `tests/support/artifact-fixtures.ts` exports deterministic caller contexts and workflow/artifact record fixtures as pure data. Named contract tests validate their shapes and relationships; importing fixtures does not call server validation code. Fixtures are test-only, injected as trusted middleware context; no token parser or resolver exists.
 - `tests/support/artifact-fakes.ts` supplies a scoped read-only metadata fake and URL-issuer spies. Write/signing spies return `unavailable` unless a test explicitly overrides them. No fake successful upload is supplied.

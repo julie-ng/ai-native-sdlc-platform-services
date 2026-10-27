@@ -1,24 +1,23 @@
-import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import { expect, test } from 'vitest'
 import { titleSchema, utcInstantSchema, nameSchema, uuidSchema } from './common.schema.ts'
 
 test('Unicode metadata length limits count code points', () => {
-  assert(titleSchema.safeParse('😀'.repeat(160)).success)
-  assert(!titleSchema.safeParse('😀'.repeat(161)).success)
+  expect(titleSchema.safeParse('😀'.repeat(160)).success).toBe(true)
+  expect(titleSchema.safeParse('😀'.repeat(161)).success).toBe(false)
 })
 
 test('UTC timestamp validation rejects impossible dates and non-UTC representations', () => {
-  assert(utcInstantSchema.safeParse('2028-02-29T10:00:00.123Z').success)
+  expect(utcInstantSchema.safeParse('2028-02-29T10:00:00.123Z').success).toBe(true)
   for (const instant of ['2026-02-29T10:00:00Z', '2026-10-26T10:00:00+00:00', '2026-10-26T10:00:00', 'yesterday']) {
-    assert(!utcInstantSchema.safeParse(instant).success)
+    expect(utcInstantSchema.safeParse(instant).success).toBe(false)
   }
 })
 
 test('logical names and UUIDs reject malformed values', () => {
   for (const name of ['', '../plan', 'plan.md', 'Plan', 'plän', 'a--b', 'a'.repeat(65)]) {
-    assert(!nameSchema.safeParse(name).success)
+    expect(nameSchema.safeParse(name).success).toBe(false)
   }
   for (const id of ['x', '10000000-0000-1000-8000-000000000001', '10000000-0000-4000-0000-000000000001']) {
-    assert(!uuidSchema.safeParse(id).success)
+    expect(uuidSchema.safeParse(id).success).toBe(false)
   }
 })

@@ -38,14 +38,15 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 | `npm run lint:fix` | Apply available ESLint fixes |
 | `npm run build` | Build the application |
 | `npm run test:contract` | Run named OpenAPI generation, schema/example and fixture/scenario tests |
-| `npm run test:unit` | Run offline native Node unit tests |
+| `npm run test:unit` | Run offline Vitest unit tests |
+| `npm run test:watch` | Run Vitest in watch mode |
 | `npm run typecheck` | Check Nuxt application and standalone unit/support TypeScript |
 | `npm run verify` | Run lint, guidance/contract checks, unit tests, typechecking and build |
 | `npm run preview` | Preview an existing production build |
 
 - For documentation-only changes, run `npm run check:guidance` and `git diff --check`. For application or configuration changes, run `npm run verify` plus relevant behavioral checks.
-- `npm run typecheck` uses `nuxt typecheck` and a strict standalone TypeScript project for native tests/support. `npm run test:unit` uses Node 24 native TypeScript tests in one process; keep tests independent and avoid shared environment mutations. ESLint and the build are not substitutes for these checks.
-- Unit tests belong beside their source (`name.utils.test.ts`); contract/export tests belong in `tests/contract/`; integration tests belong in `tests/integration/` when introduced. Verify meaningful behavior, failure paths, and authorization constraints.
+- `npm run typecheck` uses `nuxt typecheck` and a strict standalone TypeScript project for tests/support. `npm run test:unit` and `npm run test:contract` run [Vitest](https://vitest.dev/) with one `vitest.config.ts`; each test file is isolated, so run only the affected files with `npx vitest run <path>`. Keep tests independent and avoid shared environment mutations. ESLint and the build are not substitutes for these checks.
+- Unit tests belong beside their source (`name.utils.test.ts`) and import `test`, `expect` and other helpers explicitly from `vitest`; contract/export tests belong in `tests/contract/`; integration tests belong in `tests/integration/` when introduced. Verify meaningful behavior, failure paths, and authorization constraints.
 - Completion means the requested behavior or documentation is implemented, applicable checks pass, and affected docs reflect the result. Report unavailable checks and remaining limitations plainly.
 
 ## Code conventions

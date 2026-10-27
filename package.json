@@ -13,10 +13,11 @@
     "postinstall": "nuxt prepare",
     "verify": "npm run lint && npm run check:guidance && npm run test:contract && npm run test:unit && npm run typecheck && npm run build",
     "check:artifact-contract": "npm run test:contract",
-    "test:unit": "node --test --test-isolation=none \"shared/**/*.test.ts\" \"server/**/*.test.ts\"",
+    "test:unit": "vitest run shared server",
     "typecheck": "nuxt typecheck && tsc -p tsconfig.unit.json",
     "generate:artifact-openapi": "node scripts/generate-artifact-openapi.ts",
-    "test:contract": "node --test --test-isolation=none \"tests/contract/**/*.test.ts\""
+    "test:contract": "vitest run tests/contract",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@azure/identity": "4.14.0",
@@ -38,6 +39,7 @@
     "drizzle-kit": "0.31.11",
     "eslint": "^10.13.0",
     "typescript": "^6.0.3",
+    "vitest": "5.0.5",
     "vue-tsc": "3.3.13"
   }
 }
