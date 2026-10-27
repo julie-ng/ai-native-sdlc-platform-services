@@ -2,20 +2,24 @@
 
 Applies to `shared/**`, in addition to the root instructions.
 
-- Shared code must be safe in both server and browser contexts. Keep secrets, database clients, provider SDKs, Vue composables, and Pinia dependencies out of this directory.
-- Use `shared/utils/` for pure reusable helpers, `shared/types/` for shared type contracts, and `shared/enums/` for runtime constants/value lists when needed. Keep schema files together under `shared/utils/zod-schemas/` if Zod is selected; otherwise name the directory for the selected schema approach.
-- Define runtime validation once and infer TypeScript types from it where supported. Do not maintain divergent handwritten schemas or redundant interfaces for the same input.
-- Keep request schemas distinct from persistence schemas. A database insert shape is not automatically a safe public API payload.
-- The server validates every untrusted request. When stores are introduced, they reuse applicable shared schemas before sending mutations; components display validation errors instead of independently reimplementing domain validation.
-- Define status values once as a typed runtime constant object (`as const`) and a derived value list as needed. Reuse them in comparisons, schemas, and database mappings rather than repeating raw strings. Do not use unchecked tuple assertions to hide an incompatible validator API.
-- Use Nuxt's `#shared/` imports inside Nuxt. Do not assume nested files are auto-imported; use explicit imports or a deliberately maintained index.
-- Co-locate pure utility tests as `name.utils.test.ts` when test tooling is introduced. Include relevant invalid inputs, date/time edges, and serialization behavior.
+## Boundaries and layout
 
-## Artifact schemas and types
+- Keep shared code usable on server and browser: no secrets, database clients, provider SDKs, Vue composables, or Pinia dependencies.
+- Use `shared/utils/` for pure helpers, `shared/types/` for type contracts, `shared/enums/` for runtime constants, and `shared/utils/zod-schemas/` for Zod schemas.
+- Import nested modules explicitly or through a maintained index; do not assume auto-imports.
 
-- Read the [artifact ontology](../docs/plans/artifact-service.md#ontology) and [contract/type ownership](../docs/api/implementation.md#code-boundaries) before implementing shared artifact schemas/types. Handwritten Zod domain schemas under `shared/utils/zod-schemas/` are the source of truth; infer types with `z.infer` and generate OpenAPI. Use common ports; do not create a parallel payload or adapter contract.
-- Use `z.strictObject` at every object level; reject unknown fields rather than stripping them. Preserve wire values without coercion, defaults or transforms. Keep exportable field constraints in schemas and cross-field ownership/authorization checks in explicit functions.
-- Keep HTTP request schemas distinct from the trusted middleware caller context. Artifact ownership/references are step-based, without attempt identity; a client-provided role, reference or ID never establishes access. Shared types do not make caller-supplied context trustworthy.
-- Include server-owned `createdAt`/`updatedAt` in metadata response schemas, using the contract's UTC representation. Do not accept them in registration/completion payloads or add stored metadata to write-only acknowledgments. Preserve closed field allowlists and run `npm run check:artifact-contract` when changing shapes or examples; schema checks do not execute authorization. Direct schema unit tests import domain schemas, without generated OpenAPI or server validators; generated export/example parity belongs in `tests/contract/`.
+## Schemas and constants
 
-Reference: [Nuxt 4 shared directory](https://nuxt.com/docs/4.x/directory-structure/shared).
+- Define validation once in Zod and infer types with `z.infer`; do not duplicate schemas or interfaces.
+- Keep request, persistence, and trusted caller-context schemas separate. Client-supplied roles and IDs never establish access.
+- Define statuses once with `as const`; reuse derived values in schemas, comparisons, and database mappings. Do not hide validator incompatibilities with tuple assertions.
+- Test invalid inputs, date/time edges, and serialization where applicable.
+
+## Artifact contracts
+
+- Follow the [ontology](../docs/plans/artifact-service.md#ontology) and [schema/type contract](../docs/api/implementation.md#code-boundaries). Generate OpenAPI from domain schemas; do not edit generated JSON.
+- Use `z.strictObject` at every object level. Reject unknown fields; do not coerce, default, or transform wire values. Put cross-field ownership and authorization checks in explicit functions.
+- Follow the contract's request/response allowlists and UTC timestamp format; keep server-owned metadata out of write payloads.
+- Schema unit tests import domain schemas directly. Export/example parity belongs in `tests/contract/`; run `npm run test:contract` when changing shapes or examples.
+
+Reference: [Nuxt shared directory](https://nuxt.com/docs/4.x/directory-structure/shared).
