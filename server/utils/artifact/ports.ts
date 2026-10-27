@@ -1,35 +1,19 @@
 import type {
   ArtifactRef, CallerContext, CreateArtifactRequest, CompleteArtifactRequest,
-  CreateArtifactResponse, NewArtifactResponse, CompleteArtifactResponse,
-  ArtifactInfo, ListArtifactsResponse, UploadSas, DownloadSas,
+  UploadSas, DownloadSas,
 } from '../../../shared/types/artifact.ts'
 
 export type * from '../../../shared/types/artifact.ts'
 
+// Create and update stay distinct, mirroring Azure's create (`c`) and write (`w`)
+// SAS permissions, even though the POC planner currently holds both.
 export type ArtifactAction = 'create' | 'read' | 'update'
 
-// Middleware owns this field. HTTP input cannot replace it.
-export interface ArtifactEventContext {
-  caller: CallerContext
-}
-export type Result<T, E extends string>
-  = | { ok: true, value: T }
-    | { ok: false, error: E }
-
-// Context validation only; authentication is upstream.
-export type ReadCallerContext = (eventContext: unknown) => Result<CallerContext, 'context_unavailable'>
-// A false action check alone does not choose HTTP status; first establish
-// any-action visibility and existence, then map wrong permission to 403.
-export type CanAccessArtifact = (caller: CallerContext, reference: ArtifactRef, action: ArtifactAction) => boolean
-export interface ArtifactWriteScope {
+export interface ArtifactAccess {
+  readable: readonly ArtifactRef[]
   creatable: readonly ArtifactRef[]
   updatable: readonly ArtifactRef[]
 }
-export interface ArtifactAccess extends ArtifactWriteScope {
-  readable: readonly ArtifactRef[]
-}
-// Unknown tasks and ungranted bindings yield empty sets: no existence disclosure.
-// Visibility is the de-duplicated union of all three effective grant sets.
 export type DeriveArtifactAccess = (caller: CallerContext) => ArtifactAccess
 
 export type ArtifactMetadata = Omit<CreateArtifactRequest, 'name'>
@@ -38,66 +22,42 @@ interface ArtifactBase {
   reference: ArtifactRef
   metadata: ArtifactMetadata
   createdAt: string // UTC ISO instant, fixed on first registration.
-  updatedAt: string // Same initial instant; refreshed by each accepted acknowledgment.
+  updatedAt: string // Refreshed by every accepted write (repeated POST or completion).
 }
 export interface ReservedArtifact extends ArtifactBase {
   state: 'reserved'
   sizeBytes: null
   sha256: null
-  uploadedAt: null
 }
 export interface UploadedArtifact extends ArtifactBase {
   state: 'uploaded'
   sizeBytes: number
   sha256: string
-  uploadedAt: string // Latest accepted acknowledgment time; no history.
 }
 export type ArtifactRecord = ReservedArtifact | UploadedArtifact
-export type MetadataFailure = 'not_found' | 'forbidden' | 'conflict' | 'unavailable'
 export type Completion = Pick<CompleteArtifactRequest, 'sizeBytes' | 'sha256'>
 
-export interface ArtifactMetadataRepository {
-  // Atomic find-or-create by step/name. First descriptive metadata wins; repeats
-  // ignore kind/title/description and preserve the record, including timestamps.
-  // A changed contentType is a conflict. SAS URLs are never stored here.
-  findOrCreate(reference: ArtifactRef, metadata: ArtifactMetadata): Promise<Result<{
-    record: ArtifactRecord
-    created: boolean
-  }, MetadataFailure>>
-  // Discovery receives readable scope only. ID/reference lookups receive the union
-  // of all action scopes; missing OR no access => not_found. The service then
-  // checks the requested action on a found row, returning forbidden if needed.
-  listWithinScope(readable: readonly ArtifactRef[]): Promise<Result<ArtifactRecord[], 'unavailable'>>
-  findWithinScope(id: string, visible: readonly ArtifactRef[]): Promise<Result<ArtifactRecord, 'not_found' | 'unavailable'>>
-  findReferenceWithinScope(reference: ArtifactRef, visible: readonly ArtifactRef[]): Promise<Result<ArtifactRecord, 'not_found' | 'unavailable'>>
-  // Own-output reports require create for reserved rows and update for uploaded
-  // rows. Every accepted report, including an identical retry, refreshes
-  // uploadedAt and updatedAt using one DB instant. Existing accessible rows that
-  // need an ungranted update return forbidden; no history is retained.
-  acknowledgeWithinScope(id: string, scope: ArtifactWriteScope, completion: Completion): Promise<Result<UploadedArtifact, MetadataFailure>>
+// Adapters throw on unexpected failures; the HTTP layer turns those into 500s.
+// Authorization lives in the service, so lookups here are plain.
+export interface ArtifactRepository {
+  // Insert, or replace descriptive metadata of the existing step/name record.
+  // State, size and hash are kept; SAS URLs are never stored.
+  upsert(reference: ArtifactRef, metadata: ArtifactMetadata): Promise<{ record: ArtifactRecord, created: boolean }>
+  findById(id: string): Promise<ArtifactRecord | undefined>
+  // Only records matching these exact references, ordered by createdAt, then id.
+  listByReferences(references: readonly ArtifactRef[]): Promise<ArtifactRecord[]>
+  // Replaces the latest size/hash; no history. The caller has already checked access.
+  acknowledge(id: string, completion: Completion): Promise<UploadedArtifact>
 }
 export interface ArtifactUrlIssuer {
-  // Issue only after checking own-output create and update permissions.
-  issueUpload(record: ArtifactRecord): Promise<Result<UploadSas, 'unavailable'>>
-  issueDownload(record: UploadedArtifact): Promise<Result<DownloadSas, 'unavailable'>>
+  issueUpload(record: ArtifactRecord): Promise<UploadSas>
+  issueDownload(record: UploadedArtifact): Promise<DownloadSas>
 }
-// Caller context is supplied at the service boundary. Authentication/context
-// construction is upstream; artifact operations do not resolve workflow steps.
 export interface ArtifactServiceDependencies {
-  metadata: ArtifactMetadataRepository
+  repository: ArtifactRepository
   urls: ArtifactUrlIssuer
-  deriveArtifactAccess: DeriveArtifactAccess
 }
-export type ServiceFailure = 'forbidden' | 'not_found' | 'conflict' | 'unavailable' | 'internal_error'
-export type RegistrationResult
-  = | { status: 201, body: NewArtifactResponse }
-    | { status: 200, body: CreateArtifactResponse }
-export interface ArtifactService {
-  // Consume middleware-established context. No execution/attempt ID needed.
-  createArtifact(caller: CallerContext, request: CreateArtifactRequest): Promise<Result<RegistrationResult, ServiceFailure>>
-  completeArtifact(caller: CallerContext, id: string, request: CompleteArtifactRequest): Promise<Result<CompleteArtifactResponse, ServiceFailure>>
-  listArtifacts(caller: CallerContext): Promise<Result<ListArtifactsResponse, ServiceFailure>>
-  getArtifact(caller: CallerContext, id: string): Promise<Result<ArtifactInfo, ServiceFailure>>
-  getArtifactSas(caller: CallerContext, id: string): Promise<Result<DownloadSas, ServiceFailure>>
-}
-export type CreateArtifactService = (dependencies: ArtifactServiceDependencies) => ArtifactService
+
+export type ServiceResult<T>
+  = | { ok: true, status: 200 | 201, body: T }
+    | { ok: false, status: 403 | 404 | 409, message: string }

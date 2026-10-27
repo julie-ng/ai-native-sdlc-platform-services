@@ -1,4 +1,4 @@
-import type { ArtifactAccess, ArtifactRef, CanAccessArtifact, DeriveArtifactAccess } from './ports.ts'
+import type { ArtifactAction, ArtifactAccess, ArtifactRef, CallerContext, DeriveArtifactAccess } from './ports.ts'
 import { readCallerContext } from './context.utils.ts'
 
 export function sameArtifactReference(left: ArtifactRef, right: ArtifactRef): boolean {
@@ -29,7 +29,13 @@ export const deriveArtifactAccess: DeriveArtifactAccess = (caller) => {
   return { readable: [], creatable: [], updatable: [] }
 }
 
-export const canAccessArtifact: CanAccessArtifact = (caller, reference, action) => {
+// Visible means any granted action. Invisible artifacts are reported as 404 so
+// that a caller cannot learn whether they exist.
+export function isArtifactVisible(caller: CallerContext, reference: ArtifactRef): boolean {
+  return visibleArtifactReferences(deriveArtifactAccess(caller)).some(ref => sameArtifactReference(ref, reference))
+}
+
+export function canAccessArtifact(caller: CallerContext, reference: ArtifactRef, action: ArtifactAction): boolean {
   const access = deriveArtifactAccess(caller)
   switch (action) {
     case 'read': return access.readable.some(ref => sameArtifactReference(ref, reference))

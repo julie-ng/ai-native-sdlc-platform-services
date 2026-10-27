@@ -13,6 +13,6 @@ export const callerContextSchema = z.strictObject({
   runId: uuidSchema,
   stepId: uuidSchema,
   taskType: z.string().min(1).max(64),
-  inputs: z.array(artifactRefSchema).max(64),
-  outputs: z.array(artifactRefSchema).max(64),
+  inputs: z.array(artifactRefSchema),
+  outputs: z.array(artifactRefSchema),
 })

@@ -20,11 +20,8 @@ test('context schema preserves valid values and rejects unknown nested fields', 
   expect('permissions' in invalid.outputs[0]!).toBe(true)
 })
 
-test('context shape requires bindings and limits each binding array', () => {
+test('context shape requires bindings and rejects unknown top-level fields', () => {
   const { outputs: _outputs, ...incomplete } = caller
   expect(callerContextSchema.safeParse(incomplete).success).toBe(false)
-  for (const field of ['inputs', 'outputs']) {
-    expect(callerContextSchema.safeParse({ ...caller, [field]: Array.from({ length: 65 }, () => caller.outputs[0]) }).success).toBe(false)
-  }
   expect(callerContextSchema.safeParse({ ...caller, attemptId: caller.stepId }).success).toBe(false)
 })

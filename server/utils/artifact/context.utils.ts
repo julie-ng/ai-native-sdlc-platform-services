@@ -1,9 +1,11 @@
 import { callerContextSchema } from '../../../shared/utils/zod-schemas/caller-context.schema.ts'
-import type { ReadCallerContext } from './ports.ts'
+import type { CallerContext } from './ports.ts'
 
 // Only middleware may establish this field. Never inspect body/query/headers or
 // manufacture a caller from claims. A valid shape alone is not authentication.
-export const readCallerContext: ReadCallerContext = (eventContext) => {
+type ContextResult = { ok: true, value: CallerContext } | { ok: false, error: 'context_unavailable' }
+
+export function readCallerContext(eventContext: unknown): ContextResult {
   if (typeof eventContext !== 'object' || eventContext === null || !('caller' in eventContext)) {
     return { ok: false, error: 'context_unavailable' }
   }
