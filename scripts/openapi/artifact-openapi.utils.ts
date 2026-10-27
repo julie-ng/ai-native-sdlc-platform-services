@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { artifactSchemas } from '../../shared/utils/zod-schemas/index.ts'
-import { artifactHttpContract } from '../artifact-openapi.ts'
+import { buildArtifactHttpContract } from './artifact-http.ts'
 
 // A fresh registry and HTTP tree keep callers (including dereferencers) isolated.
 export function buildArtifactOpenApi() {
@@ -17,10 +17,10 @@ export function buildArtifactOpenApi() {
   for (const schema of Object.values(schemas)) {
     delete schema.$id
   }
-  const http = structuredClone(artifactHttpContract)
+  const http = structuredClone(buildArtifactHttpContract())
   return {
     ...http,
-    'x-generated-by': 'npm run generate:artifact-openapi; edit shared/utils/zod-schemas/ and scripts/artifact-openapi.ts',
+    'x-generated-by': 'npm run generate:artifact-openapi; edit shared/utils/zod-schemas/ and scripts/openapi/artifact-http.ts',
     'components': { ...http.components, schemas },
   }
 }

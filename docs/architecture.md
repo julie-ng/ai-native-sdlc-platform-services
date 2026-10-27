@@ -63,6 +63,8 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 
 | 2026-10-27 / policy verification boundary | Remove test-only service sequencing/status calculations and untouched-signer assertions. Unit tests exercise implemented context/policy/storage-key behavior; contract tests check authored denial narratives. Runtime 403/404, discovery and signing-order verification remain work for actual service/HTTP tests. |
 
+| 2026-10-27 / HTTP documentation ownership | Use compact operation definitions and shared response/header helpers under scripts/openapi/. HTTP documentation and contract tests consume the same authored examples JSON, including shared error examples. Generation imports data and schemas only; preserve HTTP semantics through this refactor. |
+
 ## Contract review record
 
 | Date / status | Proposal and review boundary |

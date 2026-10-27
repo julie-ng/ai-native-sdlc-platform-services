@@ -114,7 +114,7 @@ v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 ## Code boundaries
 
 - Handwritten Zod domain schemas under `shared/utils/zod-schemas/` are the source of truth; payload/context types in `shared/types/artifact.ts` use `z.infer`. Runtime callers import a domain schema and use `safeParse`. All objects are strict; no coercion/defaults/transforms or unknown-field stripping.
-  - `scripts/artifact-openapi.ts` owns handwritten HTTP metadata; `npm run generate:artifact-openapi` combines it with Zod's built-in OpenAPI 3.0 schema export to produce [OpenAPI](./artifact.openapi.json). Do not hand edit generated JSON. See the [workflow and runtime example](./foundation.md#schema-workflow).
+  - `scripts/openapi/artifact-http.ts` owns handwritten HTTP metadata; `npm run generate:artifact-openapi` combines it with Zod's built-in OpenAPI 3.0 schema export to produce [OpenAPI](./artifact.openapi.json). Do not hand edit generated JSON. See the [workflow and runtime example](./foundation.md#schema-workflow).
 - [artifact-ports.ts](./artifact-ports.ts) re-exports the compile-checked production interfaces from `server/utils/artifact/ports.ts`; the schema migration preserves their shapes. Caller context is supplied directly; no workflow-step lookup dependency is required.
   - Preserve the exported interfaces/method signatures so adapters compile against a common contract. Concrete database/SDK construction is private composition wiring.
 

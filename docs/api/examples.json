@@ -1179,5 +1179,67 @@
         "expiresAt": "2026-10-26T10:05:00Z"
       }
     }
-  ]
+  ],
+  "errors": {
+    "Error400": {
+      "error": {
+        "code": "INVALID_REQUEST",
+        "message": "invalid request",
+        "fields": [
+          {
+            "path": "/id",
+            "code": "format"
+          }
+        ]
+      }
+    },
+    "Error403": {
+      "error": {
+        "code": "FORBIDDEN",
+        "message": "forbidden"
+      }
+    },
+    "Error404": {
+      "error": {
+        "code": "ARTIFACT_NOT_FOUND",
+        "message": "artifact not found"
+      }
+    },
+    "Error405": {
+      "error": {
+        "code": "METHOD_NOT_ALLOWED",
+        "message": "method not allowed"
+      }
+    },
+    "Error409": {
+      "error": {
+        "code": "CONFLICT",
+        "message": "conflict"
+      }
+    },
+    "Error413": {
+      "error": {
+        "code": "REQUEST_TOO_LARGE",
+        "message": "request too large"
+      }
+    },
+    "Error415": {
+      "error": {
+        "code": "UNSUPPORTED_MEDIA_TYPE",
+        "message": "unsupported media type"
+      }
+    },
+    "Error500": {
+      "error": {
+        "code": "INTERNAL_ERROR",
+        "message": "internal error"
+      }
+    },
+    "Error503": {
+      "error": {
+        "code": "CALLER_CONTEXT_UNAVAILABLE",
+        "message": "caller context unavailable"
+      }
+    }
+  }
 }

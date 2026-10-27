@@ -7,7 +7,7 @@ Issue #6 implements the merged PR #12 contract. The [overview](./README.md) and 
 ```text
 EDIT BY HAND
 shared/utils/zod-schemas/*.schema.ts   Data shapes and validation rules
-scripts/artifact-openapi.ts            HTTP methods, paths, statuses and examples
+scripts/openapi/artifact-http.ts            HTTP methods, paths, statuses and examples
                 |
                 +--> Runtime: schema.safeParse(input)
                 +--> Types: z.infer<typeof schema>
@@ -22,8 +22,8 @@ docs/api/artifact.openapi.json          GENERATED; review and commit, never hand
 npm run verify                         Freshness, examples, tests, types and build
 ```
 
-- Edit the Zod domain schemas when fields or constraints change. Update affected examples in `docs/api/examples.json`, contexts in `docs/api/caller-contexts.fixture.json` and behavior tests as needed; these are handwritten test data.
-- Edit `scripts/artifact-openapi.ts` when paths, methods, statuses, headers or HTTP documentation change. Zod schemas cannot infer that operation metadata.
+- Edit the Zod domain schemas when fields or constraints change. Update affected examples in `docs/api/examples.json`, contexts in `docs/api/caller-contexts.fixture.json` and behavior tests as needed; these are shared authored data. HTTP definitions select their payload values from this same corpus rather than maintaining another copy.
+- Edit `scripts/openapi/artifact-http.ts` when paths, methods, statuses, headers or HTTP documentation change. Zod schemas cannot infer that operation metadata.
 - Run `npm run generate:artifact-openapi`, review the generated diff, then run `npm run verify` and `git diff --check`. Named contract tests fail if generated OpenAPI is stale.
 - JSON is an output format for OpenAPI, not the schema authoring format. No TypeScript schema constants or payload type files are generated.
 
