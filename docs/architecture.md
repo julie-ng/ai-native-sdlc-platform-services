@@ -61,6 +61,8 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 
 | 2026-10-27 / contract test ownership | Replace the bespoke checker with named native Node contract suites for schema/export parity, fixture integrity and static scenario consistency. Direct schema unit tests do not import generated OpenAPI; fixture imports are data-only. Keep compiler checks independent and run contract tests once in verify. |
 
+| 2026-10-27 / policy verification boundary | Remove test-only service sequencing/status calculations and untouched-signer assertions. Unit tests exercise implemented context/policy/storage-key behavior; contract tests check authored denial narratives. Runtime 403/404, discovery and signing-order verification remain work for actual service/HTTP tests. |
+
 ## Contract review record
 
 | Date / status | Proposal and review boundary |

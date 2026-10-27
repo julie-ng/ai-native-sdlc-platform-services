@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { artifactRecords, contexts, examples } from '../../../tests/support/artifact-fixtures.ts'
-import { createMetadataFake, createUrlIssuerSpy } from '../../../tests/support/artifact-fakes.ts'
+import { contexts, examples } from '../../../tests/support/artifact-fixtures.ts'
 import { canAccessArtifact, deriveArtifactAccess, visibleArtifactReferences, sameArtifactReference } from './policy.utils.ts'
 import type { ArtifactAction, CallerContext } from './ports.ts'
 
@@ -54,61 +53,21 @@ test('policy fails closed on invalid JS callers and does not mutate or retain bi
   assert.deepEqual(deriveArtifactAccess(null as unknown as CallerContext), { readable: [], creatable: [], updatable: [] })
 })
 
-// A boundary probe exercises scoped lookup + pure action decisions with ports.
-// This is not an HTTP/service implementation or proof of runtime route wiring.
-for (const example of examples.accessCases) {
-  test(`scoped port/policy composition: ${example.id}`, async () => {
-    const caller = contexts[example.context]!
-    const metadata = createMetadataFake(artifactRecords())
-    const urls = createUrlIssuerSpy()
-    const access = deriveArtifactAccess(caller)
-    const visible = visibleArtifactReferences(access)
-    if (example.operationId === 'createArtifact') {
-      assert(example.body?.name)
-      const reference = { runId: caller.runId, producerStepId: caller.stepId, name: example.body.name }
-      assert(!visible.some(ref => sameArtifactReference(ref, reference)))
-      assert.equal(example.expectedStatus, 404)
-      assert.equal(metadata.findReferenceWithinScope.mock.callCount(), 0)
-      assert.equal(urls.issueUpload.mock.callCount(), 0)
-      return
-    }
-    assert(example.parameters)
-    const record = await metadata.findWithinScope(example.parameters.id, visible)
-    let status = 404
-    if (record.ok) {
-      const action = example.operationId === 'completeArtifact' ? 'update' : 'read'
-      status = canAccessArtifact(caller, record.value.reference, action) ? 200 : 403
-      if (status === 200 && record.value.state === 'uploaded') {
-        await urls.issueDownload(record.value)
-      }
-    }
-    assert.equal(status, example.expectedStatus)
-    assert.equal(urls.issueDownload.mock.callCount(), 0)
-    assert.equal(urls.issueUpload.mock.callCount(), 0)
-  })
-}
-
-test('discovery scope includes only readable bindings, de-duplicates and omits unfindOrCreateed inputs', async () => {
-  const metadata = createMetadataFake(artifactRecords())
+test('read scope follows declared bindings and de-duplicates without assuming persistence', () => {
   for (const [name, count] of [['planner-p1', 0], ['coder-c1', 1], ['coder-multiple-inputs', 2], ['coder-no-inputs', 0], ['unknown-task', 0]] as const) {
-    const result = await metadata.listWithinScope(deriveArtifactAccess(contexts[name]!).readable)
-    assert(result.ok)
-    assert.equal(result.value.length, count)
+    assert.equal(deriveArtifactAccess(contexts[name]!).readable.length, count)
   }
   const caller = structuredClone(contexts['coder-c1']!)
-  caller.inputs.push({ ...caller.inputs[0]! }, { ...caller.inputs[0]!, producerStepId: '20000000-0000-4000-8000-000000000099' })
-  const result = await metadata.listWithinScope(deriveArtifactAccess(caller).readable)
-  assert(result.ok)
-  assert.equal(result.value.length, 1)
-  const urls = createUrlIssuerSpy()
-  assert.equal(urls.issueDownload.mock.callCount(), 0)
+  const unregistered = { ...caller.inputs[0]!, producerStepId: '20000000-0000-4000-8000-000000000099' }
+  caller.inputs.push({ ...caller.inputs[0]! }, unregistered)
+  // Policy returns permitted references; a real repository will resolve which exist.
+  assert.deepEqual(deriveArtifactAccess(caller).readable, [caller.inputs[0], unregistered])
 })
 
-test('test ports retain discriminated failures and never fake completed uploads', async () => {
-  const metadata = createMetadataFake([])
-  const ref = contexts['planner-p1']!.outputs[0]!
-  assert.deepEqual(await metadata.findOrCreate(ref, { contentType: 'text/markdown' }), { ok: false, error: 'unavailable' })
-  assert.deepEqual(await metadata.findReferenceWithinScope(ref, [ref]), { ok: false, error: 'not_found' })
-  const urls = createUrlIssuerSpy()
-  assert.deepEqual(await urls.issueUpload(artifactRecords()[0]!), { ok: false, error: 'unavailable' })
+test('visibility is the de-duplicated union of effective read/create/update scopes', () => {
+  const first = contexts['planner-p1']!.outputs[0]!
+  const second = contexts['planner-p2']!.outputs[0]!
+  assert(!sameArtifactReference(first, second))
+  assert.deepEqual(visibleArtifactReferences({ readable: [first], creatable: [second], updatable: [{ ...first }, { ...second }] }), [first, second])
+  assert.deepEqual(visibleArtifactReferences({ readable: [], creatable: [], updatable: [] }), [])
 })
