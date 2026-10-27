@@ -1,13 +1,14 @@
 # Executable artifact foundation
 
-Issue #6 implements the merged PR #12 contract. The [overview](./README.md) and [implementation details](./implementation.md) remain the behavioral specification. No routes, service composition, authentication, migrations or live adapters are supplied here.
+Issue #6 implements the merged PR #12 contract with the later human-approved POC scope reductions in the [decision log](../architecture.md#decision-log). The [overview](./README.md) and [implementation details](./implementation.md) remain the behavioral specification. No routes, service composition, authentication, migrations or live adapters are supplied here.
 
 ## Schema workflow
 
 ```text
 EDIT BY HAND
 shared/utils/zod-schemas/*.schema.ts   Data shapes and validation rules
-scripts/openapi/artifact-http.ts            HTTP methods, paths, statuses and examples
+scripts/openapi/artifact-http.ts       HTTP methods, paths and statuses
+docs/api/examples.json                  Shared authored example values
                 |
                 +--> Runtime: schema.safeParse(input)
                 +--> Types: z.infer<typeof schema>
@@ -33,7 +34,7 @@ npm run verify                         Freshness, examples, tests, types and bui
 | --- | --- |
 | `shared/utils/zod-schemas/common.schema.ts` | Reusable UUID, slug, timestamp and metadata constraints |
 | `shared/utils/zod-schemas/caller-context.schema.ts` | `artifactRefSchema`, `callerContextSchema`; middleware context shape, separate from HTTP claims |
-| `shared/utils/zod-schemas/artifact.schema.ts` | Registration/completion requests, write acknowledgments, metadata/list responses and ID parameters |
+| `shared/utils/zod-schemas/artifact.schema.ts` | Upload-SAS/completion requests, write acknowledgments, metadata/list responses and ID parameters |
 | `shared/utils/zod-schemas/sas.schema.ts` | Upload/download capability responses and closed header allowlists |
 | `shared/utils/zod-schemas/error.schema.ts` | Error envelopes and field categories |
 | `shared/utils/zod-schemas/index.ts` | `artifactSchemas`; named components for generation and checked examples |
@@ -43,7 +44,7 @@ npm run verify                         Freshness, examples, tests, types and bui
 | `server/utils/artifact/policy.utils.ts` | Exact task/binding policy and de-duplicated visibility scopes |
 | `server/utils/artifact/storage-key.utils.ts` | `artifactStorageKey`; validates the complete server-selected reference and derives the stable key |
 
-`docs/api/artifact-ports.ts` re-exports production-owned interfaces for compatibility. Adapters import `server/utils/artifact/ports.ts`; payload consumers use `shared/types/artifact.ts`. Pure modules use explicit relative `.ts` imports so native Node tests can execute them without Nuxt's alias loader. Nuxt route code should use the repository's normal aliases.
+Adapters import `server/utils/artifact/ports.ts`; payload consumers use `shared/types/artifact.ts`. Pure modules use explicit relative `.ts` imports so native Node tests can execute them without Nuxt's alias loader. Nuxt route code should use the repository's normal aliases.
 
 ## Runtime validation
 
@@ -62,7 +63,7 @@ else {
 
 Every object uses `z.strictObject` so unknown fields are rejected, including nested fields. Schemas do not coerce, trim, fill defaults or transform input. `readCallerContext` additionally checks same-run bindings and own-step outputs; shape validation does not authenticate a caller or grant resource access. HTTP validation/error shaping and response serialization remain future route/service work.
 
-Zod's built-in JSON Schema export targets OpenAPI 3.0. Schema definitions use representable constraints; cross-field ownership and authorization stay in explicit functions and tests. Ajv/formats are development-only dependencies used by the contract checker to independently validate generated OpenAPI examples. Production validation uses Zod directly.
+Zod's built-in JSON Schema export targets OpenAPI 3.0. Schema definitions use representable constraints; cross-field ownership and authorization stay in explicit functions and tests. Ajv/formats are development-only dependencies used by contract tests to independently validate generated OpenAPI examples. Production validation uses Zod directly.
 
 ## Trusted caller context boundary
 
@@ -74,17 +75,23 @@ Persistence integrity remains required: metadata adapters enforce the producing-
 
 ## Offline verification and support
 
-- `npm run test:contract` checks generated-file freshness, OpenAPI structure and deterministic isolated generation. The generation CLI only writes the document; it never runs tests.
-
+- `npm run test:contract` checks generated-file freshness, OpenAPI structure, deterministic isolated generation, examples against Zod/exported OpenAPI and fixture/scenario consistency. The generation CLI only writes the document; it never runs tests.
 - `npm run test:unit` runs native Node 24 tests in one process, without aliases, a server, credentials or a database. Tests must avoid shared environment mutations.
-- `npm run typecheck` runs `nuxt typecheck` and the strict standalone `tsconfig.unit.json`, including tests and support modules. `npm run verify` includes both commands.
-- `tests/support/artifact-fixtures.ts` loads the exact checked deterministic caller/identity fixtures and validates caller contexts. Fixtures are test-only, injected as trusted middleware context; no token parser or resolver exists.
+- `npm run typecheck` runs `nuxt typecheck` and the strict standalone `tsconfig.unit.json`, including contract tests, unit tests, support modules and OpenAPI tooling. `npm run verify` runs contract tests, unit tests and typechecking once each.
+- `tests/support/artifact-fixtures.ts` exports deterministic caller/identity fixtures as pure data. Named contract tests validate their shapes and relationships; importing fixtures does not call server validation code. Fixtures are test-only, injected as trusted middleware context; no token parser or resolver exists.
 - `tests/support/artifact-fakes.ts` supplies a scoped read-only metadata fake and URL-issuer spies. Write/signing spies return `unavailable` unless a test explicitly overrides them. No fake successful upload is supplied.
 - Contract tests check positive/negative examples against Zod and exported OpenAPI, validate fixture data in named tests and check static scenario consistency. Direct unit tests execute malformed and spoofed context cases, exact run/step/name matching, planner own-output create/update, coder bound reads, unknown actions/tasks, same-step later execution and stable validated keys. Static access-example checks do not execute a service. Real service/HTTP tests must verify 403/404 selection, readable-only discovery, response allowlists and signing only after authorization when that implementation exists.
+
+## POC upload requests
+
+- Only planner own-plan creation/overwrite is selected. There is one upload SAS shape and `issueUpload(record)` has no mode argument. Other callers remain denied by resource policy.
+- Each permitted POST obtains a fresh SAS for the stable step/name artifact; `findOrCreate` creates its metadata if absent. The first kind/title/description wins; repeated POSTs ignore omitted/changed descriptive fields. A different content type remains a conflict. Stored metadata, latest completion and timestamps stay unchanged on repeats.
+- SAS URLs exist only in responses: never persist or log them, look up a previous URL or introduce a renewal protocol.
+- These are contracts for future adapters/service orchestration, not implemented database or Azure behavior.
 
 ## Remaining implementation
 
 - Routes/service composition must enforce scoped existence before action checks and sign only after authorization.
-- Real metadata adapters must implement stable registration, latest-report/timestamp updates and database constraints; scoped fakes do not prove persistence behavior.
+- Real metadata adapters must implement stable find-or-create metadata, latest-report/timestamp updates and database constraints; scoped fakes do not prove persistence behavior.
 - Real Azure tests must prove overwrite and permission behavior.
 - Installed SDKs and nonfunctional example URLs establish neither a Blob handoff nor authentication.

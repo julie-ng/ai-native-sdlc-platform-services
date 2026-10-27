@@ -59,7 +59,7 @@ export function buildArtifactHttpContract() {
         post: {
           operationId: 'createArtifact',
           summary: 'Create an upload SAS for a step-owned artifact',
-          description: accessDescription,
+          description: `${accessDescription} Each permitted POST creates a fresh upload SAS and creates the metadata record if needed. Repeated requests reuse the artifact ID/blob, preserve the original kind/title/description and ignore omitted or changed descriptive fields. A changed content type is 409. SAS URLs are never persisted; no previous-URL lookup or renewal protocol is required.`,
           requestBody: requestBody('CreateArtifactRequest', first.body),
           responses: {
             200: response('CreateArtifactResponse', first.response),

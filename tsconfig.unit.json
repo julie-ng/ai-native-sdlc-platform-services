@@ -15,7 +15,6 @@
     "shared/**/*.ts",
     "server/utils/**/*.ts",
     "tests/support/**/*.ts",
-    "docs/api/artifact-ports.ts",
     "scripts/generate-artifact-openapi.ts",
     "scripts/openapi/**/*.ts",
     "tests/contract/**/*.ts"

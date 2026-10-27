@@ -16,7 +16,7 @@
       "post": {
         "operationId": "createArtifact",
         "summary": "Create an upload SAS for a step-owned artifact",
-        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented. Artifact lookup uses the union of trusted read/create/update grants: missing or no access is 404; existing with some access but wrong action is 403. Discovery filters to readable records and returns an empty list when none are readable.",
+        "description": "Precondition: trusted middleware has populated event.context.caller. Access is derived server-side; request fields cannot grant permissions. Contract only; no route is implemented. Artifact lookup uses the union of trusted read/create/update grants: missing or no access is 404; existing with some access but wrong action is 403. Discovery filters to readable records and returns an empty list when none are readable. Each permitted POST creates a fresh upload SAS and creates the metadata record if needed. Repeated requests reuse the artifact ID/blob, preserve the original kind/title/description and ignore omitted or changed descriptive fields. A changed content type is 409. SAS URLs are never persisted; no previous-URL lookup or renewal protocol is required.",
         "requestBody": {
           "required": true,
           "content": {

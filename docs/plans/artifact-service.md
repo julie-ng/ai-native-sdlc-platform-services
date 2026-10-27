@@ -59,7 +59,7 @@
 - Implementation agents must read the applicable [server](../../server/AGENTS.md), [database](../../server/db/AGENTS.md) and [shared](../../shared/AGENTS.md) instructions.
   - Those files carry reusable implementation rules, including the 403/404 distinction and timestamp lifecycle; the contract below supplies the exact schemas and signatures.
 - Start with the [overview](../api/README.md), then [implementation details](../api/implementation.md).
-  - [OpenAPI](../api/artifact.openapi.json), [checked examples](../api/examples.json), [test contexts/identities](../api/caller-contexts.fixture.json) and [TypeScript ports](../api/artifact-ports.ts) define exact shapes. Example names are labels, not artifact IDs.
+  - [OpenAPI](../api/artifact.openapi.json), [checked examples](../api/examples.json), [test contexts/identities](../api/caller-contexts.fixture.json) and [TypeScript ports](../../server/utils/artifact/ports.ts) define exact shapes. Example names are labels, not artifact IDs.
 - Caller context is `{ runId, stepId, taskType, inputs, outputs }`; internal references are `{ runId, producerStepId, name }`.
   - The service derives producer identity from an own-output binding. Public reads use IDs within trusted readable scope; bindings point to a step's current artifact, not to a historical execution.
 - Planned persistence is PostgreSQL 17 + Drizzle; no deployed database is assumed.

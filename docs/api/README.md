@@ -1,7 +1,7 @@
 # Artifact service contract
 
 > [!IMPORTANT]
-> Merged PR #12 is the authoritative contract. The [executable foundation](./foundation.md) implements schemas, context/policy utilities and exported ports; routes, database and Azure integration remain pending. [Choice sources](#choice-sources) preserve the proposal/review provenance; merge settled those choices for implementation. The later [schema review decision](../architecture.md#decision-log) supersedes the OpenAPI-first tooling: handwritten Zod domain schemas and TypeScript HTTP definitions now generate OpenAPI.
+> The contract follows merged PR #12 with the later human-approved scope reductions recorded in the [decision log](../architecture.md#decision-log). The [executable foundation](./foundation.md) implements schemas, context/policy utilities and exported ports; routes, database and Azure integration remain pending. [Choice sources](#choice-sources) preserve the proposal/review provenance; merge settled those choices for implementation. The later [schema review decision](../architecture.md#decision-log) supersedes the OpenAPI-first tooling: handwritten Zod domain schemas and TypeScript HTTP definitions now generate OpenAPI.
 
 - [Ontology](../plans/artifact-service.md#ontology) defines run, step, attempt, artifact, producer, consumer and caller.
   - The step owns the artifact. An agent execution writes it; retries do not create a different artifact.
@@ -88,7 +88,7 @@ event.context.caller = {
   - Until another acknowledgment, metadata describes the last acknowledged upload. This POC relies on read-after-production ordering, not atomic coordination between Blob bytes and database metadata.
 - Information includes `id`, `name`, `contentType`, `state`, `createdAt`, `updatedAt` and supplied kind/title/description.
   - Uploaded records also include latest reported size/hash/`uploadedAt`; reserved records omit those fields. Responses contain no producer identity, internal reference or SAS.
-- `createdAt` is fixed at registration; `updatedAt` starts at the same instant and advances on every accepted upload acknowledgment.
+- `createdAt` is fixed when the metadata record is created; `updatedAt` starts at the same instant and advances on every accepted upload acknowledgment.
   - Descriptive metadata is immutable in this slice. Reads, denied/failed operations and repeated POSTs leave timestamps unchanged. Write-only acknowledgments still omit stored timestamps/metadata.
 - Discovery returns all existing readable records, reserved or uploaded, ordered by `createdAt`, then `id`, ascending.
   - At most 128 trusted bindings bound the result; no pagination or single-result assumption. Unregistered bindings do not create fake records. Metadata/discovery never calls the SAS issuer.
@@ -97,8 +97,8 @@ event.context.caller = {
 
 ## Detailed contract and checks
 
-- [Implementation details](./implementation.md) define validation/errors, step-based persistence, SAS modes, ports and dependencies; [OpenAPI](./artifact.openapi.json) defines machine-readable shapes.
-  - [Ports](./artifact-ports.ts) are compile-checked interfaces, not implementations. The latest rules do not require workflow endpoints or an attempts table.
+- [Implementation details](./implementation.md) define validation/errors, step-based persistence, SAS issuance, ports and dependencies; [OpenAPI](./artifact.openapi.json) defines machine-readable shapes.
+  - [Ports](../../server/utils/artifact/ports.ts) are compile-checked interfaces, not implementations. The latest rules do not require workflow endpoints or an attempts table.
 - On Node 24: `npm ci`, `npm run check:artifact-contract`, `npm run check:guidance`, `npm run verify`, `git diff --check`.
   - Checks validate schemas, examples, seed relationships, stable example IDs; typecheck covers source ports. They do not execute authorization or prove Azure/PostgreSQL behavior.
 

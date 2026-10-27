@@ -46,7 +46,7 @@ test('repeated POST examples retain artifact identity and blob key', () => {
     assert.equal(example.response.id, first.response.id, 'Repeat writes must retain artifact ID')
   }
   for (const example of examples.requests.filter(example => example.operationId === 'createArtifact')) {
-    // These shapes were schema-validated above; check cross-example relationships.
+    // The examples suite validates shapes; this suite checks authored relationships.
     const body = example.body as { name: string }
     const response = example.response as { id: string, upload: { url: string, headers: Record<string, string> } }
     const caller = fixtures.contexts[example.context]
