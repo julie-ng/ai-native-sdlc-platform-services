@@ -28,17 +28,20 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 | `npm ci` | Install locked dependencies; also runs Nuxt preparation |
 | `npm run dev` | Start local development |
 | `npm run check:guidance` | Check repository guidance links and portable skill metadata |
-| `npm run check:artifact-contract` | Validate artifact OpenAPI/examples and typecheck design ports |
-| `npm run generate:artifact-schemas` | Refresh design schema constants from OpenAPI |
+| `npm run check:artifact-contract` | Alias for test:contract |
+| `npm run generate:artifact-openapi` | Generate OpenAPI from Zod schemas and TypeScript HTTP definitions |
 | `npm run lint` | Check JavaScript, TypeScript, and Vue with ESLint; warnings fail |
 | `npm run lint:fix` | Apply available ESLint fixes |
 | `npm run build` | Build the application |
-| `npm run verify` | Run lint, guidance and artifact contract checks, and the build |
+| `npm run test:contract` | Run named OpenAPI generation, schema/example and fixture/scenario tests |
+| `npm run test:unit` | Run offline native Node unit tests |
+| `npm run typecheck` | Check Nuxt application and standalone unit/support TypeScript |
+| `npm run verify` | Run lint, guidance/contract checks, unit tests, typechecking and build |
 | `npm run preview` | Preview an existing production build |
 
 - For documentation-only changes, run `npm run check:guidance` and `git diff --check`. For application or configuration changes, run `npm run verify` plus relevant behavioral checks.
-- No application typecheck or application test runner is configured yet; the artifact contract command checks design ports only. ESLint and the build are not substitutes for typechecking or behavioral tests. Introduce appropriate tooling alongside the first implementation that needs it, and update this table.
-- Unit tests belong beside their source (`name.utils.test.ts`); integration tests belong in `tests/integration/` when introduced. Verify meaningful behavior, failure paths, and authorization constraints.
+- `npm run typecheck` uses `nuxt typecheck` and a strict standalone TypeScript project for native tests/support. `npm run test:unit` uses Node 24 native TypeScript tests in one process; keep tests independent and avoid shared environment mutations. ESLint and the build are not substitutes for these checks.
+- Unit tests belong beside their source (`name.utils.test.ts`); contract/export tests belong in `tests/contract/`; integration tests belong in `tests/integration/` when introduced. Verify meaningful behavior, failure paths, and authorization constraints.
 - Completion means the requested behavior or documentation is implemented, applicable checks pass, and affected docs reflect the result. Report unavailable checks and remaining limitations plainly.
 
 ## Code conventions

@@ -27,7 +27,7 @@
       }
     },
     {
-      "id": "planner-repeats-registration",
+      "id": "planner-requests-another-upload-sas",
       "operationId": "createArtifact",
       "context": "planner-p1",
       "responseStatus": 200,
@@ -46,10 +46,7 @@
       },
       "body": {
         "name": "plan",
-        "contentType": "text/markdown",
-        "kind": "notes",
-        "title": "Implementation plan",
-        "description": "Plan for the first artifact-service slice."
+        "contentType": "text/markdown"
       }
     },
     {
@@ -237,9 +234,9 @@
       "body": {
         "name": "plan",
         "contentType": "text/markdown",
-        "kind": "notes",
-        "title": "Implementation plan",
-        "description": "Plan for the first artifact-service slice."
+        "kind": "other-notes",
+        "title": "A different title is ignored",
+        "description": "This request does not edit stored metadata."
       }
     },
     {
@@ -1171,7 +1168,7 @@
   "sasExamples": [
     {
       "id": "planner-create-and-overwrite-instructions",
-      "schema": "WritableUploadSas",
+      "schema": "UploadSas",
       "value": {
         "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=w&sig=DOCUMENTATION-ONLY",
         "method": "PUT",
@@ -1181,20 +1178,68 @@
         },
         "expiresAt": "2026-10-26T10:05:00Z"
       }
+    }
+  ],
+  "errors": {
+    "Error400": {
+      "error": {
+        "code": "INVALID_REQUEST",
+        "message": "invalid request",
+        "fields": [
+          {
+            "path": "/id",
+            "code": "format"
+          }
+        ]
+      }
     },
-    {
-      "id": "create-only-instructions-for-a-future-policy",
-      "schema": "CreateOnlyUploadSas",
-      "value": {
-        "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
-        "method": "PUT",
-        "headers": {
-          "x-ms-blob-type": "BlockBlob",
-          "Content-Type": "text/markdown",
-          "If-None-Match": "*"
-        },
-        "expiresAt": "2026-10-26T10:05:00Z"
+    "Error403": {
+      "error": {
+        "code": "FORBIDDEN",
+        "message": "forbidden"
+      }
+    },
+    "Error404": {
+      "error": {
+        "code": "ARTIFACT_NOT_FOUND",
+        "message": "artifact not found"
+      }
+    },
+    "Error405": {
+      "error": {
+        "code": "METHOD_NOT_ALLOWED",
+        "message": "method not allowed"
+      }
+    },
+    "Error409": {
+      "error": {
+        "code": "CONFLICT",
+        "message": "conflict"
+      }
+    },
+    "Error413": {
+      "error": {
+        "code": "REQUEST_TOO_LARGE",
+        "message": "request too large"
+      }
+    },
+    "Error415": {
+      "error": {
+        "code": "UNSUPPORTED_MEDIA_TYPE",
+        "message": "unsupported media type"
+      }
+    },
+    "Error500": {
+      "error": {
+        "code": "INTERNAL_ERROR",
+        "message": "internal error"
+      }
+    },
+    "Error503": {
+      "error": {
+        "code": "CALLER_CONTEXT_UNAVAILABLE",
+        "message": "caller context unavailable"
       }
     }
-  ]
+  }
 }

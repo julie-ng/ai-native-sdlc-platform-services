@@ -1,21 +1,12 @@
-// Design contracts only; future ownership is documented in implementation.md.
-import type { FromSchema } from 'json-schema-to-ts'
-import type { schemas } from './artifact-schemas.js'
+import type {
+  ArtifactRef, CallerContext, CreateArtifactRequest, CompleteArtifactRequest,
+  CreateArtifactResponse, NewArtifactResponse, CompleteArtifactResponse,
+  ArtifactInfo, ListArtifactsResponse, UploadSas, DownloadSas,
+} from '../../../shared/types/artifact.ts'
 
-export type ArtifactRef = FromSchema<typeof schemas.ArtifactRef>
-export type CallerContext = FromSchema<typeof schemas.CallerContext>
-export type CreateArtifactRequest = FromSchema<typeof schemas.CreateArtifactRequest>
-export type CompleteArtifactRequest = FromSchema<typeof schemas.CompleteArtifactRequest>
-export type CreateArtifactResponse = FromSchema<typeof schemas.CreateArtifactResponse>
-export type NewArtifactResponse = FromSchema<typeof schemas.NewArtifactResponse>
-export type CompleteArtifactResponse = FromSchema<typeof schemas.CompleteArtifactResponse>
-export type ArtifactInfo = FromSchema<typeof schemas.ArtifactInfo>
-export type ListArtifactsResponse = FromSchema<typeof schemas.ListArtifactsResponse>
-export type UploadSas = FromSchema<typeof schemas.UploadSas>
-export type DownloadSas = FromSchema<typeof schemas.DownloadSas>
-export type ErrorResponse = FromSchema<typeof schemas.ErrorResponse>
+export type * from '../../../shared/types/artifact.ts'
+
 export type ArtifactAction = 'create' | 'read' | 'update'
-export type UploadMode = 'create-only' | 'create-or-update'
 
 // Middleware owns this field. HTTP input cannot replace it.
 export interface ArtifactEventContext {
@@ -40,14 +31,6 @@ export interface ArtifactAccess extends ArtifactWriteScope {
 // Unknown tasks and ungranted bindings yield empty sets: no existence disclosure.
 // Visibility is the de-duplicated union of all three effective grant sets.
 export type DeriveArtifactAccess = (caller: CallerContext) => ArtifactAccess
-
-export interface WorkflowStepIdentity {
-  runId: string
-  stepId: string
-}
-export interface WorkflowIdentityRepository {
-  findStep(stepId: string): Promise<Result<WorkflowStepIdentity, 'not_found' | 'unavailable'>>
-}
 
 export type ArtifactMetadata = Omit<CreateArtifactRequest, 'name'>
 interface ArtifactBase {
@@ -74,9 +57,10 @@ export type MetadataFailure = 'not_found' | 'forbidden' | 'conflict' | 'unavaila
 export type Completion = Pick<CompleteArtifactRequest, 'sizeBytes' | 'sha256'>
 
 export interface ArtifactMetadataRepository {
-  // Atomic insert-or-match by step/name. Immutable descriptive metadata must match.
-  // A repeat returns the SAME record/ID, whether reserved or uploaded.
-  register(reference: ArtifactRef, metadata: ArtifactMetadata): Promise<Result<{
+  // Atomic find-or-create by step/name. First descriptive metadata wins; repeats
+  // ignore kind/title/description and preserve the record, including timestamps.
+  // A changed contentType is a conflict. SAS URLs are never stored here.
+  findOrCreate(reference: ArtifactRef, metadata: ArtifactMetadata): Promise<Result<{
     record: ArtifactRecord
     created: boolean
   }, MetadataFailure>>
@@ -86,19 +70,20 @@ export interface ArtifactMetadataRepository {
   listWithinScope(readable: readonly ArtifactRef[]): Promise<Result<ArtifactRecord[], 'unavailable'>>
   findWithinScope(id: string, visible: readonly ArtifactRef[]): Promise<Result<ArtifactRecord, 'not_found' | 'unavailable'>>
   findReferenceWithinScope(reference: ArtifactRef, visible: readonly ArtifactRef[]): Promise<Result<ArtifactRecord, 'not_found' | 'unavailable'>>
-  // First report needs create; changed report after upload needs update. An exact
-  // retry is accepted for create-only callers. Every accepted report refreshes
+  // Own-output reports require create for reserved rows and update for uploaded
+  // rows. Every accepted report, including an identical retry, refreshes
   // uploadedAt and updatedAt using one DB instant. Existing accessible rows that
   // need an ungranted update return forbidden; no history is retained.
   acknowledgeWithinScope(id: string, scope: ArtifactWriteScope, completion: Completion): Promise<Result<UploadedArtifact, MetadataFailure>>
 }
 export interface ArtifactUrlIssuer {
-  // Service selects mode from policy. Never issue create-only for an uploaded row.
-  issueUpload(record: ArtifactRecord, mode: UploadMode): Promise<Result<UploadSas, 'unavailable'>>
+  // Issue only after checking own-output create and update permissions.
+  issueUpload(record: ArtifactRecord): Promise<Result<UploadSas, 'unavailable'>>
   issueDownload(record: UploadedArtifact): Promise<Result<DownloadSas, 'unavailable'>>
 }
+// Caller context is supplied at the service boundary. Authentication/context
+// construction is upstream; artifact operations do not resolve workflow steps.
 export interface ArtifactServiceDependencies {
-  identities: WorkflowIdentityRepository
   metadata: ArtifactMetadataRepository
   urls: ArtifactUrlIssuer
   deriveArtifactAccess: DeriveArtifactAccess
@@ -108,7 +93,7 @@ export type RegistrationResult
   = | { status: 201, body: NewArtifactResponse }
     | { status: 200, body: CreateArtifactResponse }
 export interface ArtifactService {
-  // Consume middleware-established context. No execution/attempt identity needed.
+  // Consume middleware-established context. No execution/attempt ID needed.
   createArtifact(caller: CallerContext, request: CreateArtifactRequest): Promise<Result<RegistrationResult, ServiceFailure>>
   completeArtifact(caller: CallerContext, id: string, request: CompleteArtifactRequest): Promise<Result<CompleteArtifactResponse, ServiceFailure>>
   listArtifacts(caller: CallerContext): Promise<Result<ListArtifactsResponse, ServiceFailure>>
