@@ -9,11 +9,11 @@
 
 ## Branches and worktrees
 
-- Determine and fetch the remote default branch before creating a task branch; branch from that fetched reference. Preserve the human's uncommitted changes and other agents' checkouts, and establish ownership before concurrent writes.
-- Fetch the default branch before a review-ready push or handoff; rebase if it advanced. Do not merge it into the task branch.
-- Resolve routine conflicts while preserving both sides' intent. Ask when resolution requires a product or design decision, regardless of conflict count.
-- Stack branches or PRs only when explicitly requested, and state the dependency.
-- Never delete branches outside `agent/`. Ask before deleting any local or remote `agent/` branch; permission to rewrite history does not authorize deletion.
+- Fetch `origin/main` and create task branches from it.
+- Preserve others' work and agree on ownership before concurrent edits.
+- Before a review-ready push or handoff, fetch and rebase onto `origin/main` if it advanced. Do not merge `main` into task branches.
+- Resolve routine conflicts; ask when a product or design decision is needed.
+- Stack branches or PRs only when requested, and state the dependency.
 
 ## Commits and delivery
 
