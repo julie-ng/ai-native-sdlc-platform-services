@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import { assert, expect, test } from 'vitest'
 import { callerContextSchema } from './caller-context.schema.ts'
 
 const caller = {
@@ -12,20 +11,20 @@ const caller = {
 
 test('context schema preserves valid values and rejects unknown nested fields', () => {
   const result = callerContextSchema.safeParse(caller)
-  assert(result.success)
-  assert.deepEqual(result.data, caller)
+  expect(result.success).toBe(true)
+  expect(result.data).toStrictEqual(caller)
   const invalid = { ...caller, outputs: [{ ...caller.outputs[0], permissions: ['read-all'] }] }
   const parsed = callerContextSchema.safeParse(invalid)
   assert(!parsed.success)
-  assert(parsed.error.issues.some(issue => issue.code === 'unrecognized_keys' && issue.path[0] === 'outputs'))
-  assert('permissions' in invalid.outputs[0]!)
+  expect(parsed.error.issues.some(issue => issue.code === 'unrecognized_keys' && issue.path[0] === 'outputs')).toBe(true)
+  expect('permissions' in invalid.outputs[0]!).toBe(true)
 })
 
 test('context shape requires bindings and limits each binding array', () => {
   const { outputs: _outputs, ...incomplete } = caller
-  assert(!callerContextSchema.safeParse(incomplete).success)
+  expect(callerContextSchema.safeParse(incomplete).success).toBe(false)
   for (const field of ['inputs', 'outputs']) {
-    assert(!callerContextSchema.safeParse({ ...caller, [field]: Array.from({ length: 65 }, () => caller.outputs[0]) }).success)
+    expect(callerContextSchema.safeParse({ ...caller, [field]: Array.from({ length: 65 }, () => caller.outputs[0]) }).success).toBe(false)
   }
-  assert(!callerContextSchema.safeParse({ ...caller, attemptId: caller.stepId }).success)
+  expect(callerContextSchema.safeParse({ ...caller, attemptId: caller.stepId }).success).toBe(false)
 })

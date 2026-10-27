@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import { expect, test } from 'vitest'
 import { uploadSasSchema, downloadSasSchema } from './sas.schema.ts'
 
 const upload = {
@@ -10,14 +9,14 @@ const upload = {
 }
 
 test('upload instructions allow overwrites and reject conditional create-only headers', () => {
-  assert(uploadSasSchema.safeParse(upload).success)
-  assert(!uploadSasSchema.safeParse({ ...upload, headers: { ...upload.headers, 'If-None-Match': '*' } }).success)
-  assert(!uploadSasSchema.safeParse({ ...upload, method: 'GET' }).success)
+  expect(uploadSasSchema.safeParse(upload).success).toBe(true)
+  expect(uploadSasSchema.safeParse({ ...upload, headers: { ...upload.headers, 'If-None-Match': '*' } }).success).toBe(false)
+  expect(uploadSasSchema.safeParse({ ...upload, method: 'GET' }).success).toBe(false)
 })
 
 test('download instructions exclude upload headers and require HTTPS', () => {
   const download = { url: upload.url.replace('sp=w', 'sp=r'), method: 'GET', expiresAt: upload.expiresAt }
-  assert(downloadSasSchema.safeParse(download).success)
-  assert(!downloadSasSchema.safeParse({ ...download, headers: upload.headers }).success)
-  assert(!downloadSasSchema.safeParse({ ...download, url: 'http://example.com/blob?sp=r' }).success)
+  expect(downloadSasSchema.safeParse(download).success).toBe(true)
+  expect(downloadSasSchema.safeParse({ ...download, headers: upload.headers }).success).toBe(false)
+  expect(downloadSasSchema.safeParse({ ...download, url: 'http://example.com/blob?sp=r' }).success).toBe(false)
 })

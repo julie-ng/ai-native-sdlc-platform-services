@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict'
+import { assert, expect } from 'vitest'
 import { readFile } from 'node:fs/promises'
 import SwaggerParser from '@apidevtools/swagger-parser'
 import Ajv from 'ajv'
@@ -62,14 +62,14 @@ export async function loadArtifactContract() {
 
   function check(schema: object, value: unknown, label: string, expected = true) {
     const validate = ajv.compile(schema)
-    assert.equal(validate(value), expected, `${label}: ${ajv.errorsText(validate.errors)}`)
+    expect(validate(value), `${label}: ${ajv.errorsText(validate.errors)}`).toBe(expected)
   }
   function component(name: string, value: unknown, label: string, expected = true) {
-    assert(name in artifactSchemas, `Unknown Zod component ${name}`)
+    expect(name in artifactSchemas, `Unknown Zod component ${name}`).toBe(true)
     const schema = artifactSchemas[name as ArtifactSchemaName]
-    assert.equal(schema.safeParse(value).success, expected, `${label}: Zod ${name}`)
+    expect(schema.safeParse(value).success, `${label}: Zod ${name}`).toBe(expected)
     const exported = spec.components.schemas[name]
-    assert(exported, `Unknown OpenAPI component ${name}`)
+    expect(exported, `Unknown OpenAPI component ${name}`).toBeTruthy()
     check(exported, value, `${label}: OpenAPI ${name}`, expected)
   }
   function media(media: Media, value: unknown, label: string, expected = true) {
@@ -79,7 +79,7 @@ export async function loadArtifactContract() {
   }
   function responseMedia(response: Response | { $ref: string }): Media {
     if ('$ref' in response) {
-      assert(response.$ref.startsWith('#/components/responses/'))
+      expect(response.$ref.startsWith('#/components/responses/')).toBe(true)
       const shared = source.components.responses[response.$ref.split('/').at(-1)!]
       assert(shared && !('$ref' in shared))
       return shared.content['application/json']
@@ -93,18 +93,18 @@ export async function loadArtifactContract() {
   }
   function request(example: Omit<RequestExample, 'responseStatus' | 'response'>) {
     const op = operation(example.operationId)
-    assert(fixtures.contexts[example.context], `Unknown context ${example.context}`)
+    expect(fixtures.contexts[example.context], `Unknown context ${example.context}`).toBeTruthy()
     if (op.parameters?.length) {
       component('ArtifactIdParameters', example.parameters ?? {}, `${example.id} parameters`)
     }
     else {
-      assert.deepEqual(example.parameters ?? {}, {})
+      expect(example.parameters ?? {}).toStrictEqual({})
     }
     if (op.requestBody) {
       media(op.requestBody.content['application/json'], example.body, `${example.id} body`)
     }
     else {
-      assert(!('body' in example), `${example.id} must not have a body`)
+      expect('body' in example, `${example.id} must not have a body`).toBe(false)
     }
     return op
   }

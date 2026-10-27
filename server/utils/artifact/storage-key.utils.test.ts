@@ -1,20 +1,19 @@
-import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import { expect, test } from 'vitest'
 import { contexts, examples, fixture } from '../../../tests/support/artifact-fixtures.ts'
 import { artifactStorageKey } from './storage-key.utils.ts'
 
 test('exact merged storage key, stable across repeated POSTs, overwrite and same-step later execution', () => {
   const reference = contexts['planner-p1']!.outputs[0]!
   const key = artifactStorageKey(reference)
-  assert.equal(key, `v1/runs/${reference.runId}/steps/${reference.producerStepId}/artifacts/plan`)
-  assert.equal(artifactStorageKey(contexts['planner-p1-later-execution']!.outputs[0]), key)
+  expect(key).toBe(`v1/runs/${reference.runId}/steps/${reference.producerStepId}/artifacts/plan`)
+  expect(artifactStorageKey(contexts['planner-p1-later-execution']!.outputs[0])).toBe(key)
   for (const example of examples.requests) {
     if ('upload' in example.response && example.response.upload) {
-      assert.equal(new URL(example.response.upload.url).pathname, `/artifacts/${key}`)
+      expect(new URL(example.response.upload.url).pathname).toBe(`/artifacts/${key}`)
     }
   }
   for (const { reference: other } of fixture.artifactRecords.slice(1)) {
-    assert.notEqual(artifactStorageKey(other), key)
+    expect(artifactStorageKey(other)).not.toBe(key)
   }
 })
 
@@ -29,6 +28,6 @@ test('reject invalid segments and physical key overrides rather than normalizing
     { ...reference, path: 'override' },
     { ...reference, attemptId: '30000000-0000-4000-8000-000000000001' },
   ]) {
-    assert.throws(() => artifactStorageKey(value), { name: 'TypeError', message: 'Invalid artifact reference' })
+    expect(() => artifactStorageKey(value)).toThrow(new TypeError('Invalid artifact reference'))
   }
 })
