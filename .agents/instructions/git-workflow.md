@@ -5,6 +5,7 @@
 - Work in an isolated worktree on your own task branch. Never edit, commit, push, or merge directly into `main` or another protected branch unless explicitly instructed. Never bypass or change branch protections.
 - Task branches, worktrees, signed commits, and pushes to your own branch are authorized unless session instructions say otherwise.
 - Use native `git` and authenticated `gh` for repository and GitHub operations. Codex must not use GitHub MCP tools or the GitHub connector; other MCP tools and connectors are unaffected.
+- In dev-container sessions only, resolve ownership mismatches by adding the known checkout's absolute path once to global `safe.directory`, then use plain `git` commands. See [repository ownership setup](./git-setup-user-github.md#repository-ownership).
 - Keep credentials out of files, command output, logs, and commits.
 - Instructions, command filters, and session UIs guide behavior. Name the OS controls or GitHub permissions and rulesets that enforce restrictions; distinguish mitigations from guarantees.
 - Do not push changes to `.github/workflows/`.

@@ -4,7 +4,8 @@ If agent credentials are unavailable, continue permitted local work and report d
 
 ### Repository ownership
 
-- For host/container ownership mismatches, trust only this known checkout using `git -c safe.directory="$PWD" ...` or its exact global `safe.directory` entry.
+- In dev-container sessions only, resolve host/container ownership mismatches by running `git config --global --add safe.directory "$PWD"` once from the known checkout, unless its exact absolute path is already listed. Then use plain `git` commands.
+- Add a separate exact-path entry for each known worktree that needs it. Never use `safe.directory '*'`.
 
 ### Find config mount
 
