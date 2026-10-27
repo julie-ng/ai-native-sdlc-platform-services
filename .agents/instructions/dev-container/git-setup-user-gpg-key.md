@@ -6,7 +6,7 @@ If agent credentials are unavailable, continue permitted local work and report d
 
 - For host/container ownership mismatches, trust only this known checkout using `git -c safe.directory="$PWD" ...` or its exact global `safe.directory` entry.
 
-### Find mounts
+### Find config mount
 
 - If in a worktree, locate that workspace through `git worktree list`.
 - Find the read-only environment and GPG mounts in the original workspace's local `.devcontainer/devcontainer.json`, which has:
@@ -25,3 +25,7 @@ Based on `.env.agent`
   - Export `GH_TOKEN="$GITHUB_PAT"` for `gh`;
   - use `gh auth setup-git` for HTTPS Git authentication.
   - Never place the token in a remote URL.
+
+### Token permissions
+
+- The agent PAT lacks `workflow` scope, which limits adding or updating GitHub Actions workflows. GitHub allows files whose path and contents already exist on another branch; see [GitHub's scope documentation](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps#available-scopes).
