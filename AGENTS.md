@@ -2,9 +2,20 @@
 
 Shared instructions for every coding agent working in this repository.
 
-## Git & GitHub Configuration
+## Agent Identity
 
-Before doing anything, see [docs/git-workflow.md](./docs/git-workflow.md) to configure your git credentials to be able to access the github CLI for full context.
+Agents run under a separate identity from host.
+
+-
+
+### In a Dev Container (default)
+
+- **Git**: See [credential setup](./.agents/instructions/dev-container/git-setup-user-gpg-key.md) to configure your git credentials to be able to access the github CLI for full context.
+
+
+### In Host environment
+
+- Do not commit or push – all credentials are on a physical YubiKey that agents have zero access to. Just work interactively with Julie (human).
 
 ## Project and reading order
 
@@ -18,7 +29,7 @@ Before doing anything, see [docs/git-workflow.md](./docs/git-workflow.md) to con
 | Database schema and migrations | Server instructions, then [server/db/AGENTS.md](./server/db/AGENTS.md) |
 | Vue application and future UI | [app/AGENTS.md](./app/AGENTS.md) |
 | Shared schemas, types, constants, utilities | [shared/AGENTS.md](./shared/AGENTS.md) |
-| Branches, credentials, commits, issues, pull requests, delivery | [Git workflow](./docs/git-workflow.md) |
+| Branches, credentials, commits, issues, pull requests, delivery | [Git workflow](./.agents/instructions/git-workflow.md) |
 
 - When adding a REST route or HTTP method, read the [add-api-endpoint skill](./.agents/skills/add-api-endpoint/SKILL.md). Read it directly if your client does not discover skills.
 - Keep broadly applicable rules here and area-specific rules in nested `AGENTS.md` files. Skills describe procedures and reference those rules instead of duplicating them.
@@ -79,12 +90,6 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 - Keep reusable learnings and preferences in existing memory entries and maintain the index. Keep entries harness-agnostic unless the detail is specific to a harness; coordinate before editing shared memory. Verify remembered technical claims against repository files and current sources.
 - If memory is missing or unreadable, report that limitation and continue with repository documentation.
 
-## Git and security
-
-- Work in an isolated worktree on your own `agent/` branch. Never edit, commit, push, or merge directly into `main` or another protected branch, or bypass branch protections.
-- Use native `git` and the authenticated `gh` CLI for repository and GitHub operations. Codex must not use GitHub MCP tools or the GitHub connector; this restriction does not apply to other MCP tools or connectors.
-- Follow the [Git workflow](./docs/git-workflow.md) before creating branches, commits, issues, or pull requests. Keep credentials out of files, command output, logs, and commits.
-- Instructions and command filters guide behavior; claim a security boundary only where OS-level controls enforce it. Name the mechanism and distinguish mitigations from guarantees. Session managers, dashboards, and worktree UIs provide convenience; do not credit them with isolation they do not enforce.
 
 ## Code Review Rules
 
