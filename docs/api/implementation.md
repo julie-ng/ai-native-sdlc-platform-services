@@ -140,7 +140,7 @@ v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 | --- | --- |
 | Generated-contract checks (dev only) | `@apidevtools/swagger-parser@13.1.0`, `ajv@8.20.0`, `ajv-formats@3.0.1` |
 | Runtime validation and schema export | `zod@4.6.7`; handwritten strict domain schemas; inferred payload types; built-in OpenAPI 3.0 schema export |
-| Unit / HTTP tests | Node 24 `node:test`, `node:assert/strict`, native fetch; pure policy/context tests first, HTTP tests against built Nitro on a disposable port. |
+| Unit / HTTP tests | Vitest, native fetch; pure policy/context tests first, HTTP tests against built Nitro on a disposable port. |
 | Product typecheck | Dev `vue-tsc@3.3.13`, `nuxt typecheck`, plus standalone test/support TypeScript; installed and configured. |
 | Persistence | `drizzle-orm@0.45.4`, `pg@8.23.1`; dev `drizzle-kit@0.31.11`, `@types/pg@8.23.1` |
 | Azure SAS | `@azure/storage-blob@12.34.0`, `@azure/identity@4.14.0` |
@@ -161,7 +161,7 @@ git diff --check
 ```
 
 - `test:contract` validates OpenAPI structure with Swagger Parser, compiles schemas with Ajv/formats and checks authored examples, contexts and scenario relationships. `check:artifact-contract` is a compatibility alias; `verify` runs the suite once.
-  - It checks positive/negative examples against Zod and exported OpenAPI, seed/scenario consistency and generated-file freshness through named native Node tests. Source interfaces are covered by `typecheck`. It does not execute authorization or contact Azure/PostgreSQL; Swagger Parser is not a complete semantic OpenAPI linter.
+  - It checks positive/negative examples against Zod and exported OpenAPI, seed/scenario consistency and generated-file freshness through named Vitest contract tests. Source interfaces are covered by `typecheck`. It does not execute authorization or contact Azure/PostgreSQL; Swagger Parser is not a complete semantic OpenAPI linter.
 - `verify` includes contract checks, offline unit tests and application/test typechecking; `generate:artifact-openapi` refreshes generated OpenAPI after Zod schema or TypeScript HTTP definition edits.
   - Later tests must execute visibility/action distinctions, timestamp and repeat-write cases, prove metadata discovery does not call the signer, and prove scope omissions return no foreign records.
 - Real Azure tests must upload UTF-8 text containing `plan` followed by one LF newline, acknowledge it, overwrite the same blob with `revised plan` followed by one LF newline, acknowledge again and read the latest bytes/hash via a separate SAS.

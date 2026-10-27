@@ -43,7 +43,7 @@ Applies to `server/**`, in addition to the root instructions. For schema or migr
 ## Verification
 
 - Cover the success contract, malformed input, missing resources, unauthenticated and unauthorized access where applicable, and response-field permissions. Include a regression check for deliberate security omissions.
-- Run `npm run test:unit` for offline native Node tests and `npm run typecheck` for Nuxt plus standalone test/support types. HTTP behavior needs separate tests when routes are introduced.
+- Run `npm run test:unit` for offline Vitest tests and `npm run typecheck` for Nuxt plus standalone test/support types. HTTP behavior needs separate tests when routes are introduced.
 - Do not create placeholder endpoints, permissive guards, or invented database helpers just to satisfy an example.
 
 Reference: [Nuxt 4 server documentation](https://nuxt.com/docs/4.x/directory-structure/server). Check the installed Nuxt/H3 versions before adapting examples.
