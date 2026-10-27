@@ -62,7 +62,7 @@ event.context.caller = {
 - `deriveArtifactAccess` intersects task policy with trusted bindings, yielding readable, creatable and updatable reference sets.
   - De-duplicate references. Create/update requires the caller's own output and same run/step; read requires an exact bound input/output plus read capability.
 - The selected POC map is planner `plan:create` + `plan:update`, coder `plan:read`; all other capabilities are denied.
-  - Matching task types do not share ownership. The two upload modes also support a future explicitly configured create-only task without granting it overwrite rights; no additional task policy is selected here.
+  - Matching task types do not share ownership. Only planner own-plan writes are selected; create-only producers are deferred.
 - Registration uses `name` to select a permitted own-output slot; the service derives the full reference.
   - No caller-supplied producer ID, role, permission list, blob path or SAS lifetime is accepted.
 - Determine visibility from the union of readable, creatable and updatable grants before ID lookup.
@@ -113,10 +113,10 @@ event.context.caller = {
 | 404 for missing/no access; 403 only for an existing accessible artifact with wrong action; required `createdAt`/`updatedAt` | Architect's inline review comments; timestamp update mechanism is specified in the implementation contract. |
 | Authentication upstream; define caller context only | Architect's explicit instruction; no token/resolver work in this slice. |
 | Direct cloud bytes, PostgreSQL 17/Drizzle, metadata ownership | Original issue requirements retained; no deployed database assumed. |
-| Step FK/export contract; exact blob key; 300-second SAS; two SAS modes | **New concrete proposals**, consistent with the agreed step-owned model. |
+| Step FK/export contract; exact blob key; 300-second SAS | **New concrete proposals**, consistent with the agreed step-owned model. |
 | Context field name, limits, discovery order/bound, descriptive metadata immutability | **New proposals** absent from pinned plans; unchanged unless listed above as agreed. |
 | Optional title/description fields and limits, adapter signatures and dependency versions | **New proposals** for PR review; caller-authored descriptive metadata was suggested by the architect. |
-| Completion timestamp refresh on identical retries; create-only repeat rules | **Concrete refinements** of latest-report storage; no deduplication IDs/history added. |
+| Completion timestamp refresh on identical retries | **Concrete refinements** of latest-report storage; no deduplication IDs/history added. |
 
 - [Architecture decisions](../architecture.md#decision-log) record the accepted refinements; the pinned plans remain references.
   - Review/merge settles the remaining proposals. Implementation requires no parent checkout, personal memory, conversation history or running agent.

@@ -234,11 +234,10 @@ for (const example of examples.policyCases) {
   check(spec.components.schemas.ArtifactRef, example.reference, example.id)
 }
 for (const example of examples.sasExamples) {
-  assert(['WritableUploadSas', 'CreateOnlyUploadSas'].includes(example.schema))
+  assert.equal(example.schema, 'UploadSas')
   check(spec.components.schemas[example.schema], example.value, example.id)
   const url = new URL(example.value.url)
-  const createOnly = example.schema === 'CreateOnlyUploadSas'
-  assert.equal(url.searchParams.get('sp'), createOnly ? 'c' : 'w')
+  assert.equal(url.searchParams.get('sp'), 'w')
   assert.equal(url.searchParams.get('sr'), 'b')
   assert.equal(url.searchParams.get('spr'), 'https')
   assert(!url.pathname.includes('/attempts/'), 'Blob key must be step-owned')
@@ -262,7 +261,7 @@ for (const example of examples.requests.filter(example => example.operationId ==
   const url = new URL(response.upload.url)
   const expectedPath = `/artifacts/v1/runs/${reference.runId}/steps/${reference.producerStepId}/artifacts/${reference.name}`
   assert.equal(url.pathname, expectedPath, 'Uploads and renewals must use the same step-owned key')
-  assert.equal(url.searchParams.get('sp'), response.upload.headers['If-None-Match'] === '*' ? 'c' : 'w')
+  assert.equal(url.searchParams.get('sp'), 'w')
 }
 const revised = examples.requests.find(example => example.id === 'planner-reports-revised-plan')
 const latest = examples.requests.find(example => example.id === 'coder-reads-latest-plan-metadata')

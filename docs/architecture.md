@@ -53,6 +53,8 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 | 2026-10-26 / workflow lookup naming review | Name the step/run consistency lookup `WorkflowStepLookup`, its result `WorkflowStepReference`, its dependency `workflowSteps`, and its planned factory/module `createWorkflowStepLookup` / `workflow-step.utils.ts`. Avoid ambiguous identity terminology that suggests authentication or Azure workload identity. This naming decision is superseded by the subsequent trusted-context boundary decision. |
 | 2026-10-26 / initial trusted-context boundary | Consume complete trusted caller context directly; defer workflow-step lookup and authentication/context construction until the HMAC versus Kubernetes ServiceAccount decision is made. Remove the unused lookup interface, reference type, factory plan, test fake and service dependency. Keep fail-closed context validation, binding/resource policy, test-only injected contexts and persistence FK/run-membership integrity. This supersedes the previous lookup handoff/naming requirement. |
 
+| 2026-10-27 / human POC scope reduction | Defer unused create-only uploads. The only upload SAS permits planner creation/overwrite of its own bound plan; remove the mode selector, alternate schemas and create-only retry/completion branches. Other callers remain denied under resource policy. |
+
 ## Contract review record
 
 | Date / status | Proposal and review boundary |

@@ -8,7 +8,7 @@ import {
   createArtifactResponseSchema, completeArtifactResponseSchema, reservedArtifactInfoSchema,
   uploadedArtifactInfoSchema, artifactInfoSchema, listArtifactsResponseSchema, newArtifactResponseSchema,
 } from './artifact.schema.ts'
-import { uploadSasSchema, downloadSasSchema, createOnlyUploadSasSchema, writableUploadSasSchema } from './sas.schema.ts'
+import { uploadSasSchema, downloadSasSchema } from './sas.schema.ts'
 import {
   fieldErrorSchema, error400Schema, error403Schema, error404Schema, error405Schema,
   error409Schema, error413Schema, error415Schema, error500Schema, error503Schema, errorResponseSchema,
@@ -49,8 +49,6 @@ export const artifactSchemas = {
   Error500: error500Schema,
   Error503: error503Schema,
   ErrorResponse: errorResponseSchema,
-  CreateOnlyUploadSas: createOnlyUploadSasSchema,
-  WritableUploadSas: writableUploadSasSchema,
   NewArtifactResponse: newArtifactResponseSchema,
 }
 export type ArtifactSchemaName = keyof typeof artifactSchemas

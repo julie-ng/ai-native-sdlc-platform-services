@@ -7,7 +7,6 @@ import type {
 export type * from '../../../shared/types/artifact.ts'
 
 export type ArtifactAction = 'create' | 'read' | 'update'
-export type UploadMode = 'create-only' | 'create-or-update'
 
 // Middleware owns this field. HTTP input cannot replace it.
 export interface ArtifactEventContext {
@@ -70,15 +69,15 @@ export interface ArtifactMetadataRepository {
   listWithinScope(readable: readonly ArtifactRef[]): Promise<Result<ArtifactRecord[], 'unavailable'>>
   findWithinScope(id: string, visible: readonly ArtifactRef[]): Promise<Result<ArtifactRecord, 'not_found' | 'unavailable'>>
   findReferenceWithinScope(reference: ArtifactRef, visible: readonly ArtifactRef[]): Promise<Result<ArtifactRecord, 'not_found' | 'unavailable'>>
-  // First report needs create; changed report after upload needs update. An exact
-  // retry is accepted for create-only callers. Every accepted report refreshes
+  // Own-output reports require create for reserved rows and update for uploaded
+  // rows. Every accepted report, including an identical retry, refreshes
   // uploadedAt and updatedAt using one DB instant. Existing accessible rows that
   // need an ungranted update return forbidden; no history is retained.
   acknowledgeWithinScope(id: string, scope: ArtifactWriteScope, completion: Completion): Promise<Result<UploadedArtifact, MetadataFailure>>
 }
 export interface ArtifactUrlIssuer {
-  // Service selects mode from policy. Never issue create-only for an uploaded row.
-  issueUpload(record: ArtifactRecord, mode: UploadMode): Promise<Result<UploadSas, 'unavailable'>>
+  // Issue only after checking own-output create and update permissions.
+  issueUpload(record: ArtifactRecord): Promise<Result<UploadSas, 'unavailable'>>
   issueDownload(record: UploadedArtifact): Promise<Result<DownloadSas, 'unavailable'>>
 }
 // Caller context is supplied at the service boundary. Authentication/context

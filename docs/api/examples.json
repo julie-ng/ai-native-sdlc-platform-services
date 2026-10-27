@@ -1171,27 +1171,13 @@
   "sasExamples": [
     {
       "id": "planner-create-and-overwrite-instructions",
-      "schema": "WritableUploadSas",
+      "schema": "UploadSas",
       "value": {
         "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=w&sig=DOCUMENTATION-ONLY",
         "method": "PUT",
         "headers": {
           "x-ms-blob-type": "BlockBlob",
           "Content-Type": "text/markdown"
-        },
-        "expiresAt": "2026-10-26T10:05:00Z"
-      }
-    },
-    {
-      "id": "create-only-instructions-for-a-future-policy",
-      "schema": "CreateOnlyUploadSas",
-      "value": {
-        "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=c&sig=DOCUMENTATION-ONLY",
-        "method": "PUT",
-        "headers": {
-          "x-ms-blob-type": "BlockBlob",
-          "Content-Type": "text/markdown",
-          "If-None-Match": "*"
         },
         "expiresAt": "2026-10-26T10:05:00Z"
       }

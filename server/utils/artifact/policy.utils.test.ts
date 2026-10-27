@@ -110,5 +110,5 @@ test('test ports retain discriminated failures and never fake completed uploads'
   assert.deepEqual(await metadata.register(ref, { contentType: 'text/markdown' }), { ok: false, error: 'unavailable' })
   assert.deepEqual(await metadata.findReferenceWithinScope(ref, [ref]), { ok: false, error: 'not_found' })
   const urls = createUrlIssuerSpy()
-  assert.deepEqual(await urls.issueUpload(artifactRecords()[0]!, 'create-or-update'), { ok: false, error: 'unavailable' })
+  assert.deepEqual(await urls.issueUpload(artifactRecords()[0]!), { ok: false, error: 'unavailable' })
 })

@@ -10,22 +10,14 @@ const uploadShape = {
   expiresAt: utcInstantSchema,
 }
 
-export const createOnlyUploadSasSchema = z.strictObject({
-  ...uploadShape,
-  headers: z.strictObject({
-    'x-ms-blob-type': z.literal('BlockBlob'),
-    'If-None-Match': z.literal('*'),
-    'Content-Type': contentTypeSchema,
-  }),
-})
-export const writableUploadSasSchema = z.strictObject({
+// The POC has one writer policy: create or overwrite the caller's own plan.
+export const uploadSasSchema = z.strictObject({
   ...uploadShape,
   headers: z.strictObject({
     'x-ms-blob-type': z.literal('BlockBlob'),
     'Content-Type': contentTypeSchema,
   }),
 })
-export const uploadSasSchema = z.union([createOnlyUploadSasSchema, writableUploadSasSchema])
 export const downloadSasSchema = z.strictObject({
   url: sasUrlSchema,
   method: z.literal('GET'),

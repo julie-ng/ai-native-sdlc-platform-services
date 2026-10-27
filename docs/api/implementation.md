@@ -28,7 +28,7 @@
 - Discovery queries only readable scope and returns 200 with an empty list if none exists.
   - It neither returns write-only records nor fails the whole collection with 403. Having a raw binding without an effective policy capability grants no visibility.
 - Registration targets the caller's own step/name, derived server-side; an input with the same name is a different target.
-  - If that target is outside any-action scope, return 404 without lookup. If visible, use `findReferenceWithinScope` before deciding permission: missing + create grant allows insertion; missing without create is 404; existing + missing required action is 403. Reserved upload renewal requires create, uploaded renewal requires create/update capability. Only permitted requests reach metadata comparison/registration or signing.
+  - If that target is outside any-action scope, return 404 without lookup. If visible, use `findReferenceWithinScope` before deciding permission: missing + create grant allows insertion; missing without create is 404; existing + missing required action is 403. Upload SAS issuance requires both create and update capability on the own output, regardless of upload state. Only permitted requests reach metadata comparison/registration or signing.
 - Completion first looks up the ID within any-action scope, then checks own-output create/update permissions.
   - Read-only access produces 403 for an existing artifact, not 404. A changed completion without update permission is also 403; a metadata mismatch on an otherwise permitted registration remains 409.
 
@@ -73,10 +73,10 @@
 
 - `register(reference, metadata)` atomically inserts or returns the row for that step/name; it never creates a row for a retry.
   - A different registration content type/kind/title/description is 409. `createdAt` and artifact ID remain fixed. Only the URL expiry changes on renewal; existing upload state and completion metadata remain intact.
-- The service chooses upload mode from trusted policy, not from HTTP input.
-  - Create + update capability on the own output selects `create-or-update`, even for a newly registered artifact. Create without update selects `create-only` and may obtain renewal only while reserved; an already uploaded artifact returns 403 before signing because it exists within scope but update permission is absent.
+- The POC issues one upload capability: create or overwrite the own output.
+  - Require both create and update permission before signing, even for a new artifact. No create-only producer, mode selector or conditional-upload protocol is implemented.
 - First completion requires create permission within the caller's own-output scope.
-  - Later changed size/hash requires update permission in that same scope. For the planner this replaces the latest values, not a new artifact. Missing update permission for a changed report is 403. An identical retry is accepted, including for create-only callers, and refreshes `uploadedAt` and `updatedAt` together.
+  - Every subsequent report requires update permission in that same scope, whether identical or changed. For the planner it replaces the latest values and refreshes `uploadedAt` and `updatedAt` together; no report comparison or deduplication is needed.
 - `uploadedAt` and `updatedAt` are the service's last accepted-report time, not an audit log or an independently verified Azure timestamp.
   - The service does not HEAD/download/hash Blob content. A report can be dishonest, and SAS does not enforce the API's reported size cap on actual bytes.
 - Assume one active writer per step, no overlapping executions, and consumption after production.
@@ -102,11 +102,10 @@ v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 | Mode | SAS / direct upload instructions |
 | --- | --- |
 | `create-or-update` | `sp=w`; PUT a BlockBlob; Content-Type + client-computed Content-Length; no `If-None-Match: *`. Creates or overwrites the same blob. |
-| `create-only` | `sp=c`; PUT a BlockBlob with the same headers plus `If-None-Match: *`. Omitting `w` prevents overwrite even if a caller drops the conditional header. |
 | Read | `sp=r`; GET the current blob, issued only by the explicit SAS read operation. No write/list/delete permission. |
 
 - Azure documents [create versus overwrite permissions for Put Blob](https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob#user-delegation-sas).
-  - Both upload modes use a single Put Blob with `x-ms-blob-type: BlockBlob`. Do not add multi-block upload flows or broaden create-only SAS to `w` as a convenience.
+  - Uploads use a single Put Blob with `x-ms-blob-type: BlockBlob`. Create-only producers and multi-block upload flows are deferred.
 - Real verification requires separately supplied service identity/account permissions.
   - See [delegation SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas) and [JavaScript SDK flow](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blob-create-user-delegation-sas-javascript). Example signatures are deliberately nonfunctional.
 
@@ -164,4 +163,4 @@ git diff --check
 - `verify` includes contract checks, offline unit tests and application/test typechecking; `generate:artifact-openapi` refreshes generated OpenAPI after Zod schema or TypeScript HTTP definition edits.
   - Later tests must execute visibility/action distinctions, timestamp and repeat-write cases, prove metadata discovery does not call the signer, and prove scope omissions return no foreign records.
 - Real Azure tests must upload UTF-8 text containing `plan` followed by one LF newline, acknowledge it, overwrite the same blob with `revised plan` followed by one LF newline, acknowledge again and read the latest bytes/hash via a separate SAS.
-  - Prove stable ID/key, planner overwrite success, create-only overwrite denial even without its conditional header, and read-only permission boundaries. A fake URL or successful build proves none of this.
+  - Prove stable ID/key, planner overwrite success and read-only permission boundaries. A fake URL or successful build proves none of this.

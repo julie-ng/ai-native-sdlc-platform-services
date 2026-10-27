@@ -894,14 +894,48 @@
         "additionalProperties": false
       },
       "UploadSas": {
-        "anyOf": [
-          {
-            "$ref": "#/components/schemas/CreateOnlyUploadSas"
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "pattern": "^https:\\/\\/[^/?#]+\\/[^?#]+\\?[^#]+$"
           },
-          {
-            "$ref": "#/components/schemas/WritableUploadSas"
+          "method": {
+            "type": "string",
+            "enum": [
+              "PUT"
+            ]
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/UtcInstant"
+          },
+          "headers": {
+            "type": "object",
+            "properties": {
+              "x-ms-blob-type": {
+                "type": "string",
+                "enum": [
+                  "BlockBlob"
+                ]
+              },
+              "Content-Type": {
+                "$ref": "#/components/schemas/ContentType"
+              }
+            },
+            "required": [
+              "x-ms-blob-type",
+              "Content-Type"
+            ],
+            "additionalProperties": false
           }
-        ]
+        },
+        "required": [
+          "url",
+          "method",
+          "expiresAt",
+          "headers"
+        ],
+        "additionalProperties": false
       },
       "DownloadSas": {
         "type": "object",
@@ -1454,101 +1488,6 @@
             "$ref": "#/components/schemas/Error503"
           }
         ]
-      },
-      "CreateOnlyUploadSas": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "pattern": "^https:\\/\\/[^/?#]+\\/[^?#]+\\?[^#]+$"
-          },
-          "method": {
-            "type": "string",
-            "enum": [
-              "PUT"
-            ]
-          },
-          "expiresAt": {
-            "$ref": "#/components/schemas/UtcInstant"
-          },
-          "headers": {
-            "type": "object",
-            "properties": {
-              "x-ms-blob-type": {
-                "type": "string",
-                "enum": [
-                  "BlockBlob"
-                ]
-              },
-              "If-None-Match": {
-                "type": "string",
-                "enum": [
-                  "*"
-                ]
-              },
-              "Content-Type": {
-                "$ref": "#/components/schemas/ContentType"
-              }
-            },
-            "required": [
-              "x-ms-blob-type",
-              "If-None-Match",
-              "Content-Type"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "required": [
-          "url",
-          "method",
-          "expiresAt",
-          "headers"
-        ],
-        "additionalProperties": false
-      },
-      "WritableUploadSas": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "pattern": "^https:\\/\\/[^/?#]+\\/[^?#]+\\?[^#]+$"
-          },
-          "method": {
-            "type": "string",
-            "enum": [
-              "PUT"
-            ]
-          },
-          "expiresAt": {
-            "$ref": "#/components/schemas/UtcInstant"
-          },
-          "headers": {
-            "type": "object",
-            "properties": {
-              "x-ms-blob-type": {
-                "type": "string",
-                "enum": [
-                  "BlockBlob"
-                ]
-              },
-              "Content-Type": {
-                "$ref": "#/components/schemas/ContentType"
-              }
-            },
-            "required": [
-              "x-ms-blob-type",
-              "Content-Type"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "required": [
-          "url",
-          "method",
-          "expiresAt",
-          "headers"
-        ],
-        "additionalProperties": false
       },
       "NewArtifactResponse": {
         "type": "object",

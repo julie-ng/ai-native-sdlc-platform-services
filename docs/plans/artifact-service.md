@@ -75,7 +75,7 @@
 2. Supply workflow-owned run/step identities, then artifact migrations and disposable PostgreSQL 17 tests.
    - Prove the step FK, unique step/name, stable IDs and restart durability; do not build attempt tracking or overlapping-writer coordination.
 3. Exercise real Azure upload, overwrite, acknowledgment and download with separately supplied service credentials.
-   - Prove the same blob is reused, latest bytes/hash match, create-only capabilities cannot overwrite, and read-only capabilities cannot write. Fake URLs and builds do not prove this.
+   - Prove the same blob is reused, latest bytes/hash match and read-only capabilities cannot write. Fake URLs and builds do not prove this.
 4. Integrate production middleware/context delivery and cluster execution later.
    - Broader workflow endpoints, attempt logging, Kubernetes/Argo, GitHub broker, webhook ingress, UI and LLM calls remain outside this slice.
 
