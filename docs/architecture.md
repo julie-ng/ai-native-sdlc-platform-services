@@ -10,6 +10,7 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 - Handwritten shared Zod schemas with inferred TypeScript types and runtime parsing are implemented, along with server context/policy/storage-key utilities and adapter interfaces. No service orchestration, routes, authentication, database schema/migrations or live storage adapters exist. Test-only fixtures and scoped fakes live under `tests/support/`.
 - `npm run check:guidance` validates local Markdown file references and shared skill metadata. Nuxt ESLint checks JavaScript, TypeScript, and Vue with stylistic rules matching repository conventions. `npm run test:contract` validates generated OpenAPI, examples and fixture/scenario consistency; `check:artifact-contract` is a compatibility alias. Source interfaces are covered by `typecheck`. `npm run verify` runs lint, guidance checks, named contract tests, unit tests, typechecking and the Nuxt production build. `npm run test:unit` executes offline Vitest tests; `npm run typecheck` covers Nuxt plus standalone tests/support and OpenAPI tooling. All are included in `verify`.
 - GitHub Actions runs verification on pull requests targeting `main` and pushes to `main`, with manual dispatch available. A non-blocking npm audit includes development dependencies and summarizes high and critical findings in the job summary.
+- Remaining route and adapter implementation follows the [artifact contract](./api/README.md); the [workflow reference](./plans/workflow-service.md) does not expand its scope.
 
 ## Agreed direction
 
@@ -23,19 +24,9 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 | Agent guidance | Root and nested `AGENTS.md`; portable workflows under `.agents/skills/` | Shared guidance authored here; client adapters are managed separately |
 | Durable context | Repository documentation is the minimum; personal memory is optional | No personal memory or other repository is required |
 
-## Module boundaries
-
-- `server/api/`: HTTP contracts and request handling; use explicit guards for protected operations.
-- `server/utils/`: server-only utilities and integrations. `server/db/`: future Drizzle connection, schemas, and migrations.
-- `shared/`: runtime schemas, types, constants, and pure helpers usable by server and client. No credentials, database clients, or Vue app dependencies.
-- `app/`: Vue application and future UI. Pinia stores will own domain state and API interactions; pages/composables coordinate domains.
-- Instructions explain conventions; they do not provision services or enforce runtime isolation.
-
 ## Open decisions
 
-- Implement routes and real adapters against the merged [artifact contract](./api/README.md). The pinned [workflow reference](./plans/workflow-service.md) does not expand this slice.
-- PostgreSQL 17/Drizzle/node-postgres, Zod validation, Vitest tests and adapter interfaces follow the merged contract. Packages and pure utilities are installed; database schema, runtime clients and actual cloud transfer remain future work.
-- Caller authentication and context construction are deferred: the initial service consumes trusted `event.context.caller` directly, with no workflow-step lookup dependency. Tests inject fixed server-owned context; production HMAC versus Kubernetes ServiceAccount authentication remains undecided. The artifact contract defines context shape and scoped resource access; real credentials and cluster context delivery remain deferred. Broader workflow/product choices remain outside this slice.
+- Choose HMAC or Kubernetes ServiceAccount authentication and define how trusted `event.context.caller` is constructed.
 
 ## Decision log
 
