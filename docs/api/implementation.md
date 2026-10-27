@@ -56,16 +56,16 @@
   - They start at the same instant. Keep `createdAt` fixed. On each accepted acknowledgment explicitly set `updated_at = CURRENT_TIMESTAMP` and `uploaded_at = CURRENT_TIMESTAMP` in the same SQL UPDATE as size/hash/state. Both use one [DB transaction timestamp](https://www.postgresql.org/docs/17/functions-datetime.html#FUNCTIONS-DATETIME-CURRENT), including identical report retries; UTC sessions/serialization yield `Z` strings.
 - A repeated POST returns the existing row without changing it; reads, failures and denied requests do not update timestamps.
   - Do not attach an automatic ORM on-update hook or blanket trigger that would make a repeated POST advance `updatedAt`. No general metadata editing exists yet. Do not append history or introduce upload/attempt version numbers.
-- Workflow owns only the run/step identity prerequisite below for this slice; artifact code imports its `steps` export.
-  - Full workflow endpoints, execution tracking and an attempts table are not required. Artifact code must not create a competing owner of workflow identities.
+- Workflow owns the prerequisite `runs` and `steps` tables below for this slice; artifact code imports its `steps` export.
+  - Full workflow endpoints, execution tracking and an attempts table are not required. Artifact code must not create a competing owner of workflow run and step records.
 
 | Future `server/db/workflow.schema.ts` export | Minimum table contract |
 | --- | --- |
 | `runs` | `runs(id uuid PRIMARY KEY)` |
 | `steps` | `steps(id uuid PRIMARY KEY, run_id uuid NOT NULL REFERENCES runs(id) ON DELETE RESTRICT)` |
 
-- Apply workflow-owned identity migrations before artifact migrations in one journal.
-  - Seed the exact runs/steps in [caller-contexts.fixture.json](./caller-contexts.fixture.json) using future workflow-owned `seedArtifactWorkflowIdentities(client)` in `tests/integration/fixtures/workflow-identities.ts`. `planner-p1-later-execution` deliberately has the same context as P1: it is not another identity row.
+- Apply the workflow-owned run/step schema migrations before artifact migrations in one journal.
+  - Seed the exact runs/steps in [caller-contexts.fixture.json](./caller-contexts.fixture.json) using future workflow-owned `seedWorkflowRunsAndSteps(client)` in `tests/integration/fixtures/workflow-records.ts`. `planner-p1-later-execution` deliberately has the same context as P1: it is not another step record.
 - Local PostgreSQL 17 tests must prove the real step FK, run membership, unique step/name, stable IDs, latest-report replacement, initial timestamp equality, acknowledgment updates and unchanged timestamps on repeated POST/denial, plus restart durability.
   - Test data also names artifact IDs/references. Remove child artifacts first during cleanup or drop the disposable database. No concurrent-writer/attempt-history tests or locking protocol are required under the agreed operating assumption.
 

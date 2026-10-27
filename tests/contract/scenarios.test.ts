@@ -37,7 +37,7 @@ test('upload SAS samples carry only blob write permissions', () => {
   }
 })
 
-test('repeated POST examples retain artifact identity and blob key', () => {
+test('repeated POST examples retain artifact ID and blob key', () => {
   const first = examples.requests.find(example => example.id === 'planner-registers-local-plan')
   assert(first && first.response && typeof first.response === 'object' && 'id' in first.response)
   for (const name of ['planner-requests-fresh-sas-after-upload', 'later-execution-reuses-step-artifact']) {
@@ -52,7 +52,7 @@ test('repeated POST examples retain artifact identity and blob key', () => {
     const caller = fixtures.contexts[example.context]
     const reference = caller.outputs.find(output => output.name === body.name)
     assert(reference, 'Registration must use a trusted own-output binding')
-    const seed = fixtures.artifactIdentities.find(artifact => artifact.id === response.id)
+    const seed = fixtures.artifactRecords.find(artifact => artifact.id === response.id)
     assert.deepEqual(seed?.reference, reference, 'Registration ID must match its step-owned artifact')
     const url = new URL(response.upload.url)
     const expectedPath = `/artifacts/v1/runs/${reference.runId}/steps/${reference.producerStepId}/artifacts/${reference.name}`

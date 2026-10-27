@@ -38,11 +38,11 @@ export interface RequestExample {
 interface ContextExamples {
   testOnly: boolean
   contexts: Record<string, CallerContext>
-  workflowIdentities: {
+  workflowRecords: {
     runs: { id: string }[]
     steps: { id: string, runId: string }[]
   }
-  artifactIdentities: { id: string, reference: ArtifactRef }[]
+  artifactRecords: { id: string, reference: ArtifactRef }[]
 }
 
 export const examples = exampleData

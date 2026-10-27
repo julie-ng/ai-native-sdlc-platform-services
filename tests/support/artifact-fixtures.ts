@@ -7,7 +7,7 @@ export { fixture, examples }
 export const contexts: Record<string, CallerContext> = fixture.contexts
 
 export function artifactRecords(): ArtifactRecord[] {
-  return fixture.artifactIdentities.map(({ id, reference }) => ({
+  return fixture.artifactRecords.map(({ id, reference }) => ({
     id,
     reference: { ...reference },
     metadata: { contentType: 'text/markdown' },

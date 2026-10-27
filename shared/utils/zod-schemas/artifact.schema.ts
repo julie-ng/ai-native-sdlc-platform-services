@@ -16,7 +16,7 @@ const descriptiveMetadata = {
 
 export const artifactIdParametersSchema = z.strictObject({ id: uuidSchema })
 
-// Public requests never accept producer identity, permissions or timestamps.
+// Public requests never accept producing step ID, permissions or timestamps.
 export const createArtifactRequestSchema = z.strictObject({
   name: nameSchema,
   ...descriptiveMetadata,
@@ -28,7 +28,7 @@ export const completeArtifactRequestSchema = z.strictObject({
 })
 
 // Write permissions do not imply read permissions: acknowledgments exclude
-// stored descriptive metadata, producer identity and timestamps.
+// stored descriptive metadata, producing step ID and timestamps.
 export const createArtifactResponseSchema = z.strictObject({
   id: uuidSchema,
   state: artifactStateSchema,

@@ -93,7 +93,7 @@ export type RegistrationResult
   = | { status: 201, body: NewArtifactResponse }
     | { status: 200, body: CreateArtifactResponse }
 export interface ArtifactService {
-  // Consume middleware-established context. No execution/attempt identity needed.
+  // Consume middleware-established context. No execution/attempt ID needed.
   createArtifact(caller: CallerContext, request: CreateArtifactRequest): Promise<Result<RegistrationResult, ServiceFailure>>
   completeArtifact(caller: CallerContext, id: string, request: CompleteArtifactRequest): Promise<Result<CompleteArtifactResponse, ServiceFailure>>
   listArtifacts(caller: CallerContext): Promise<Result<ListArtifactsResponse, ServiceFailure>>

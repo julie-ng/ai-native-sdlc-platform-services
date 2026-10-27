@@ -87,7 +87,7 @@ event.context.caller = {
 - An unexpired planner upload SAS can be reused for multiple writes. Requesting another URL does not change state, metadata, `updatedAt`, ID or blob key. SAS URLs are never stored or logged.
   - Until another acknowledgment, metadata describes the last acknowledged upload. This POC relies on read-after-production ordering, not atomic coordination between Blob bytes and database metadata.
 - Information includes `id`, `name`, `contentType`, `state`, `createdAt`, `updatedAt` and supplied kind/title/description.
-  - Uploaded records also include latest reported size/hash/`uploadedAt`; reserved records omit those fields. Responses contain no producer identity, internal reference or SAS.
+  - Uploaded records also include latest reported size/hash/`uploadedAt`; reserved records omit those fields. Responses contain no producing step ID, internal reference or SAS.
 - `createdAt` is fixed when the metadata record is created; `updatedAt` starts at the same instant and advances on every accepted upload acknowledgment.
   - Descriptive metadata is immutable in this slice. Reads, denied/failed operations and repeated POSTs leave timestamps unchanged. Write-only acknowledgments still omit stored timestamps/metadata.
 - Discovery returns all existing readable records, reserved or uploaded, ordered by `createdAt`, then `id`, ascending.

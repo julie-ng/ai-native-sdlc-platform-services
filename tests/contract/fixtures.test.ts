@@ -8,14 +8,14 @@ before(async () => {
   contract = await loadArtifactContract()
 })
 
-test('authored fixture identities and bindings are internally consistent', () => {
+test('authored fixture records and bindings are internally consistent', () => {
   const { component } = contract
   assert.equal(fixtures.testOnly, true)
-  const runs = new Set(fixtures.workflowIdentities.runs.map(run => run.id))
-  const steps = new Map(fixtures.workflowIdentities.steps.map(step => [step.id, step]))
-  assert.equal(runs.size, fixtures.workflowIdentities.runs.length, 'Duplicate run identity')
-  assert.equal(steps.size, fixtures.workflowIdentities.steps.length, 'Duplicate step identity')
-  for (const run of fixtures.workflowIdentities.runs) {
+  const runs = new Set(fixtures.workflowRecords.runs.map(run => run.id))
+  const steps = new Map(fixtures.workflowRecords.steps.map(step => [step.id, step]))
+  assert.equal(runs.size, fixtures.workflowRecords.runs.length, 'Duplicate run ID')
+  assert.equal(steps.size, fixtures.workflowRecords.steps.length, 'Duplicate step ID')
+  for (const run of fixtures.workflowRecords.runs) {
     component('Uuid', run.id, 'workflow run ID')
   }
   for (const step of steps.values()) {
@@ -39,7 +39,7 @@ test('authored fixture identities and bindings are internally consistent', () =>
   }
   const artifactIds = new Set<string>()
   const artifactKeys = new Set<string>()
-  for (const artifact of fixtures.artifactIdentities) {
+  for (const artifact of fixtures.artifactRecords) {
     const key = `${artifact.reference.producerStepId}:${artifact.reference.name}`
     assert(!artifactIds.has(artifact.id), 'Duplicate artifact ID')
     assert(!artifactKeys.has(key), 'More than one artifact for the same step/name')

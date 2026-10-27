@@ -13,7 +13,7 @@ test('exact merged storage key, stable across repeated POSTs, overwrite and same
       assert.equal(new URL(example.response.upload.url).pathname, `/artifacts/${key}`)
     }
   }
-  for (const { reference: other } of fixture.artifactIdentities.slice(1)) {
+  for (const { reference: other } of fixture.artifactRecords.slice(1)) {
     assert.notEqual(artifactStorageKey(other), key)
   }
 })
