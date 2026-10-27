@@ -15,9 +15,9 @@ Applies to `server/**`, in addition to the root instructions. For schema or migr
 - Define each endpoint's authentication requirements and input/output/error contract before implementation.
 - Guards establish typed `event.context` and throw on failure; callers read that context rather than guard return values.
 - Validate bodies, route parameters, and queries with Zod and Nuxt/H3 validated request helpers. Follow [shared schema conventions](../shared/AGENTS.md).
-- Derive visibility server-side and scope database lookups before checking the requested action. Authorize both the target and newly linked resources.
+- Derive visibility (any granted action) server-side. Check the requested action only for visible resources. Authorize both the target and newly linked resources.
 - Return 400 with structured field errors for invalid input. Never expose internal errors or secrets.
-- Return the same 404 for missing resources or no access. Return 403 when the caller has some access but lacks the requested permission. Include no resource fields in either error.
+- Return the same 404 for missing resources or no access; because the responses are identical, an unscoped lookup by ID is fine. Return 403 when the caller has some access but lacks the requested permission. Include no resource fields in either error.
 
 ## Responses and data ownership
 
@@ -28,7 +28,7 @@ Applies to `server/**`, in addition to the root instructions. For schema or migr
 ## Artifacts
 
 - Follow the [API overview](../docs/api/README.md), [implementation contract](../docs/api/implementation.md), and [server ports](./utils/artifact/ports.ts).
-- Consume trusted `event.context.caller`; reject missing/malformed context. Never replace it with HTTP claims or a workflow-step lookup. Fixed caller contexts belong only in tests.
+- Call `requireCallerContext(event)` first in every artifact route; it validates trusted `event.context.caller`. Never replace it with HTTP claims or a workflow-step lookup. Fixed caller contexts belong only in tests.
 - Logical steps own artifacts. Reuse IDs/blobs across retries; do not add attempt history or overlapping-writer coordination.
 - Keep discovery/metadata separate from SAS issuance. List readable records only; transfer bytes directly between caller and cloud storage.
 - Each permitted POST issues a fresh SAS for the same artifact. Never persist or log SAS URLs.

@@ -20,6 +20,6 @@ Applies to `shared/**`, in addition to the root instructions.
 - Follow the [ontology](../docs/plans/artifact-service.md#ontology) and [schema/type contract](../docs/api/implementation.md#code-boundaries). Generate OpenAPI from domain schemas; do not edit generated JSON.
 - Use `z.strictObject` at every object level. Reject unknown fields; do not coerce, default, or transform wire values. Put cross-field ownership and authorization checks in explicit functions.
 - Follow the contract's request/response allowlists and UTC timestamp format; keep server-owned metadata out of write payloads.
-- Schema unit tests import domain schemas directly. Export/example parity belongs in `tests/contract/`; run `npm run test:contract` when changing shapes or examples.
+- Schema unit tests import domain schemas directly. OpenAPI freshness and documentation-example checks belong in `tests/contract/`; run `npm run test:contract` when changing shapes or examples.
 
 Reference: [Nuxt shared directory](https://nuxt.com/docs/4.x/directory-structure/shared).
