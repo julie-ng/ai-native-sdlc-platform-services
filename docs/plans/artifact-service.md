@@ -82,6 +82,6 @@
 ## Verification
 
 - On Node 24: `npm ci`, `npm run check:artifact-contract`, `npm run check:guidance`, `npm run verify`, `git diff --check`.
-  - Contract checks validate schemas, examples, seed consistency and port types. Real authorization, PostgreSQL and Azure behavior need implementation tests.
+  - Contract checks validate schemas, examples, seed consistency; typecheck covers source ports. Real authorization, PostgreSQL and Azure behavior need implementation tests.
 - The [workflow reference](./workflow-service.md) preserves broader planning ideas, not additional POC requirements.
   - No external checkout, parent temporary files, conversation history or personal memory is required to implement the recorded contract.

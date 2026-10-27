@@ -80,7 +80,7 @@ Persistence integrity remains required: metadata adapters enforce the producing-
 - `npm run typecheck` runs `nuxt typecheck` and the strict standalone `tsconfig.unit.json`, including tests and support modules. `npm run verify` includes both commands.
 - `tests/support/artifact-fixtures.ts` loads the exact checked deterministic caller/identity fixtures and validates caller contexts. Fixtures are test-only, injected as trusted middleware context; no token parser or resolver exists.
 - `tests/support/artifact-fakes.ts` supplies a scoped read-only metadata fake and URL-issuer spies. Write/signing spies return `unavailable` unless a test explicitly overrides them. No fake successful upload is supplied.
-- Tests execute positive/negative schema examples, malformed and spoofed context cases, exact run/step/name matching, planner own-output create/update, coder bound reads, unknown actions/tasks, same-step later execution, and stable validated keys. Port composition probes exercise the contract's 403/404 denial cases without signing. These probes are test support, not production service orchestration.
+- Contract tests check positive/negative examples against Zod and exported OpenAPI, validate fixture data in named tests and check static scenario consistency. Direct unit tests execute malformed and spoofed context cases, exact run/step/name matching, planner own-output create/update, coder bound reads, unknown actions/tasks, same-step later execution, and stable validated keys. Port composition probes exercise the contract's 403/404 denial cases without signing. These probes are test support, not production service orchestration.
 
 ## Remaining implementation
 

@@ -8,7 +8,7 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 - Installed runtime dependencies include Nuxt/Vue, Zod, Drizzle/node-postgres and Azure Identity/Blob packages; [package.json](../package.json) and [package-lock.json](../package-lock.json) are authoritative for versions.
 - Node.js 24 and npm are the development baseline. Nuxt project references are configured in [tsconfig.json](../tsconfig.json).
 - Handwritten shared Zod schemas with inferred TypeScript types and runtime parsing are implemented, along with server context/policy/storage-key utilities and adapter interfaces. No service orchestration, routes, authentication, database schema/migrations or live storage adapters exist. Test-only fixtures and scoped fakes live under `tests/support/`.
-- `npm run check:guidance` validates local Markdown file references and shared skill metadata. Nuxt ESLint checks JavaScript, TypeScript, and Vue with stylistic rules matching repository conventions. `npm run check:artifact-contract` validates OpenAPI/examples and typechecks the exported ports. `npm run verify` runs lint, guidance checks, the artifact contract check, unit tests, typechecking and the Nuxt production build. `npm run test:unit` executes offline native Node tests; `npm run typecheck` covers Nuxt plus standalone tests/support. Both are included in `verify`.
+- `npm run check:guidance` validates local Markdown file references and shared skill metadata. Nuxt ESLint checks JavaScript, TypeScript, and Vue with stylistic rules matching repository conventions. `npm run test:contract` validates generated OpenAPI, examples and fixture/scenario consistency; `check:artifact-contract` is a compatibility alias. Source interfaces are covered by `typecheck`. `npm run verify` runs lint, guidance checks, the artifact contract check, unit tests, typechecking and the Nuxt production build. `npm run test:unit` executes offline native Node tests; `npm run typecheck` covers Nuxt plus standalone tests/support. Both are included in `verify`.
 - GitHub Actions runs verification on pull requests targeting `main` and pushes to `main`, with manual dispatch available. A non-blocking npm audit includes development dependencies and summarizes high and critical findings in the job summary.
 
 ## Agreed direction
@@ -58,6 +58,8 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 | 2026-10-27 / human SAS request simplification | Each permitted POST creates a fresh upload SAS for a stable step/name artifact. No URL renewal protocol, previous-URL lookup or SAS persistence. First descriptive metadata wins; repeated POSTs ignore omitted/changed kind/title/description without requiring replay. Keep content type consistent (409 on mismatch), timestamps and latest completion unchanged. This supersedes exact descriptive-metadata matching in PR #12. |
 
 | 2026-10-27 / contract tooling separation | Build OpenAPI through a pure function with fresh per-call state. The explicit generation CLI only writes output; named native Node contract tests own freshness, deterministic generation and OpenAPI structure checks. Other legacy assertions migrate separately. |
+
+| 2026-10-27 / contract test ownership | Replace the bespoke checker with named native Node contract suites for schema/export parity, fixture integrity and static scenario consistency. Direct schema unit tests do not import generated OpenAPI; fixture imports are data-only. Keep compiler checks independent and run contract tests once in verify. |
 
 ## Contract review record
 

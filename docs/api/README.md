@@ -100,7 +100,7 @@ event.context.caller = {
 - [Implementation details](./implementation.md) define validation/errors, step-based persistence, SAS modes, ports and dependencies; [OpenAPI](./artifact.openapi.json) defines machine-readable shapes.
   - [Ports](./artifact-ports.ts) are compile-checked interfaces, not implementations. The latest rules do not require workflow endpoints or an attempts table.
 - On Node 24: `npm ci`, `npm run check:artifact-contract`, `npm run check:guidance`, `npm run verify`, `git diff --check`.
-  - Checks validate schemas, examples, seed relationships, stable example IDs and port types. They do not execute authorization or prove Azure/PostgreSQL behavior.
+  - Checks validate schemas, examples, seed relationships, stable example IDs; typecheck covers source ports. They do not execute authorization or prove Azure/PostgreSQL behavior.
 
 ## Choice sources
 

@@ -28,7 +28,7 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 | `npm ci` | Install locked dependencies; also runs Nuxt preparation |
 | `npm run dev` | Start local development |
 | `npm run check:guidance` | Check repository guidance links and portable skill metadata |
-| `npm run check:artifact-contract` | Validate artifact OpenAPI/examples and typecheck exported ports |
+| `npm run check:artifact-contract` | Alias for test:contract |
 | `npm run generate:artifact-openapi` | Generate OpenAPI from Zod schemas and TypeScript HTTP definitions |
 | `npm run lint` | Check JavaScript, TypeScript, and Vue with ESLint; warnings fail |
 | `npm run lint:fix` | Apply available ESLint fixes |

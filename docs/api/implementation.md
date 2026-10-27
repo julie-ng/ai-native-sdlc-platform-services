@@ -160,8 +160,8 @@ npm run verify
 git diff --check
 ```
 
-- `check:artifact-contract` validates OpenAPI structure with Swagger Parser, compiles schemas with Ajv/formats, checks supplied examples/context-seed relationships, rejects missing/malformed context examples and typechecks the ports.
-  - It checks negative example rejection ; `test:contract` checks generated OpenAPI freshness, structure and deterministic generation. It does not execute authorization or contact Azure/PostgreSQL; Swagger Parser is not a complete semantic OpenAPI linter.
+- `test:contract` validates OpenAPI structure with Swagger Parser, compiles schemas with Ajv/formats and checks authored examples, contexts and scenario relationships. `check:artifact-contract` is a compatibility alias; `verify` runs the suite once.
+  - It checks positive/negative examples against Zod and exported OpenAPI, seed/scenario consistency and generated-file freshness through named native Node tests. Source interfaces are covered by `typecheck`. It does not execute authorization or contact Azure/PostgreSQL; Swagger Parser is not a complete semantic OpenAPI linter.
 - `verify` includes contract checks, offline unit tests and application/test typechecking; `generate:artifact-openapi` refreshes generated OpenAPI after Zod schema or TypeScript HTTP definition edits.
   - Later tests must execute visibility/action distinctions, timestamp and repeat-write cases, prove metadata discovery does not call the signer, and prove scope omissions return no foreign records.
 - Real Azure tests must upload UTF-8 text containing `plan` followed by one LF newline, acknowledge it, overwrite the same blob with `revised plan` followed by one LF newline, acknowledge again and read the latest bytes/hash via a separate SAS.
