@@ -4,7 +4,7 @@
 
 Platform Services is a Nuxt 4 application being developed to expose RESTful APIs. The initial release has no product UI.
 
-- The application serves the [artifact API](./api/README.md) routes; the Nuxt welcome page remains at `/`. Authentication is not implemented, so artifact routes currently return 503 for every request.
+- The application serves the [artifact API](./api/README.md) routes; public `GET /` returns `{"name":"platform-services"}` as JSON. Authentication is not implemented, so artifact routes currently return 503 for every request.
 - Installed runtime dependencies include Nuxt/Vue, Zod, Drizzle/node-postgres and Azure Identity/Blob packages; [package.json](../package.json) and [package-lock.json](../package-lock.json) are authoritative for versions.
 - Node.js 24 and npm are the development baseline. Nuxt project references are configured in [tsconfig.json](../tsconfig.json).
 - Implemented: handwritten Zod schemas, caller-context validation, policy, the artifact service, five routes with an explicit `requireCallerContext` guard, a Drizzle/PostgreSQL repository with generated migrations, and an Azure user delegation SAS issuer. Test-only fixtures and fakes live under `tests/support/`; repository integration tests under `tests/integration/` need Docker (`npm run db:up`, `npm run test:db`).
@@ -32,6 +32,7 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 
 | Date / context | Decision and reason |
 | --- | --- |
+| 2026-10-30 / minimal service root | Replace the Nuxt welcome page with a public JSON service identifier at `GET /`. Keep the root minimal; it does not check dependency health. |
 | 2026-10-25 / repository bootstrap | Start with TypeScript and REST APIs; defer UI implementation to keep the first release focused. Drizzle is the chosen ORM; Pinia, Tailwind, and Nuxt UI are reserved for later UI work. |
 | 2026-10-25 / coding preferences | Use PascalCase components and adapt utility/composable conventions to TypeScript. Do not inherit another application's domain model, credentials, or service choices. |
 | 2026-10-25 / agent portability | Author rules once in root/nested `AGENTS.md` and workflows in standard `SKILL.md` files. Client adapters are separate; repo docs must support fresh sessions independently of personal memory. |
