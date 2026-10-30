@@ -24,16 +24,17 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 | Vue naming | PascalCase reusable component filenames | Applies to new components; Nuxt special filenames retain framework conventions |
 | Agent guidance | Root and nested `AGENTS.md`; portable workflows under `.agents/skills/` | Shared guidance authored here; client adapters are managed separately |
 | Durable context | Repository documentation is the minimum; personal memory is optional | No personal memory or other repository is required |
+| Reference documentation | Astro Starlight site in `site/`, published to GitHub Pages from `main` | Site with HTTP API and code reference sections implemented; Pages workflow to be added by the maintainer ([#24](https://github.com/julie-ng/ai-native-sdlc-platform-services/issues/24)) |
 
 ## Open decisions
 
 - Choose HMAC or Kubernetes ServiceAccount authentication for the `requireCallerContext` guard, which constructs `event.context.caller`.
-- Choose how to publish the API reference. Stated preference: a static site hosted on GitHub Pages, which would replace the intermediary `docs:dev` preview server. Neither the generator (TypeDoc may stay or go) nor the publishing workflow is decided.
 
 ## Decision log
 
 | Date / context | Decision and reason |
 | --- | --- |
+| 2026-10-30 / documentation site (#24) | Publish reference documentation as an [Astro Starlight](https://starlight.astro.build/) site in `site/`, deployed to GitHub Pages on every push to `main`, so it is always current without manual deploys. Two generated sections: HTTP API from the committed OpenAPI contract (starlight-openapi) and code reference from JSDoc (starlight-typedoc), following the pattern of [aristoteliss/nestjs-pipeline](https://github.com/aristoteliss/nestjs-pipeline). The site is a separate package with its own lockfile, so documentation dependencies stay out of the app. It replaces the intermediary TypeDoc HTML preview and the root TypeDoc dependency. starlight-typedoc does not run TypeDoc validation, so the site's `build` runs `docs:check` first and an undocumented export fails the build and therefore the deployment. The repository is public, so the Pages site is public. Tradeoff: the site build depends on the root install, because TypeDoc and Vite read the Nuxt-generated tsconfig. |
 | 2026-10-30 / API reference | Add TypeDoc (dev dependency, pinned) to render JSDoc as browsable API documentation, so the server architecture can be reviewed as API docs. Scope is `server/utils/` and `server/db/` only: JSDoc on `shared/` Zod schemas and inferred types, and on route handlers, only restated the code and the OpenAPI contract, and TypeDoc renders both poorly (Zod internals, bare `default` exports). `shared/` is marked external so it is neither documented nor validated. The preview is a small Node script rather than another dependency, and is explicitly an intermediary solution until the reference can be published as a static site (see open decisions). `docs:api` enforces documentation on modules, functions, types, interfaces and variables, but not on properties. It is not in `verify`; adding it would make documentation a CI gate. |
 | 2026-10-30 / minimal service root | Replace the Nuxt welcome page with a public JSON service identifier at `GET /`. Keep the root minimal; it does not check dependency health. |
 | 2026-10-25 / repository bootstrap | Start with TypeScript and REST APIs; defer UI implementation to keep the first release focused. Drizzle is the chosen ORM; Pinia, Tailwind, and Nuxt UI are reserved for later UI work. |
