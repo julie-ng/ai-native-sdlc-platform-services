@@ -3,8 +3,8 @@ import { contexts, planP1, runA, runB, stepIds } from '../../../tests/support/ar
 import { readCallerContext } from './context.utils.ts'
 
 for (const [name, caller] of Object.entries(contexts)) {
-  test(`middleware context: ${name}`, () => {
-    expect(readCallerContext({ caller, unrelatedMiddlewareField: true })).toStrictEqual({ ok: true, value: caller })
+  test(`established context: ${name}`, () => {
+    expect(readCallerContext({ caller, unrelatedContextField: true })).toStrictEqual({ ok: true, value: caller })
   })
 }
 

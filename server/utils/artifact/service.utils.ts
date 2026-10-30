@@ -27,7 +27,7 @@ function toArtifactInfo(record: ArtifactRecord): ArtifactInfo {
 }
 
 /**
- * Artifact operations for a caller that middleware has already established.
+ * Artifact operations for a caller already established by requireCallerContext.
  *
  * Missing or invisible artifacts are 404, so IDs reveal nothing. A visible
  * artifact with the wrong action is 403. Adapters may throw; routes report 500.

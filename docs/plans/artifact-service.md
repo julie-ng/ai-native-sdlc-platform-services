@@ -14,13 +14,13 @@
 | Artifact | The current file and its metadata, with one stable ID per producing step/name. | P1's `plan`. |
 | Producer | The step that owns/creates an artifact; its executing agent writes the file. | P1 produces the plan. |
 | Consumer | A caller permitted to read that artifact. | C1 consumes P1's plan. |
-| Caller | Whoever is making the current service request, using middleware-established context. | Planner requesting upload access; coder downloading. |
+| Caller | Whoever is making the current service request, using context established by the caller guard. | Planner requesting upload access; coder downloading. |
 | Name | Logical artifact slot, not a filename or permission. | `plan`, not `plan.md`. |
 | SAS URL | A temporary cloud-storage capability scoped to one blob and permitted actions. | Upload or download URL. |
 
 ## Purpose: the airport counter
 
-- Middleware has checked the caller's “passport”; the service receives its trusted itinerary in `event.context.caller`.
+- The `requireCallerContext` guard, called explicitly by each route, checks the caller's “passport” and records the trusted itinerary in `event.context.caller`.
   - The service owns the access list. A caller can discover zero, one or several available artifacts without knowing IDs first; an ID only selects within that list.
 - The artifact service owns metadata; cloud storage owns bytes.
   - A SAS URL is the temporary ticket to those bytes. Metadata/discovery reads do not issue that ticket automatically.
@@ -35,7 +35,7 @@
   - Only the current values are stored. Consumers read after the producing step finishes.
 - Assume one active writer per step and no overlapping executions.
   - This is an operating assumption, not service-enforced isolation. No locks, leases or concurrent-writer coordination are required for this POC.
-- Authentication is outside this task; upstream middleware supplies caller context.
+- Authentication is outside this task; the caller guard will construct the context (#13).
   - The service checks its required shape and binding consistency and fails closed if missing. Consume complete trusted context directly; defer workflow-step lookup, token parsing and context construction. HMAC versus Kubernetes ServiceAccount authentication remains undecided. Tests inject fixed server-owned context without production auth bypasses.
 
 ## Caller flow
@@ -70,7 +70,7 @@
 
 ## Remaining work
 
-1. Authentication middleware/guard that establishes `event.context.caller` (HMAC vs Kubernetes ServiceAccount is still open). Until then every artifact request returns 503.
-2. HTTP-level route tests and a test/dev way to inject caller context. Nuxt documents fixture apps for `@nuxt/test-utils` but nothing for injecting `event.context`.
+1. Authentication inside the `requireCallerContext` guard that constructs `event.context.caller` (#13; HMAC vs Kubernetes ServiceAccount is still open). Until then every artifact request returns 503.
+2. Unit tests for the guard and a static check that every artifact route calls it before reading input (#19).
 3. Real Azure upload, overwrite, report and download with a provisioned storage account and service identity. Prove the same blob is reused, latest bytes/hash match and read SAS cannot write.
 4. Cluster execution, broader workflow endpoints, attempt logging, GitHub broker, webhook ingress, UI and LLM calls remain outside this slice. The [workflow reference](./workflow-service.md) preserves broader planning ideas, not POC requirements.

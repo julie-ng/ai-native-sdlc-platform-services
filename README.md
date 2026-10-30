@@ -55,7 +55,7 @@ Project knowledge belongs in repository documentation. Personal memories and oth
 
 The [artifact API](./docs/api/README.md) and [artifact plan](./docs/plans/artifact-service.md) describe the service. Routes under `server/api/artifacts/` call a service that applies the planner/coder policy, a Drizzle/PostgreSQL repository, and an Azure user delegation SAS issuer. Artifacts belong to steps and keep one ID/blob across retries. Bytes go directly between callers and Azure.
 
-Authentication is not implemented: routes require a trusted `event.context.caller` that nothing sets yet, so every artifact request currently returns 503. HMAC versus Kubernetes ServiceAccount authentication is undecided. Real Azure transfer has not been exercised.
+Authentication is not implemented: each route explicitly calls the `requireCallerContext` guard, which today only validates an `event.context.caller` that nothing sets yet, so every artifact request currently returns 503. HMAC versus Kubernetes ServiceAccount authentication is undecided. Real Azure transfer has not been exercised.
 
 `shared/utils/zod-schemas/` is the schema source of truth. `npm run generate:artifact-openapi` generates `docs/api/artifact.openapi.json` from those schemas and the HTTP definitions in `scripts/openapi/artifact-http.ts`; edit those sources, not the JSON. See the [schema workflow](./docs/api/implementation.md#schema-workflow).
 

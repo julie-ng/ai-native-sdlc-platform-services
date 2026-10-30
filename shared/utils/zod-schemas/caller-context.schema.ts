@@ -7,7 +7,7 @@ export const artifactRefSchema = z.strictObject({
   name: nameSchema,
 })
 
-// Only upstream middleware may supply this context. Shape validation does not
+// Only the server's caller guard may establish this context. Shape validation does not
 // authenticate a caller. Cross-field ownership checks live in readCallerContext.
 export const callerContextSchema = z.strictObject({
   runId: uuidSchema,

@@ -78,7 +78,7 @@ export function buildArtifactHttpContract() {
     'info': {
       title: 'Artifact service contract',
       version: '0.4.0',
-      description: 'One current artifact per producing step/name. Trusted middleware supplies event.context.caller; task policy and exact bindings determine access. Missing or not visible is 404; visible but wrong action is 403. Planners write their own plan; coders read bound plans. Bytes move directly between caller and Azure Blob Storage. Errors use Nitro\'s createError() JSON.',
+      description: 'One current artifact per producing step/name. The explicit requireCallerContext guard establishes event.context.caller; task policy and exact bindings determine access. Missing or not visible is 404; visible but wrong action is 403. Planners write their own plan; coders read bound plans. Bytes move directly between caller and Azure Blob Storage. Errors use Nitro\'s createError() JSON.',
     },
     'x-caller-context': { location: 'event.context.caller', schema: { $ref: '#/components/schemas/CallerContext' } },
     'paths': {

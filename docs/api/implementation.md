@@ -6,7 +6,7 @@ See the [API overview](./README.md) for operations, access policy, and POC assum
 
 Each route under `server/api/artifacts/` runs, in order:
 
-1. `requireCallerContext(event)`: validates the trusted `event.context.caller`; 503 if missing or malformed.
+1. `requireCallerContext(event)`: the explicit guard that establishes `event.context.caller`; 503 if it cannot. Today it only validates a context that nothing sets yet; #13 replaces its body with authentication that constructs the context.
 2. Validate the body and `id` route parameter with the strict [Zod schemas](../../shared/utils/zod-schemas/index.ts); 400 on failure, with `z.flattenError()` output in `data`. h3 rejects malformed JSON with 400.
 3. Call the [artifact service](../../server/utils/artifact/service.utils.ts) and return its result.
 
@@ -17,7 +17,7 @@ Each route under `server/api/artifacts/` runs, in order:
 
 ## Caller context and authorization
 
-Trusted middleware provides `event.context.caller`:
+The `requireCallerContext` guard establishes `event.context.caller`:
 
 ```ts
 {
@@ -30,7 +30,7 @@ Trusted middleware provides `event.context.caller`:
 // Each reference: { runId, producerStepId, name }
 ```
 
-- `readCallerContext` requires all bindings in the caller's run and outputs owned by its step. Context comes from middleware, never HTTP claims or workflow-step lookups. Fixed contexts are test-only.
+- `readCallerContext` requires all bindings in the caller's run and outputs owned by its step. Context comes only from the guard's authentication, never HTTP claims or workflow-step lookups. Fixed contexts are test-only.
 - `deriveArtifactAccess` intersects task policy with exact bindings into `readable`, `creatable` and `updatable` references. Create and update stay distinct, mirroring Azure's `c`/`w` SAS permissions. Unknown tasks get nothing.
 - ID lookups use this sequence in the service:
 
