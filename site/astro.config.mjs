@@ -24,6 +24,8 @@ export default defineConfig({
           sidebar: { label: 'Code reference', collapsed: false },
           // Regenerate on source changes during `astro dev` only; builds run once.
           watch: process.argv.includes('dev'),
+          // Module overview pages are only generated with an explicit entry file name.
+          typeDoc: { entryFileName: 'index.md' },
         }),
         // Generated from Zod by `npm run generate:artifact-openapi`; `test:contract` keeps it fresh.
         starlightOpenAPI([
