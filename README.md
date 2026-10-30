@@ -13,6 +13,8 @@ npm run dev
 
 The development server defaults to `http://localhost:3000`.
 
+`GET /` is public and returns `200 OK` with `application/json`: `{"name":"platform-services"}`. It accepts no input and identifies the service; it does not check dependency health.
+
 ## Verification and production
 
 ```bash
