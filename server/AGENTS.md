@@ -5,11 +5,17 @@ Applies to `server/**`, in addition to the root instructions. For schema or migr
 ## REST routes and boundaries
 
 - Put routes in `server/api/` with HTTP method suffixes, e.g. `resources/index.post.ts` or `resources/[id].get.ts`. Nuxt adds `/api`.
-- `server/routes/` serves paths outside `/api`. It holds only the public `GET /` service identifier (`index.get.ts`); do not add API behavior there.
+- `server/routes/` serves paths outside `/api`. It holds only the public `GET /` service identifier (`index.get.ts`) and the `GET /readyz` readiness probe; do not add API behavior there.
 - Use `defineEventHandler` for HTTP parsing, authorization, status codes, and response shaping. Extract reusable behavior into server utilities.
 - Use `createError()` for HTTP failures; translate ordinary utility errors at the HTTP boundary. Standalone scripts must not depend on Nuxt globals.
 - Auto-import Nuxt helpers only; explicitly import project dependencies unless their auto-imports are configured. Do not invent database or guard helpers.
 - Never import Vue app code. Read private configuration with `useRuntimeConfig(event)`.
+
+## Logging and database
+
+- Log with `useLogger(domain)` from `server/utils/use-logger.ts`, called inside handlers or callbacks, not at module top level. Never log request or response bodies, credential headers, SAS URLs or caller context.
+- The access log is the only global middleware. Readiness probes are excluded from it.
+- Use the shared pool through `useDB()` (`server/db/use-db.ts`); do not create another pool in application code. `createDatabase()` is for tests and tooling that own their pool.
 
 ## Guards and validation
 

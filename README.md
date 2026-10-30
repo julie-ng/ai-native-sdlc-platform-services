@@ -28,7 +28,7 @@ npm run docs:build  # docs:check, then the static site into docs-site/dist/
 
 [docs-site/typedoc.json](./docs-site/typedoc.json) defines the documented scope and validation for both the site and `docs:check`. The documentation commands are not part of `verify`.
 
-`GET /` is public and returns `200 OK` with `application/json`: `{"name":"platform-services"}`. It accepts no input and identifies the service; it does not check dependency health.
+`GET /` is public and returns `200 OK` with `application/json`: `{"name":"platform-services"}`. It accepts no input and identifies the service; it does not check dependency health (see [readiness](#logging-and-readiness)).
 
 ## Verification and production
 
@@ -95,5 +95,40 @@ npm run db:down      # Stop and discard the database
 | `NUXT_DATABASE_URL` | PostgreSQL connection string |
 | `NUXT_ARTIFACT_STORAGE_ACCOUNT_URL` | Blob service endpoint, e.g. `https://<account>.blob.core.windows.net` |
 | `NUXT_ARTIFACT_STORAGE_CONTAINER` | Container name; defaults to `artifacts` |
+| `NUXT_LOG_LEVEL` | pino log level (`fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`); defaults to `info`. Unknown values fall back to `info` with a warning |
 
 The Blob client uses `DefaultAzureCredential`. Its identity needs read/write data access to the container (for example, Storage Blob Data Contributor scoped to the container) plus Storage Blob Delegator at the storage account scope or above, because [Get User Delegation Key acts at the account level](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas). Missing configuration returns 503.
+
+### Logging and readiness
+
+The server writes JSON lines to stdout with [pino](https://getpino.io/); Kubernetes collects them. Each line has a `domain`:
+
+| Domain | Lines |
+| --- | --- |
+| `http` | One access line per response (`method`, `path`, `search`, `status`, `duration`), except `/readyz`. Unhandled request errors at `error` level with `err`; expected `createError()` responses appear only as their access line |
+| `db` | Failed idle database connections; the pool replaces them instead of the process exiting |
+| `readyz` | One `error` line per failed readiness check, with `check`, the driver `code` if any, and `err` |
+
+Request and response bodies, headers, SAS URLs and caller context are never logged. `NUXT_LOG_LEVEL=warn` suppresses access lines.
+
+`GET /readyz` is the Kubernetes readiness probe: public, outside `/api`, no caller guard. It responds with `application/health+json` and `Cache-Control: no-store`:
+
+```json
+{
+  "status": "pass",
+  "message": "Server is up and running.",
+  "timestamp": "2026-10-30T13:58:04.299Z",
+  "uptime": 1234,
+  "uptime_human_readable": "20 minutes and 34 seconds",
+  "checks": {
+    "postgres:connection": [{ "componentType": "datastore", "status": "pass", "time": "2026-10-30T13:58:04.299Z" }],
+    "azure-storage:configuration": [{ "componentType": "component", "status": "pass", "time": "2026-10-30T13:58:04.299Z" }]
+  }
+}
+```
+
+- `postgres:connection` runs `select 1` on the shared pool. It fails when the database is unreachable or `NUXT_DATABASE_URL` is unset.
+- `azure-storage:configuration` checks that `NUXT_ARTIFACT_STORAGE_ACCOUNT_URL` is HTTPS and `NUXT_ARTIFACT_STORAGE_CONTAINER` is set. It does not call Azure, so it cannot detect missing credentials or roles.
+- `200` when every check passes; otherwise `503` with `status: fail` and the failing check marked `fail`. Causes go to the log only.
+
+Probe manifests belong in the infrastructure repository. There is no liveness endpoint.
