@@ -3,6 +3,9 @@
  * serve it for preview, by default at http://localhost:4000. Refresh the page after a
  * rebuild. A development preview only: static files, no caching, GET and HEAD.
  *
+ * Intermediary solution: this stands in until the API reference is published as a static
+ * site (GitHub Pages is the preferred host). Replace or delete it then; do not extend it.
+ *
  * Environment: `DOCS_PORT` (default 4000) and `DOCS_HOST` (default 127.0.0.1; use
  * 0.0.0.0 to reach the preview from outside a dev container).
  * @module

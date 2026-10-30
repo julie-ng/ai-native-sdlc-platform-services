@@ -28,12 +28,13 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 ## Open decisions
 
 - Choose HMAC or Kubernetes ServiceAccount authentication for the `requireCallerContext` guard, which constructs `event.context.caller`.
+- Choose how to publish the API reference. Stated preference: a static site hosted on GitHub Pages, which would replace the intermediary `docs:dev` preview server. Neither the generator (TypeDoc may stay or go) nor the publishing workflow is decided.
 
 ## Decision log
 
 | Date / context | Decision and reason |
 | --- | --- |
-| 2026-10-30 / API reference | Add TypeDoc (dev dependency, pinned) to render JSDoc as browsable API documentation, so the server architecture can be reviewed as API docs. Scope is `server/utils/` and `server/db/` only: JSDoc on `shared/` Zod schemas and inferred types, and on route handlers, only restated the code and the OpenAPI contract, and TypeDoc renders both poorly (Zod internals, bare `default` exports). `shared/` is marked external so it is neither documented nor validated. The preview is a small Node script rather than another dependency. `docs:api` enforces documentation on modules, functions, types, interfaces and variables, but not on properties. It is not in `verify`; adding it would make documentation a CI gate. |
+| 2026-10-30 / API reference | Add TypeDoc (dev dependency, pinned) to render JSDoc as browsable API documentation, so the server architecture can be reviewed as API docs. Scope is `server/utils/` and `server/db/` only: JSDoc on `shared/` Zod schemas and inferred types, and on route handlers, only restated the code and the OpenAPI contract, and TypeDoc renders both poorly (Zod internals, bare `default` exports). `shared/` is marked external so it is neither documented nor validated. The preview is a small Node script rather than another dependency, and is explicitly an intermediary solution until the reference can be published as a static site (see open decisions). `docs:api` enforces documentation on modules, functions, types, interfaces and variables, but not on properties. It is not in `verify`; adding it would make documentation a CI gate. |
 | 2026-10-30 / minimal service root | Replace the Nuxt welcome page with a public JSON service identifier at `GET /`. Keep the root minimal; it does not check dependency health. |
 | 2026-10-25 / repository bootstrap | Start with TypeScript and REST APIs; defer UI implementation to keep the first release focused. Drizzle is the chosen ORM; Pinia, Tailwind, and Nuxt UI are reserved for later UI work. |
 | 2026-10-25 / coding preferences | Use PascalCase components and adapt utility/composable conventions to TypeScript. Do not inherit another application's domain model, credentials, or service choices. |

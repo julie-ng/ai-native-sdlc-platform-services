@@ -42,7 +42,7 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 | --- | --- |
 | `npm ci` | Install locked dependencies; also runs Nuxt preparation |
 | `npm run dev` | Start local development |
-| `npm run docs:dev` | Preview the TypeDoc API reference at `http://localhost:4000`, rebuilding on change |
+| `npm run docs:dev` | Intermediary: preview the TypeDoc API reference at `http://localhost:4000`, rebuilding on change |
 | `npm run docs:api` | Build the API reference into `.typedoc/`; fails on undocumented exports or broken `{@link}`s |
 | `npm run check:guidance` | Check repository guidance links and portable skill metadata |
 | `npm run check:artifact-contract` | Alias for test:contract |
