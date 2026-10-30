@@ -8,7 +8,7 @@ import * as schema from './schema.ts'
 
 /**
  * Create a Drizzle client over its own node-postgres pool. The application
- * holds one per Nitro process (see useArtifactService); tests create their own.
+ * shares one per Nitro process (see `useDB` in `use-db.ts`); tests create their own.
  * Callers own the pool and must end it.
  * @param connectionString - PostgreSQL connection URL.
  * @returns The Drizzle client (`db`) and its pool (`pool`, end it with `pool.end()`).
