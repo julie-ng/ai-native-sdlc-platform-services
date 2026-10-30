@@ -6,6 +6,8 @@
     "build": "nuxt build",
     "check:guidance": "node scripts/check-guidance.ts",
     "dev": "nuxt dev",
+    "docs:api": "typedoc",
+    "docs:dev": "node scripts/docs-dev.ts",
     "generate": "nuxt generate",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
@@ -41,6 +43,7 @@
     "@types/pg": "8.23.1",
     "drizzle-kit": "0.31.11",
     "eslint": "^10.13.0",
+    "typedoc": "0.28.20",
     "typescript": "^6.0.3",
     "vitest": "5.0.5",
     "vue-tsc": "3.3.13"

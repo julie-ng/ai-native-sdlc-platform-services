@@ -1,3 +1,8 @@
+/**
+ * Drizzle schema for artifact persistence and the workflow tables it references.
+ * Migrations are generated from this file (`npm run db:generate`).
+ * @module
+ */
 import { sql } from 'drizzle-orm'
 import { check, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 import type { artifactStates } from '../../shared/utils/zod-schemas/artifact.schema.ts'
@@ -6,10 +11,12 @@ import type { artifactStates } from '../../shared/utils/zod-schemas/artifact.sch
  * Workflow-owned run/step records. Kept minimal until the workflow service
  * exists; artifacts reference steps so ownership has a real foreign key.
  */
+/** A workflow run. */
 export const runs = pgTable('runs', {
   id: uuid('id').primaryKey(),
 })
 
+/** A step of a run: the producer that owns artifacts. Deleting a run with steps is restricted. */
 export const steps = pgTable('steps', {
   id: uuid('id').primaryKey(),
   runId: uuid('run_id').notNull().references(() => runs.id, { onDelete: 'restrict' }),
@@ -18,6 +25,9 @@ export const steps = pgTable('steps', {
 /**
  * One current artifact per producing step/name. No attempt, revision, SAS or
  * blob-key columns: the blob key is derived from run/step/name.
+ *
+ * Constraints: `(producer_step_id, name)` is unique, and the check constraint ties
+ * `state` to the size/hash columns (`reserved` requires both NULL, `uploaded` both set).
  */
 export const artifacts = pgTable('artifacts', {
   id: uuid('id').primaryKey().defaultRandom(),

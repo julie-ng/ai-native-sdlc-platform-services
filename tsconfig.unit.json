@@ -16,6 +16,7 @@
     "server/utils/**/*.ts",
     "server/db/**/*.ts",
     "tests/support/**/*.ts",
+    "scripts/docs-dev.ts",
     "scripts/generate-artifact-openapi.ts",
     "scripts/openapi/**/*.ts",
     "tests/contract/**/*.ts",

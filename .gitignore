@@ -5,6 +5,7 @@
 .nitro
 .cache
 dist
+.typedoc
 
 # Node dependencies
 node_modules

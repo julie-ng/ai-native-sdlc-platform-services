@@ -1,3 +1,7 @@
+/**
+ * Explicit guard that establishes the trusted caller context for artifact routes.
+ * @module
+ */
 import { createError } from 'h3'
 import type { H3Event } from 'h3'
 import { readCallerContext } from '../artifact/context.utils.ts'
@@ -13,6 +17,8 @@ import { readCallerContext } from '../artifact/context.utils.ts'
  * Never build the context from body, query or headers.
  *
  * After this call, `event.context.caller` is set and validated.
+ * @param event - The request event.
+ * @throws H3Error 503 when no valid caller context is available.
  */
 export function requireCallerContext(event: H3Event) {
   const result = readCallerContext(event.context)

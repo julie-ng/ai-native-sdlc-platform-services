@@ -1,12 +1,18 @@
+/**
+ * PostgreSQL implementation of the artifact repository port, using Drizzle.
+ * @module
+ */
 import { and, asc, eq, getTableColumns, or, sql } from 'drizzle-orm'
 import type { Database } from '../../db/connection.ts'
 import { artifacts, steps } from '../../db/schema.ts'
 import type { ArtifactRecord, ArtifactRepository, UploadedArtifact } from './ports.ts'
 
+/** Artifact columns plus the run ID from the workflow-owned step the artifact references. */
 const columns = { ...getTableColumns(artifacts), runId: steps.runId }
+/** An artifact row joined with its step's run ID. */
 type Row = typeof artifacts.$inferSelect & { runId: string }
 
-// Absent optional metadata is SQL NULL and omitted from records.
+/** Map a joined row to a record. Absent optional metadata is SQL NULL and omitted from records. */
 function toRecord(row: Row): ArtifactRecord {
   const base = {
     id: row.id,
@@ -29,8 +35,10 @@ function toRecord(row: Row): ArtifactRecord {
 /**
  * PostgreSQL artifact metadata. Every lookup joins the workflow-owned step so
  * the returned reference carries the step's actual run.
+ * @param db - Drizzle client; the caller owns its connection pool.
  */
 export function createArtifactRepository(db: Database): ArtifactRepository {
+  /** Look up one record by ID; `undefined` when absent. */
   async function findById(id: string) {
     const [row] = await db.select(columns).from(artifacts)
       .innerJoin(steps, eq(steps.id, artifacts.producerStepId))
@@ -41,6 +49,11 @@ export function createArtifactRepository(db: Database): ArtifactRepository {
   return {
     findById,
 
+    /**
+     * Insert the artifact, or replace its descriptive metadata when the step/name
+     * record exists, in one transaction. State, size and hash are kept.
+     * @throws If the producing step is not registered in the reference's run.
+     */
     async upsert(reference, { contentType, kind, title, description }) {
       const metadata = { contentType, kind: kind ?? null, title: title ?? null, description: description ?? null }
       const { id, created } = await db.transaction(async (tx) => {
@@ -66,6 +79,7 @@ export function createArtifactRepository(db: Database): ArtifactRepository {
       return { record: (await findById(id))!, created }
     },
 
+    /** Records matching exactly the given references, oldest first (then by ID). */
     async listByReferences(references) {
       if (references.length === 0) {
         return []
@@ -81,6 +95,10 @@ export function createArtifactRepository(db: Database): ArtifactRepository {
       return rows.map(toRecord)
     },
 
+    /**
+     * Mark the artifact `uploaded` with the reported size and hash, replacing earlier values.
+     * @throws If the artifact no longer exists.
+     */
     async acknowledge(id, { sizeBytes, sha256 }) {
       const [updated] = await db.update(artifacts)
         .set({ state: 'uploaded', sizeBytes, sha256, updatedAt: sql`now()` })
