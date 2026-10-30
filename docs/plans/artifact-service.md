@@ -1,7 +1,7 @@
 # Artifact service — POC contract
 
 > [!IMPORTANT]
-> The [API contract](../api/README.md) defines the current POC; [implementation details](../api/implementation.md) cover persistence and storage. Schemas and policy utilities exist; routes and live adapters remain unimplemented. Accepted refinements are recorded in the [decision log](../architecture.md#decision-log).
+> The [API contract](../api/README.md) defines the current POC; [implementation details](../api/implementation.md) cover persistence and storage. Routes, service, PostgreSQL repository and Azure SAS issuer are implemented; caller authentication and live Azure verification remain. Accepted refinements are recorded in the [decision log](../architecture.md#decision-log).
 
 ## Ontology
 
@@ -14,13 +14,13 @@
 | Artifact | The current file and its metadata, with one stable ID per producing step/name. | P1's `plan`. |
 | Producer | The step that owns/creates an artifact; its executing agent writes the file. | P1 produces the plan. |
 | Consumer | A caller permitted to read that artifact. | C1 consumes P1's plan. |
-| Caller | Whoever is making the current service request, using middleware-established context. | Planner requesting upload access; coder downloading. |
+| Caller | Whoever is making the current service request, using context established by the caller guard. | Planner requesting upload access; coder downloading. |
 | Name | Logical artifact slot, not a filename or permission. | `plan`, not `plan.md`. |
 | SAS URL | A temporary cloud-storage capability scoped to one blob and permitted actions. | Upload or download URL. |
 
 ## Purpose: the airport counter
 
-- Middleware has checked the caller's “passport”; the service receives its trusted itinerary in `event.context.caller`.
+- The `requireCallerContext` guard, called explicitly by each route, checks the caller's “passport” and records the trusted itinerary in `event.context.caller`.
   - The service owns the access list. A caller can discover zero, one or several available artifacts without knowing IDs first; an ID only selects within that list.
 - The artifact service owns metadata; cloud storage owns bytes.
   - A SAS URL is the temporary ticket to those bytes. Metadata/discovery reads do not issue that ticket automatically.
@@ -35,7 +35,7 @@
   - Only the current values are stored. Consumers read after the producing step finishes.
 - Assume one active writer per step and no overlapping executions.
   - This is an operating assumption, not service-enforced isolation. No locks, leases or concurrent-writer coordination are required for this POC.
-- Authentication is outside this task; upstream middleware supplies caller context.
+- Authentication is outside this task; the caller guard will construct the context (#13).
   - The service checks its required shape and binding consistency and fails closed if missing. Consume complete trusted context directly; defer workflow-step lookup, token parsing and context construction. HMAC versus Kubernetes ServiceAccount authentication remains undecided. Tests inject fixed server-owned context without production auth bypasses.
 
 ## Caller flow
@@ -54,34 +54,23 @@
 - Completion reports metadata, not independently verified cloud content.
   - Missing artifacts or no granted access return 404; an existing accessible artifact with the wrong action returns 403. HTTP claims cannot replace roles, ownership or permissions from trusted context.
 
-## Implementable contract
+## Implementation map
 
-- Implementation agents must read the applicable [server](../../server/AGENTS.md), [database](../../server/db/AGENTS.md) and [shared](../../shared/AGENTS.md) instructions.
-  - Those files carry reusable implementation rules, including the 403/404 distinction and timestamp lifecycle; the contract below supplies the exact schemas and signatures.
-- Start with the [overview](../api/README.md), then [implementation details](../api/implementation.md).
-  - [OpenAPI](../api/artifact.openapi.json), [checked examples](../api/examples.json), [test contexts and records](../api/caller-contexts.fixture.json) and [TypeScript ports](../../server/utils/artifact/ports.ts) define exact shapes. Example names are labels, not artifact IDs.
-- Caller context is `{ runId, stepId, taskType, inputs, outputs }`; internal references are `{ runId, producerStepId, name }`.
-  - The service derives the producing step ID from an own-output binding. Public reads use IDs within trusted readable scope; bindings point to a step's current artifact, not to a historical execution.
-- Planned persistence is PostgreSQL 17 + Drizzle; no deployed database is assumed.
-  - Proposed FK: `producerStepId -> steps(id)`; unique producing step/name. Workflow owns minimal run/step tables and schema migrations, without requiring workflow endpoints or an attempts table for this slice.
+- Read the applicable [server](../../server/AGENTS.md), [database](../../server/db/AGENTS.md) and [shared](../../shared/AGENTS.md) instructions before changing artifact code.
+- Start with the [overview](../api/README.md), then [implementation details](../api/implementation.md). [OpenAPI](../api/artifact.openapi.json) and [TypeScript ports](../../server/utils/artifact/ports.ts) define exact shapes.
+- Caller context is `{ runId, stepId, taskType, inputs, outputs }`; internal references are `{ runId, producerStepId, name }`. The service derives the producing step from the caller; bindings point to a step's current artifact, not a historical execution.
+- Artifacts keep `createdAt` and `updatedAt`. Every accepted write (repeated POST or upload report) refreshes `updatedAt`; reads and denials do not.
 
-- Artifacts keep `createdAt` and `updatedAt`, exposed in permitted metadata reads.
-  - Both start together; each accepted upload report refreshes `updatedAt` and `uploadedAt` with one DB timestamp. Repeated POST/read/denial does not modify the row. Mutation acknowledgments still omit stored metadata for write-only callers.
+| Piece | Location | Tests |
+| --- | --- | --- |
+| Routes and caller guard | `server/api/artifacts/`, `server/utils/guards/` | Manual HTTP smoke only; see remaining work |
+| Service (404/403/409 decisions) | `server/utils/artifact/service.utils.ts` | Unit tests with in-memory fakes |
+| PostgreSQL repository and migrations | `server/utils/artifact/repository.utils.ts`, `server/db/` | `npm run test:db` against disposable PostgreSQL 17 |
+| Azure user delegation SAS | `server/utils/artifact/azure-sas.utils.ts` | Offline signing with a fixed test key |
 
-## Delivery after contract merge
+## Remaining work
 
-1. Implement pure context/policy functions and resource routes against injected adapters.
-   - Unit tests need no server. Cover same-step writes, 404 with no access versus 403 with wrong action, latest completion/timestamps, discovery without signing and response allowlists.
-2. Supply workflow-owned run/step records, then artifact migrations and disposable PostgreSQL 17 tests.
-   - Prove the step FK, unique step/name, stable IDs and restart durability; do not build attempt tracking or overlapping-writer coordination.
-3. Exercise real Azure upload, overwrite, acknowledgment and download with separately supplied service credentials.
-   - Prove the same blob is reused, latest bytes/hash match and read-only capabilities cannot write. Fake URLs and builds do not prove this.
-4. Integrate production middleware/context delivery and cluster execution later.
-   - Broader workflow endpoints, attempt logging, Kubernetes/Argo, GitHub broker, webhook ingress, UI and LLM calls remain outside this slice.
-
-## Verification
-
-- On Node 24: `npm ci`, `npm run check:artifact-contract`, `npm run check:guidance`, `npm run verify`, `git diff --check`.
-  - Contract checks validate schemas, examples, seed consistency; typecheck covers source ports. Real authorization, PostgreSQL and Azure behavior need implementation tests.
-- The [workflow reference](./workflow-service.md) preserves broader planning ideas, not additional POC requirements.
-  - No external checkout, parent temporary files, conversation history or personal memory is required to implement the recorded contract.
+1. Authentication inside the `requireCallerContext` guard that constructs `event.context.caller` (#13; HMAC vs Kubernetes ServiceAccount is still open). Until then every artifact request returns 503.
+2. Unit tests for the guard and a static check that every artifact route calls it before reading input (#19).
+3. Real Azure upload, overwrite, report and download with a provisioned storage account and service identity. Prove the same blob is reused, latest bytes/hash match and read SAS cannot write.
+4. Cluster execution, broader workflow endpoints, attempt logging, GitHub broker, webhook ingress, UI and LLM calls remain outside this slice. The [workflow reference](./workflow-service.md) preserves broader planning ideas, not POC requirements.

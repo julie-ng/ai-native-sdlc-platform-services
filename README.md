@@ -19,7 +19,7 @@ The development server defaults to `http://localhost:3000`.
 npm run check:guidance  # Local documentation links and portable skill metadata
 npm run generate:artifact-openapi # Generate OpenAPI after editing Zod/HTTP definitions
 npm run check:artifact-contract # Alias for test:contract
-npm run test:contract   # Generated OpenAPI freshness, structure and generation
+npm run test:contract   # Generated OpenAPI freshness, validity and documentation examples
 npm run lint            # ESLint checks; warnings fail
 npm run lint:fix        # Apply available ESLint fixes
 npm run test:unit       # Offline Vitest unit tests
@@ -29,7 +29,7 @@ npm run verify          # All checks above and Nuxt production build
 npm run preview         # Preview the completed build
 ```
 
-`npm run build` is available separately. [Nuxt ESLint](https://eslint.nuxt.com/packages/module) checks JavaScript, TypeScript, and Vue using the repository's style conventions. `npm ci` generates its Nuxt configuration through the existing preparation hook. `typecheck` runs `nuxt typecheck` plus the strict standalone [test/support project](./tsconfig.unit.json). `test:unit` and `test:contract` use [Vitest](https://vitest.dev/) with each test file isolated. No cloud credentials or database are needed.
+`npm run build` is available separately. [Nuxt ESLint](https://eslint.nuxt.com/packages/module) checks JavaScript, TypeScript, and Vue using the repository's style conventions. `npm ci` generates its Nuxt configuration through the existing preparation hook. `typecheck` runs `nuxt typecheck` plus the strict standalone [test/support project](./tsconfig.unit.json). `test:unit` and `test:contract` use [Vitest](https://vitest.dev/) with each test file isolated. No cloud credentials or database are needed; `test:db` (below) needs Docker.
 
 [CI](./.github/workflows/ci.yml) runs on pull requests targeting `main`, pushes to `main`, and manual dispatch. It installs locked dependencies with Node.js 24 from `.node-version`, then runs `npm run verify`, including lint, guidance/contract checks, unit tests, typechecking and one production build.
 
@@ -51,8 +51,32 @@ The [add-api-endpoint skill](./.agents/skills/add-api-endpoint/SKILL.md) provide
 
 Project knowledge belongs in repository documentation. Personal memories and other repository checkouts are optional and are not required to understand or build this application.
 
-## Artifact service foundation
+## Artifact service
 
-The merged [artifact contract](./docs/api/README.md), [artifact plan](./docs/plans/artifact-service.md) and [workflow reference](./docs/plans/workflow-service.md) define the API. Handwritten Zod schemas, trusted-context validation, pure policy and stable storage-key derivation are implemented. Artifacts belong to steps, retain one ID/blob across retries, and permit planner updates to their own bound plan. The service consumes complete trusted caller context without a workflow-step lookup dependency; tests inject server-owned contexts. Authentication/context construction is deferred, with HMAC versus Kubernetes ServiceAccount authentication undecided. No routes, service orchestration, database schema/migrations or Azure integration are implemented.
+The [artifact API](./docs/api/README.md) and [artifact plan](./docs/plans/artifact-service.md) describe the service. Routes under `server/api/artifacts/` call a service that applies the planner/coder policy, a Drizzle/PostgreSQL repository, and an Azure user delegation SAS issuer. Artifacts belong to steps and keep one ID/blob across retries. Bytes go directly between callers and Azure.
 
-`shared/utils/zod-schemas/` contains the schema source of truth, grouped by domain with comments. Runtime code uses `safeParse`; TypeScript types use `z.infer`. `npm run generate:artifact-openapi` generates `docs/api/artifact.openapi.json` from those schemas and handwritten HTTP definitions in `scripts/openapi/artifact-http.ts`. Edit those TypeScript sources, not the generated JSON. `npm run test:contract` checks generated OpenAPI freshness/structure, deterministic generation, example parity with Zod and fixture/scenario consistency. `npm run check:artifact-contract` is a compatibility alias for the contract tests; `typecheck` checks actual source interfaces. Ajv/formats are development-only generated-contract checkers. Unit tests exercise runtime schemas and context/policy/storage-key functions. Contract tests check documented denial examples; real service/HTTP tests must establish status selection and signing order when those implementations exist. See the [schema workflow](./docs/api/implementation.md#schema-workflow) for generation and verification.
+Authentication is not implemented: each route explicitly calls the `requireCallerContext` guard, which today only validates an `event.context.caller` that nothing sets yet, so every artifact request currently returns 503. HMAC versus Kubernetes ServiceAccount authentication is undecided. Real Azure transfer has not been exercised.
+
+`shared/utils/zod-schemas/` is the schema source of truth. `npm run generate:artifact-openapi` generates `docs/api/artifact.openapi.json` from those schemas and the HTTP definitions in `scripts/openapi/artifact-http.ts`; edit those sources, not the JSON. See the [schema workflow](./docs/api/implementation.md#schema-workflow).
+
+### Database
+
+```bash
+npm run db:up        # Disposable PostgreSQL 17 in Docker (compose.yaml, tmpfs data)
+npm run test:db      # Repository integration tests; each file creates and drops its own database
+npm run db:generate  # Generate a migration after editing server/db/schema.ts
+npm run db:migrate   # Apply migrations to NUXT_DATABASE_URL
+npm run db:down      # Stop and discard the database
+```
+
+`test:db` connects to `TEST_DATABASE_URL` (default `postgres://postgres:postgres@localhost:5432/postgres`, matching `compose.yaml`). It is not part of `verify` or CI because it needs Docker.
+
+### Runtime configuration
+
+| Variable | Purpose |
+| --- | --- |
+| `NUXT_DATABASE_URL` | PostgreSQL connection string |
+| `NUXT_ARTIFACT_STORAGE_ACCOUNT_URL` | Blob service endpoint, e.g. `https://<account>.blob.core.windows.net` |
+| `NUXT_ARTIFACT_STORAGE_CONTAINER` | Container name; defaults to `artifacts` |
+
+The Blob client uses `DefaultAzureCredential`. Its identity needs read/write data access to the container (for example, Storage Blob Data Contributor scoped to the container) plus Storage Blob Delegator at the storage account scope or above, because [Get User Delegation Key acts at the account level](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas). Missing configuration returns 503.

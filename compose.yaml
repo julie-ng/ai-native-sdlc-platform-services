@@ -1,0 +1,15 @@
+# Disposable local PostgreSQL for `npm run test:db`. Data lives in tmpfs and is
+# discarded on `npm run db:down`. Never use these credentials outside local tests.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - 5432:5432
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: [CMD, pg_isready, -U, postgres]
+      interval: 1s
+      retries: 30

@@ -9,13 +9,10 @@ import {
   uploadedArtifactInfoSchema, artifactInfoSchema, listArtifactsResponseSchema, newArtifactResponseSchema,
 } from './artifact.schema.ts'
 import { uploadSasSchema, downloadSasSchema } from './sas.schema.ts'
-import {
-  fieldErrorSchema, error400Schema, error403Schema, error404Schema, error405Schema,
-  error409Schema, error413Schema, error415Schema, error500Schema, error503Schema, errorResponseSchema,
-} from './error.schema.ts'
+import { errorResponseSchema } from './error.schema.ts'
 
-// Stable public component names connect Zod schemas to generated OpenAPI and
-// the checked example corpus. Runtime callers import individual domain schemas.
+// Stable public component names connect Zod schemas to generated OpenAPI.
+// Runtime callers import individual domain schemas.
 export const artifactSchemas = {
   Uuid: uuidSchema,
   Name: nameSchema,
@@ -38,16 +35,6 @@ export const artifactSchemas = {
   UploadedArtifactInfo: uploadedArtifactInfoSchema,
   ArtifactInfo: artifactInfoSchema,
   ListArtifactsResponse: listArtifactsResponseSchema,
-  FieldError: fieldErrorSchema,
-  Error400: error400Schema,
-  Error403: error403Schema,
-  Error404: error404Schema,
-  Error405: error405Schema,
-  Error409: error409Schema,
-  Error413: error413Schema,
-  Error415: error415Schema,
-  Error500: error500Schema,
-  Error503: error503Schema,
   ErrorResponse: errorResponseSchema,
   NewArtifactResponse: newArtifactResponseSchema,
 }

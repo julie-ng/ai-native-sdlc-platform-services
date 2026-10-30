@@ -14,10 +14,13 @@
   "include": [
     "shared/**/*.ts",
     "server/utils/**/*.ts",
+    "server/db/**/*.ts",
     "tests/support/**/*.ts",
     "scripts/generate-artifact-openapi.ts",
     "scripts/openapi/**/*.ts",
     "tests/contract/**/*.ts",
+    "tests/integration/**/*.ts",
+    "drizzle.config.ts",
     "vitest.config.ts"
   ]
 }

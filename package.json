@@ -17,7 +17,12 @@
     "typecheck": "nuxt typecheck && tsc -p tsconfig.unit.json",
     "generate:artifact-openapi": "node scripts/generate-artifact-openapi.ts",
     "test:contract": "vitest run tests/contract",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:down": "docker compose down",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "test:db": "vitest run tests/integration"
   },
   "dependencies": {
     "@azure/identity": "4.14.0",
@@ -34,8 +39,6 @@
     "@nuxt/eslint": "^1.17.0",
     "@types/node": "24.19.2",
     "@types/pg": "8.23.1",
-    "ajv": "8.20.0",
-    "ajv-formats": "3.0.1",
     "drizzle-kit": "0.31.11",
     "eslint": "^10.13.0",
     "typescript": "^6.0.3",

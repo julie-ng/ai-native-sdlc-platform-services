@@ -16,7 +16,7 @@ Applies to `server/db/**`, in addition to the root and [server instructions](../
 
 - Follow the [persistence contract](../../docs/api/implementation.md#persistence-and-workflow-ownership) for fields, constraints, migrations, and timestamp behavior.
 - Persist one current artifact per step/name with stable IDs across retries. Reference workflow-owned run/step tables; do not duplicate their ownership or add attempt history.
-- Scope existence queries to any granted action and discovery to read access. Follow the [server authorization rules](../AGENTS.md#guards-and-validation); do not use unrestricted ID lookups.
-- Verify constraints, stable IDs, report replacement, timestamps, and restart durability against disposable PostgreSQL, not mocks.
+- Discovery queries take the caller's readable references. ID lookups may be unscoped; the service decides 404/403 per the [server authorization rules](../AGENTS.md#guards-and-validation).
+- Verify constraints, stable IDs, report replacement, timestamps, and durability against disposable PostgreSQL (`npm run db:up`, `npm run test:db`), not mocks.
 
 References: [Drizzle columns](https://orm.drizzle.team/docs/column-types), [updates](https://orm.drizzle.team/docs/update), and [migrations](https://orm.drizzle.team/docs/migrations).

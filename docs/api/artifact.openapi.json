@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Artifact service contract",
-    "version": "0.3.1",
-    "description": "One current artifact per producing step/name. Trusted middleware supplies event.context.caller; task policy and exact bindings determine access. Missing or no access is 404; some access but wrong action is 403. Planners write their own plan; coders read bound plans. Assume one plan per consumer, one active writer per step, and reads after production. No history or planner recovery. Unsupported methods return 405 with Allow. Generated contract; routes and integrations are not implemented."
+    "version": "0.4.0",
+    "description": "One current artifact per producing step/name. The explicit requireCallerContext guard establishes event.context.caller; task policy and exact bindings determine access. Missing or not visible is 404; visible but wrong action is 403. Planners write their own plan; coders read bound plans. Bytes move directly between caller and Azure Blob Storage. Errors use Nitro's createError() JSON."
   },
   "x-caller-context": {
     "location": "event.context.caller",
@@ -15,8 +15,8 @@
     "/api/artifacts": {
       "post": {
         "operationId": "createArtifact",
-        "summary": "Create an upload SAS for a step-owned artifact",
-        "description": "Register metadata if absent and issue a fresh upload SAS for the same ID/blob. First kind/title/description wins; later descriptive changes are ignored. Changed content type returns 409.",
+        "summary": "Register the caller's artifact and issue an upload SAS",
+        "description": "Insert, or replace the descriptive metadata of, the caller's step/name artifact (last write wins; omitted optional fields are cleared). State, size and hash are kept. Every call issues a fresh write SAS for the same blob.",
         "requestBody": {
           "required": true,
           "content": {
@@ -24,23 +24,17 @@
               "schema": {
                 "$ref": "#/components/schemas/CreateArtifactRequest"
               },
-              "examples": {
-                "example": {
-                  "value": {
-                    "name": "plan",
-                    "contentType": "text/markdown",
-                    "kind": "notes",
-                    "title": "Implementation plan",
-                    "description": "Plan for the first artifact-service slice."
-                  }
-                }
+              "example": {
+                "name": "plan",
+                "contentType": "text/markdown",
+                "title": "Implementation plan"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Existing artifact",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -56,20 +50,16 @@
                 "schema": {
                   "$ref": "#/components/schemas/CreateArtifactResponse"
                 },
-                "examples": {
-                  "example": {
-                    "value": {
-                      "id": "40000000-0000-4000-8000-000000000001",
-                      "state": "reserved",
-                      "upload": {
-                        "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=w&sig=DOCUMENTATION-ONLY",
-                        "method": "PUT",
-                        "headers": {
-                          "x-ms-blob-type": "BlockBlob",
-                          "Content-Type": "text/markdown"
-                        },
-                        "expiresAt": "2026-10-26T10:05:00Z"
-                      }
+                "example": {
+                  "id": "40000000-0000-4000-8000-000000000001",
+                  "state": "uploaded",
+                  "upload": {
+                    "url": "https://account.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sp=w&sig=DOCUMENTATION-ONLY",
+                    "method": "PUT",
+                    "expiresAt": "2026-10-27T10:05:00.000Z",
+                    "headers": {
+                      "x-ms-blob-type": "BlockBlob",
+                      "Content-Type": "text/markdown"
                     }
                   }
                 }
@@ -93,20 +83,16 @@
                 "schema": {
                   "$ref": "#/components/schemas/NewArtifactResponse"
                 },
-                "examples": {
-                  "example": {
-                    "value": {
-                      "id": "40000000-0000-4000-8000-000000000001",
-                      "state": "reserved",
-                      "upload": {
-                        "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=w&sig=DOCUMENTATION-ONLY",
-                        "method": "PUT",
-                        "headers": {
-                          "x-ms-blob-type": "BlockBlob",
-                          "Content-Type": "text/markdown"
-                        },
-                        "expiresAt": "2026-10-26T10:05:00Z"
-                      }
+                "example": {
+                  "id": "40000000-0000-4000-8000-000000000001",
+                  "state": "reserved",
+                  "upload": {
+                    "url": "https://account.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sp=w&sig=DOCUMENTATION-ONLY",
+                    "method": "PUT",
+                    "expiresAt": "2026-10-27T10:05:00.000Z",
+                    "headers": {
+                      "x-ms-blob-type": "BlockBlob",
+                      "Content-Type": "text/markdown"
                     }
                   }
                 }
@@ -114,86 +100,106 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/Error400"
+            "description": "Invalid body or route parameter; `data` holds z.flattenError() output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "403": {
-            "$ref": "#/components/responses/Error403"
+            "description": "Artifact is visible to the caller, but the requested action is not permitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/Error404"
-          },
-          "409": {
-            "$ref": "#/components/responses/Error409"
-          },
-          "413": {
-            "$ref": "#/components/responses/Error413"
-          },
-          "415": {
-            "$ref": "#/components/responses/Error415"
+            "description": "Artifact is missing or not visible to the caller; the two are indistinguishable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "500": {
-            "$ref": "#/components/responses/Error500"
+            "description": "Unexpected database or storage failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "503": {
-            "$ref": "#/components/responses/Error503"
+            "description": "Caller context unavailable, or the service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },
       "get": {
         "operationId": "listArtifacts",
-        "summary": "Discover artifacts readable by the middleware-established caller",
-        "description": "List readable reserved/uploaded metadata, ordered by createdAt then id ascending. Return an empty collection if none; never issue SAS URLs.",
+        "summary": "Discover artifacts readable by the caller",
+        "description": "List readable reserved/uploaded metadata, ordered by createdAt then id ascending. Possibly empty; never issues SAS URLs.",
         "responses": {
           "200": {
             "description": "Success",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ListArtifactsResponse"
                 },
-                "examples": {
-                  "example": {
-                    "value": {
-                      "artifacts": [
-                        {
-                          "id": "40000000-0000-4000-8000-000000000001",
-                          "name": "plan",
-                          "contentType": "text/markdown",
-                          "kind": "notes",
-                          "title": "Implementation plan",
-                          "description": "Plan for the first artifact-service slice.",
-                          "state": "uploaded",
-                          "createdAt": "2026-10-26T10:00:00Z",
-                          "sizeBytes": 5,
-                          "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
-                          "uploadedAt": "2026-10-26T10:00:10Z",
-                          "updatedAt": "2026-10-26T10:00:10Z"
-                        }
-                      ]
+                "example": {
+                  "artifacts": [
+                    {
+                      "id": "40000000-0000-4000-8000-000000000001",
+                      "name": "plan",
+                      "contentType": "text/markdown",
+                      "title": "Implementation plan",
+                      "createdAt": "2026-10-27T10:00:00.000Z",
+                      "updatedAt": "2026-10-27T10:01:00.000Z",
+                      "state": "uploaded",
+                      "sizeBytes": 5,
+                      "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
                     }
-                  }
+                  ]
                 }
               }
             }
           },
-          "400": {
-            "$ref": "#/components/responses/Error400"
-          },
           "500": {
-            "$ref": "#/components/responses/Error500"
+            "description": "Unexpected database or storage failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "503": {
-            "$ref": "#/components/responses/Error503"
+            "description": "Caller context unavailable, or the service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -201,8 +207,8 @@
     "/api/artifacts/{id}": {
       "put": {
         "operationId": "completeArtifact",
-        "summary": "Record the latest successful upload; retain no completion history",
-        "description": "After Azure upload succeeds, report size and SHA-256. Every accepted report replaces the latest values and acknowledgment timestamps, including identical retries. Maximum reported size: 1,000,000 bytes; uploaded bytes are not verified.",
+        "summary": "Report a successful upload",
+        "description": "After Azure accepts the upload, report its size and SHA-256. Each report replaces the latest values; no history. Uploaded bytes are not verified. Maximum reported size: 1,000,000 bytes.",
         "parameters": [
           {
             "name": "id",
@@ -221,14 +227,10 @@
               "schema": {
                 "$ref": "#/components/schemas/CompleteArtifactRequest"
               },
-              "examples": {
-                "example": {
-                  "value": {
-                    "state": "uploaded",
-                    "sizeBytes": 5,
-                    "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
-                  }
-                }
+              "example": {
+                "state": "uploaded",
+                "sizeBytes": 5,
+                "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
               }
             }
           }
@@ -236,62 +238,73 @@
         "responses": {
           "200": {
             "description": "Success",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CompleteArtifactResponse"
                 },
-                "examples": {
-                  "example": {
-                    "value": {
-                      "id": "40000000-0000-4000-8000-000000000001",
-                      "state": "uploaded"
-                    }
-                  }
+                "example": {
+                  "id": "40000000-0000-4000-8000-000000000001",
+                  "state": "uploaded"
                 }
               }
             }
           },
           "400": {
-            "$ref": "#/components/responses/Error400"
+            "description": "Invalid body or route parameter; `data` holds z.flattenError() output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "403": {
-            "$ref": "#/components/responses/Error403"
+            "description": "Artifact is visible to the caller, but the requested action is not permitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/Error404"
-          },
-          "409": {
-            "$ref": "#/components/responses/Error409"
-          },
-          "413": {
-            "$ref": "#/components/responses/Error413"
-          },
-          "415": {
-            "$ref": "#/components/responses/Error415"
+            "description": "Artifact is missing or not visible to the caller; the two are indistinguishable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "500": {
-            "$ref": "#/components/responses/Error500"
+            "description": "Unexpected database or storage failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "503": {
-            "$ref": "#/components/responses/Error503"
+            "description": "Caller context unavailable, or the service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },
       "get": {
         "operationId": "getArtifact",
-        "summary": "Read artifact metadata without generating a SAS URL",
-        "description": "Return reserved or uploaded metadata without a SAS URL.",
+        "summary": "Read artifact metadata without issuing a SAS URL",
         "parameters": [
           {
             "name": "id",
@@ -306,56 +319,74 @@
         "responses": {
           "200": {
             "description": "Success",
-            "headers": {
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "no-store"
-                  ]
-                }
-              }
-            },
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ArtifactInfo"
                 },
-                "examples": {
-                  "example": {
-                    "value": {
-                      "id": "40000000-0000-4000-8000-000000000001",
-                      "name": "plan",
-                      "contentType": "text/markdown",
-                      "kind": "notes",
-                      "title": "Implementation plan",
-                      "description": "Plan for the first artifact-service slice.",
-                      "state": "uploaded",
-                      "createdAt": "2026-10-26T10:00:00Z",
-                      "sizeBytes": 5,
-                      "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
-                      "uploadedAt": "2026-10-26T10:00:10Z",
-                      "updatedAt": "2026-10-26T10:00:10Z"
-                    }
-                  }
+                "example": {
+                  "id": "40000000-0000-4000-8000-000000000001",
+                  "name": "plan",
+                  "contentType": "text/markdown",
+                  "title": "Implementation plan",
+                  "createdAt": "2026-10-27T10:00:00.000Z",
+                  "updatedAt": "2026-10-27T10:01:00.000Z",
+                  "state": "uploaded",
+                  "sizeBytes": 5,
+                  "sha256": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3"
                 }
               }
             }
           },
           "400": {
-            "$ref": "#/components/responses/Error400"
+            "description": "Invalid body or route parameter; `data` holds z.flattenError() output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "403": {
-            "$ref": "#/components/responses/Error403"
+            "description": "Artifact is visible to the caller, but the requested action is not permitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/Error404"
+            "description": "Artifact is missing or not visible to the caller; the two are indistinguishable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "500": {
-            "$ref": "#/components/responses/Error500"
+            "description": "Unexpected database or storage failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "503": {
-            "$ref": "#/components/responses/Error503"
+            "description": "Caller context unavailable, or the service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -363,8 +394,8 @@
     "/api/artifacts/{id}/sas": {
       "get": {
         "operationId": "getArtifactSas",
-        "summary": "Receive a just-in-time download SAS URL",
-        "description": "Issue a read SAS for the current blob; return 409 if upload has not been acknowledged.",
+        "summary": "Issue a just-in-time download SAS URL",
+        "description": "Issue a read SAS for the current blob; 409 until an upload has been reported.",
         "parameters": [
           {
             "name": "id",
@@ -394,329 +425,79 @@
                 "schema": {
                   "$ref": "#/components/schemas/DownloadSas"
                 },
-                "examples": {
-                  "example": {
-                    "value": {
-                      "url": "https://example.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sv=2023-11-03&spr=https&sr=b&sp=r&sig=DOCUMENTATION-ONLY",
-                      "method": "GET",
-                      "expiresAt": "2026-10-26T10:05:00Z"
-                    }
-                  }
+                "example": {
+                  "url": "https://account.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sp=r&sig=DOCUMENTATION-ONLY",
+                  "method": "GET",
+                  "expiresAt": "2026-10-27T10:05:00.000Z"
                 }
               }
             }
           },
           "400": {
-            "$ref": "#/components/responses/Error400"
+            "description": "Invalid body or route parameter; `data` holds z.flattenError() output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "403": {
-            "$ref": "#/components/responses/Error403"
+            "description": "Artifact is visible to the caller, but the requested action is not permitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/Error404"
+            "description": "Artifact is missing or not visible to the caller; the two are indistinguishable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "409": {
-            "$ref": "#/components/responses/Error409"
+            "description": "Download requested before an upload was reported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "500": {
-            "$ref": "#/components/responses/Error500"
+            "description": "Unexpected database or storage failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "503": {
-            "$ref": "#/components/responses/Error503"
+            "description": "Caller context unavailable, or the service is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
     }
   },
   "components": {
-    "responses": {
-      "Error400": {
-        "description": "INVALID_REQUEST",
-        "headers": {
-          "Cache-Control": {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "no-store"
-              ]
-            }
-          }
-        },
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error400"
-            },
-            "examples": {
-              "example": {
-                "value": {
-                  "error": {
-                    "code": "INVALID_REQUEST",
-                    "message": "invalid request",
-                    "fields": [
-                      {
-                        "path": "/id",
-                        "code": "format"
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "Error403": {
-        "description": "The artifact exists within the caller's any-action scope, but the requested action is not permitted. Never use 403 for an unseen or missing artifact.",
-        "headers": {
-          "Cache-Control": {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "no-store"
-              ]
-            }
-          }
-        },
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error403"
-            },
-            "examples": {
-              "example": {
-                "value": {
-                  "error": {
-                    "code": "FORBIDDEN",
-                    "message": "forbidden"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "Error404": {
-        "description": "Artifact is missing or outside the caller's any-action scope; do not disclose which.",
-        "headers": {
-          "Cache-Control": {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "no-store"
-              ]
-            }
-          }
-        },
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error404"
-            },
-            "examples": {
-              "example": {
-                "value": {
-                  "error": {
-                    "code": "ARTIFACT_NOT_FOUND",
-                    "message": "artifact not found"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "Error405": {
-        "description": "METHOD_NOT_ALLOWED",
-        "headers": {
-          "Cache-Control": {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "no-store"
-              ]
-            }
-          },
-          "Allow": {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "GET, POST",
-                "GET, PUT",
-                "GET"
-              ]
-            }
-          }
-        },
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error405"
-            },
-            "examples": {
-              "example": {
-                "value": {
-                  "error": {
-                    "code": "METHOD_NOT_ALLOWED",
-                    "message": "method not allowed"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "Error409": {
-        "description": "CONFLICT",
-        "headers": {
-          "Cache-Control": {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "no-store"
-              ]
-            }
-          }
-        },
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error409"
-            },
-            "examples": {
-              "example": {
-                "value": {
-                  "error": {
-                    "code": "CONFLICT",
-                    "message": "conflict"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "Error413": {
-        "description": "REQUEST_TOO_LARGE",
-        "headers": {
-          "Cache-Control": {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "no-store"
-              ]
-            }
-          }
-        },
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error413"
-            },
-            "examples": {
-              "example": {
-                "value": {
-                  "error": {
-                    "code": "REQUEST_TOO_LARGE",
-                    "message": "request too large"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "Error415": {
-        "description": "UNSUPPORTED_MEDIA_TYPE",
-        "headers": {
-          "Cache-Control": {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "no-store"
-              ]
-            }
-          }
-        },
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error415"
-            },
-            "examples": {
-              "example": {
-                "value": {
-                  "error": {
-                    "code": "UNSUPPORTED_MEDIA_TYPE",
-                    "message": "unsupported media type"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "Error500": {
-        "description": "INTERNAL_ERROR",
-        "headers": {
-          "Cache-Control": {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "no-store"
-              ]
-            }
-          }
-        },
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error500"
-            },
-            "examples": {
-              "example": {
-                "value": {
-                  "error": {
-                    "code": "INTERNAL_ERROR",
-                    "message": "internal error"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "Error503": {
-        "description": "CALLER_CONTEXT_UNAVAILABLE, DEPENDENCY_UNAVAILABLE",
-        "headers": {
-          "Cache-Control": {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "no-store"
-              ]
-            }
-          }
-        },
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error503"
-            },
-            "examples": {
-              "example": {
-                "value": {
-                  "error": {
-                    "code": "CALLER_CONTEXT_UNAVAILABLE",
-                    "message": "caller context unavailable"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "schemas": {
       "Uuid": {
         "type": "string",
@@ -795,14 +576,12 @@
             "maxLength": 64
           },
           "inputs": {
-            "maxItems": 64,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ArtifactRef"
             }
           },
           "outputs": {
-            "maxItems": 64,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ArtifactRef"
@@ -1107,9 +886,6 @@
           },
           "sha256": {
             "$ref": "#/components/schemas/Sha256"
-          },
-          "uploadedAt": {
-            "$ref": "#/components/schemas/UtcInstant"
           }
         },
         "required": [
@@ -1120,8 +896,7 @@
           "updatedAt",
           "state",
           "sizeBytes",
-          "sha256",
-          "uploadedAt"
+          "sha256"
         ],
         "additionalProperties": false
       },
@@ -1139,7 +914,6 @@
         "type": "object",
         "properties": {
           "artifacts": {
-            "maxItems": 128,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ArtifactInfo"
@@ -1151,340 +925,27 @@
         ],
         "additionalProperties": false
       },
-      "FieldError": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string",
-            "maxLength": 256
-          },
-          "code": {
-            "type": "string",
-            "enum": [
-              "required",
-              "type",
-              "format",
-              "range",
-              "unknown_field"
-            ]
-          }
-        },
-        "required": [
-          "path",
-          "code"
-        ],
-        "additionalProperties": false
-      },
-      "Error400": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "INVALID_REQUEST"
-                ]
-              },
-              "message": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              },
-              "fields": {
-                "minItems": 1,
-                "maxItems": 20,
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/FieldError"
-                }
-              }
-            },
-            "required": [
-              "code",
-              "message",
-              "fields"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "required": [
-          "error"
-        ],
-        "additionalProperties": false
-      },
-      "Error403": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "FORBIDDEN"
-                ]
-              },
-              "message": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              }
-            },
-            "required": [
-              "code",
-              "message"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "required": [
-          "error"
-        ],
-        "additionalProperties": false
-      },
-      "Error404": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "ARTIFACT_NOT_FOUND"
-                ]
-              },
-              "message": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              }
-            },
-            "required": [
-              "code",
-              "message"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "required": [
-          "error"
-        ],
-        "additionalProperties": false
-      },
-      "Error405": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "METHOD_NOT_ALLOWED"
-                ]
-              },
-              "message": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              }
-            },
-            "required": [
-              "code",
-              "message"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "required": [
-          "error"
-        ],
-        "additionalProperties": false
-      },
-      "Error409": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "CONFLICT"
-                ]
-              },
-              "message": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              }
-            },
-            "required": [
-              "code",
-              "message"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "required": [
-          "error"
-        ],
-        "additionalProperties": false
-      },
-      "Error413": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "REQUEST_TOO_LARGE"
-                ]
-              },
-              "message": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              }
-            },
-            "required": [
-              "code",
-              "message"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "required": [
-          "error"
-        ],
-        "additionalProperties": false
-      },
-      "Error415": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "UNSUPPORTED_MEDIA_TYPE"
-                ]
-              },
-              "message": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              }
-            },
-            "required": [
-              "code",
-              "message"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "required": [
-          "error"
-        ],
-        "additionalProperties": false
-      },
-      "Error500": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "INTERNAL_ERROR"
-                ]
-              },
-              "message": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              }
-            },
-            "required": [
-              "code",
-              "message"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "required": [
-          "error"
-        ],
-        "additionalProperties": false
-      },
-      "Error503": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "CALLER_CONTEXT_UNAVAILABLE",
-                  "DEPENDENCY_UNAVAILABLE"
-                ]
-              },
-              "message": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              }
-            },
-            "required": [
-              "code",
-              "message"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "required": [
-          "error"
-        ],
-        "additionalProperties": false
-      },
       "ErrorResponse": {
-        "anyOf": [
-          {
-            "$ref": "#/components/schemas/Error400"
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
           },
-          {
-            "$ref": "#/components/schemas/Error403"
+          "statusMessage": {
+            "type": "string"
           },
-          {
-            "$ref": "#/components/schemas/Error404"
+          "message": {
+            "type": "string"
           },
-          {
-            "$ref": "#/components/schemas/Error405"
-          },
-          {
-            "$ref": "#/components/schemas/Error409"
-          },
-          {
-            "$ref": "#/components/schemas/Error413"
-          },
-          {
-            "$ref": "#/components/schemas/Error415"
-          },
-          {
-            "$ref": "#/components/schemas/Error500"
-          },
-          {
-            "$ref": "#/components/schemas/Error503"
-          }
-        ]
+          "data": {}
+        },
+        "required": [
+          "statusCode",
+          "message"
+        ],
+        "additionalProperties": {}
       },
       "NewArtifactResponse": {
         "type": "object",

@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { assert, expect, test } from 'vitest'
 import SwaggerParser from '@apidevtools/swagger-parser'
 import { artifactSchemas } from '../../shared/utils/zod-schemas/index.ts'
+import type { ArtifactSchemaName } from '../../shared/utils/zod-schemas/index.ts'
 import { buildArtifactOpenApi } from '../../scripts/openapi/artifact-openapi.utils.ts'
 
 // Compare serialized bytes so a hand edit cannot bypass regeneration.
@@ -29,4 +30,20 @@ test('generated OpenAPI structure and internal references validate without netwo
 
 test('schema registry and exported component names agree', () => {
   expect(Object.keys(buildArtifactOpenApi().components.schemas).sort()).toStrictEqual(Object.keys(artifactSchemas).sort())
+})
+
+test('every documentation example satisfies its Zod schema', () => {
+  interface Media { schema: { $ref: string }, example?: unknown }
+  interface Operation { requestBody?: { content: Record<string, Media> }, responses: Record<string, { content: Record<string, Media> }> }
+  const paths = buildArtifactOpenApi().paths as unknown as Record<string, Record<string, Operation>>
+  const media = Object.values(paths).flatMap(methods => Object.values(methods)).flatMap(operation => [
+    ...(operation.requestBody ? [operation.requestBody.content['application/json']!] : []),
+    ...Object.values(operation.responses).map(response => response.content['application/json']!),
+  ])
+  const examples = media.filter(entry => 'example' in entry)
+  expect(examples.length).toBe(8)
+  for (const entry of examples) {
+    const name = entry.schema.$ref.split('/').at(-1) as ArtifactSchemaName
+    expect(artifactSchemas[name].safeParse(entry.example).success, name).toBe(true)
+  }
 })

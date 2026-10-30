@@ -42,6 +42,7 @@ export const completeArtifactResponseSchema = z.strictObject({
   state: z.literal(artifactStates.uploaded),
 })
 
+// updatedAt changes on every accepted write: a repeated POST or a completion report.
 const publicMetadata = {
   id: uuidSchema,
   name: nameSchema,
@@ -58,9 +59,8 @@ export const uploadedArtifactInfoSchema = z.strictObject({
   state: z.literal(artifactStates.uploaded),
   sizeBytes: sizeBytesSchema,
   sha256: sha256Schema,
-  uploadedAt: utcInstantSchema,
 })
 export const artifactInfoSchema = z.discriminatedUnion('state', [reservedArtifactInfoSchema, uploadedArtifactInfoSchema])
 export const listArtifactsResponseSchema = z.strictObject({
-  artifacts: z.array(artifactInfoSchema).max(128),
+  artifacts: z.array(artifactInfoSchema),
 })
