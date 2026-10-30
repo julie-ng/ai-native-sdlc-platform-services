@@ -38,6 +38,7 @@ function createRootLogger(level: string) {
     return pino({ level })
   }
   const logger = pino({ level: 'info' })
-  logger.warn({ domain: 'logger', level }, 'Unknown NUXT_LOG_LEVEL, using info')
+  // Not `level`: that key would overwrite pino's own level field.
+  logger.warn({ domain: 'logger', configuredLevel: level }, 'Unknown NUXT_LOG_LEVEL, using info')
   return logger
 }
