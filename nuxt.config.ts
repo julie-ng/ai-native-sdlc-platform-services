@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url'
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   modules: ['@nuxt/eslint'],
@@ -11,6 +13,13 @@ export default defineNuxtConfig({
     logLevel: 'info',
   },
   compatibilityDate: '2025-07-15',
+  hooks: {
+    // Log unexpected request errors as JSON before Nuxt's own error handler runs.
+    'nitro:config'(config) {
+      const handlers = [config.errorHandler ?? []].flat()
+      config.errorHandler = [fileURLToPath(new URL('./server/error-handler.ts', import.meta.url)), ...handlers]
+    },
+  },
   eslint: {
     config: {
       stylistic: {
