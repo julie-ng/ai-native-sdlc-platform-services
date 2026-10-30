@@ -4,12 +4,16 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview"
+    "build": "npm run check && astro build",
+    "preview": "astro preview",
+    "check": "typedoc --emit none"
   },
   "devDependencies": {
     "@astrojs/starlight": "0.42.8",
     "astro": "7.4.4",
-    "starlight-openapi": "0.27.0"
+    "starlight-openapi": "0.27.0",
+    "starlight-typedoc": "0.23.2",
+    "typedoc": "0.28.20",
+    "typedoc-plugin-markdown": "4.14.1"
   }
 }

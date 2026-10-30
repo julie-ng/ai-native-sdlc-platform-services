@@ -3,6 +3,7 @@
 import starlight from '@astrojs/starlight'
 import { defineConfig } from 'astro/config'
 import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi'
+import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc'
 
 export default defineConfig({
   site: 'https://julie-ng.github.io',
@@ -16,6 +17,14 @@ export default defineConfig({
         { icon: 'github', label: 'GitHub', href: 'https://github.com/julie-ng/ai-native-sdlc-platform-services' },
       ],
       plugins: [
+        // Entry points, tsconfig and validation come from typedoc.json, which `npm run check`
+        // also uses, so the site and the documentation check cannot drift apart.
+        starlightTypeDoc({
+          output: 'code',
+          sidebar: { label: 'Code reference', collapsed: false },
+          // Regenerate on source changes during `astro dev` only; builds run once.
+          watch: process.argv.includes('dev'),
+        }),
         // Generated from Zod by `npm run generate:artifact-openapi`; `test:contract` keeps it fresh.
         starlightOpenAPI([
           {
@@ -27,6 +36,7 @@ export default defineConfig({
       ],
       sidebar: [
         ...openAPISidebarGroups,
+        typeDocSidebarGroup,
       ],
     }),
   ],
