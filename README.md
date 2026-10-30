@@ -13,6 +13,17 @@ npm run dev
 
 The development server defaults to `http://localhost:3000`.
 
+### API reference
+
+The JSDoc in `server/utils/` and `server/db/` is rendered with [TypeDoc](https://typedoc.org/) as an API reference. `shared/` schemas and route handlers are deliberately excluded: the schemas and the [HTTP contract](./docs/api/README.md) already document them.
+
+```bash
+npm run docs:dev  # Rebuild on change and preview at http://localhost:4000 (refresh after edits)
+npm run docs:api  # One-off static build into .typedoc/ (git-ignored)
+```
+
+`DOCS_PORT` changes the port. `DOCS_HOST=0.0.0.0` exposes the preview outside a dev container. The build warns, and `docs:api` fails, on undocumented modules, functions, types, interfaces and variables or on unresolved `{@link}` references. It is not part of `verify`.
+
 `GET /` is public and returns `200 OK` with `application/json`: `{"name":"platform-services"}`. It accepts no input and identifies the service; it does not check dependency health.
 
 ## Verification and production
