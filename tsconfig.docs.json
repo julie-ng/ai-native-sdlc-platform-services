@@ -1,5 +1,5 @@
 {
-  // Program used only by TypeDoc (`npm run docs:api`). Extends the Nuxt-generated server
+  // Program used only by TypeDoc for the docs site (site/typedoc.json). Extends the Nuxt-generated server
   // config so route handlers see auto-imports and the #shared / #server aliases.
   "extends": "./.nuxt/tsconfig.server.json",
   "include": [

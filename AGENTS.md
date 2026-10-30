@@ -42,8 +42,10 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 | --- | --- |
 | `npm ci` | Install locked dependencies; also runs Nuxt preparation |
 | `npm run dev` | Start local development |
-| `npm run docs:dev` | Intermediary: preview the TypeDoc API reference at `http://localhost:4000`, rebuilding on change |
-| `npm run docs:api` | Build the API reference into `.typedoc/`; fails on undocumented exports or broken `{@link}`s |
+| `npm ci --prefix site` | Install the documentation site's locked dependencies (after the root `npm ci`) |
+| `npm run docs:dev` | Preview the documentation site on port 4000, regenerating on source changes |
+| `npm run docs:check` | Fail on undocumented exports or broken `{@link}`s in the JSDoc scope |
+| `npm run docs:build` | Run `docs:check`, then build the static documentation site into `site/dist/` |
 | `npm run check:guidance` | Check repository guidance links and portable skill metadata |
 | `npm run check:artifact-contract` | Alias for test:contract |
 | `npm run generate:artifact-openapi` | Generate OpenAPI from Zod schemas and TypeScript HTTP definitions |
@@ -75,7 +77,7 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 - Within Nuxt, prefer `#shared/` and `#server/` for cross-boundary imports, and `~/` for app imports. Do not introduce `~~/` imports. Standalone scripts must use imports their actual runtime can resolve.
 - Keep secrets and provider SDK credentials server-side. Private runtime configuration stays outside `runtimeConfig.public`.
 - Comment non-obvious intent and deliberate omissions. Preserve useful comments and JSDoc during refactors; flag unclear or stale intent before removing it.
-- Document `server/utils/` and `server/db/` with JSDoc (`/** */`) so the server architecture can be reviewed as API documentation: an `@module` overview per file and a summary on every exported function, type, constant and port, with `@param`, `@returns` and `@throws` where they add information. Do not repeat TypeScript types in tags; state intent, constraints and failure behavior rather than restating the code. Do not add JSDoc to `shared/` Zod schemas and inferred types (the schemas and generated OpenAPI are the documentation) or to route handlers (HTTP behavior is documented in [docs/api](./docs/api/README.md)); keep their short intent comments. Update JSDoc with the code, and run `npm run docs:api` after changing exports or JSDoc.
+- Document `server/utils/` and `server/db/` with JSDoc (`/** */`) so the server architecture can be reviewed as API documentation: an `@module` overview per file and a summary on every exported function, type, constant and port, with `@param`, `@returns` and `@throws` where they add information. Do not repeat TypeScript types in tags; state intent, constraints and failure behavior rather than restating the code. Do not add JSDoc to `shared/` Zod schemas and inferred types (the schemas and generated OpenAPI are the documentation) or to route handlers (HTTP behavior is documented in [docs/api](./docs/api/README.md)); keep their short intent comments. Update JSDoc with the code, and run `npm run docs:check` after changing exports or JSDoc.
 
 ## Knowledge and collaboration
 

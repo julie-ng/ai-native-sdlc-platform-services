@@ -1,6 +1,7 @@
 {
   "$schema": "https://typedoc.org/schema.json",
   "tsconfig": "../tsconfig.docs.json",
+  "readme": "none",
   "entryPoints": [
     "../server/utils/**/*.ts",
     "../server/db/**/*.ts"
