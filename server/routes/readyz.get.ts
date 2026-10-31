@@ -9,7 +9,11 @@ import { useLogger } from '#server/utils/use-logger'
 export default defineEventHandler(async (event) => {
   const { artifactStorageAccountUrl, artifactStorageContainer } = useRuntimeConfig(event)
   const { statusCode, body, failures } = await checkReadiness([
-    { name: 'postgres:connection', componentType: 'datastore', run: () => useDB().execute(sql`select 1`) },
+    {
+      name: 'postgres:connection',
+      componentType: 'datastore',
+      run: () => useDB().execute(sql`select 1`),
+    },
     {
       name: 'azure-storage:configuration',
       componentType: 'component',
