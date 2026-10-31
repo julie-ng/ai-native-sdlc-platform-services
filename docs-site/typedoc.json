@@ -1,0 +1,39 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "tsconfig": "../tsconfig.docs.json",
+  "readme": "none",
+  "entryPoints": [
+    "../server/utils/**/*.ts",
+    "../server/db/**/*.ts"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.d.ts",
+    "../server/db/migrations/**"
+  ],
+  "externalPattern": [
+    "**/shared/**"
+  ],
+  "excludeExternals": true,
+  "intentionallyNotExported": [
+    "CreateArtifactRequest",
+    "CompleteArtifactRequest",
+    "CallerContext"
+  ],
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": true
+  },
+  "requiredToBeDocumented": [
+    "Module",
+    "Function",
+    "Method",
+    "Class",
+    "Interface",
+    "TypeAlias",
+    "Variable",
+    "Enum"
+  ],
+  "treatWarningsAsErrors": true
+}

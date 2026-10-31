@@ -1,0 +1,6 @@
+{
+  // Isolates the docs site from the Nuxt app's root tsconfig.
+  "extends": "astro/tsconfigs/strict",
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"]
+}
