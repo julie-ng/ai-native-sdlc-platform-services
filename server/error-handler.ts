@@ -11,6 +11,7 @@ import { useLogger } from '#server/utils/use-logger'
 // Nitro's built-in handler would also print these errors as plain text. For API requests in
 // production, which Nuxt hands to that built-in handler, write the same JSON response here
 // with `silent: true` instead. Other requests and dev mode fall through unchanged.
+// Relies on Nitro 2 / Nuxt internals; recheck on upgrades (#27).
 export default defineNitroErrorHandler(async (error, event, { defaultHandler }) => {
   const { pathname } = getRequestURL(event)
   if (error.unhandled || error.fatal) {
