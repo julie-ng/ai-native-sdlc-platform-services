@@ -54,7 +54,7 @@ if (!canAccessArtifact(caller, record.reference, action))    → 403
 
 ## Persistence and workflow ownership
 
-- PostgreSQL 17 with Drizzle/node-postgres. [Schema](../../server/db/schema.ts) and generated [migrations](../../server/db/migrations/) live under `server/db/`. One lazy `pg.Pool` (max 5) per Nitro process, shared with the readiness check through `useDB()`, closed on shutdown. Idle connection errors are logged, not fatal.
+- PostgreSQL 17 with Drizzle/node-postgres. [Schema](../../server/db/schema.ts) and generated [migrations](../../server/db/migrations/) live under `server/db/`. One lazy `pg.Pool` (max 5) per Nitro process, shared with the readiness check through `useDB()`, closed on shutdown. Connecting or waiting for a free connection times out after 5 seconds. Idle connection errors are logged, not fatal.
 - `artifacts`: `id`, `producer_step_id`, `name`, `content_type`, `kind`, `title`, `description`, `state`, `size_bytes`, `sha256`, `created_at`, `updated_at`. Unique `(producer_step_id, name)`; `producer_step_id → steps(id) ON DELETE RESTRICT`; a CHECK keeps size/hash NULL when reserved and present when uploaded. No attempt, revision, SAS or blob-key columns.
 - Workflow-owned `runs(id)` and `steps(id, run_id → runs)` are minimal stubs until the workflow service exists. Lookups join `steps` so references carry the step's actual run; registration fails if the step is not in the caller's run.
 - `created_at` is fixed. `updated_at` is set explicitly to `now()` by every accepted write (repeated POST or upload report); reads and denials leave it unchanged.

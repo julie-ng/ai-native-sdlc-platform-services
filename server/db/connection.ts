@@ -10,11 +10,15 @@ import * as schema from './schema.ts'
  * Create a Drizzle client over its own node-postgres pool. The application
  * shares one per Nitro process (see `useDB` in `use-db.ts`); tests create their own.
  * Callers own the pool and must end it.
+ *
+ * Connecting, or waiting for a free connection when all are busy, fails after
+ * 5 seconds instead of waiting indefinitely (node-postgres's default), so an
+ * unreachable database fails requests and readiness checks rather than hanging.
  * @param connectionString - PostgreSQL connection URL.
  * @returns The Drizzle client (`db`) and its pool (`pool`, end it with `pool.end()`).
  */
 export function createDatabase(connectionString: string) {
-  const pool = new pg.Pool({ connectionString, max: 5 })
+  const pool = new pg.Pool({ connectionString, max: 5, connectionTimeoutMillis: 5_000 })
   return { db: drizzle(pool, { schema }), pool }
 }
 
