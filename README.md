@@ -15,18 +15,18 @@ The development server defaults to `http://localhost:3000`.
 
 ### Documentation site
 
-[`site/`](./site/) is an [Astro Starlight](https://starlight.astro.build/) site with two generated sections: **HTTP API** from the [OpenAPI contract](./docs/api/README.md) (`docs/api/artifact.openapi.json`, via [starlight-openapi](https://github.com/HiDeoo/starlight-openapi)) and **Code reference** from the JSDoc in `server/utils/` and `server/db/` (via [starlight-typedoc](https://github.com/HiDeoo/starlight-typedoc)). `shared/` schemas and route handlers have no JSDoc by design: the schemas and the HTTP contract document them.
+[`docs-site/`](./docs-site/) is an [Astro Starlight](https://starlight.astro.build/) site with two generated sections: **HTTP API** from the [OpenAPI contract](./docs/api/README.md) (`docs/api/artifact.openapi.json`, via [starlight-openapi](https://github.com/HiDeoo/starlight-openapi)) and **Code reference** from the JSDoc in `server/utils/` and `server/db/` (via [starlight-typedoc](https://github.com/HiDeoo/starlight-typedoc)). `shared/` schemas and route handlers have no JSDoc by design: the schemas and the HTTP contract document them.
 
 The site has its own dependencies. Install the root dependencies first: TypeDoc reads the Nuxt-generated tsconfig.
 
 ```bash
-npm ci && npm ci --prefix site
+npm ci && npm ci --prefix docs-site
 npm run docs:dev    # Preview at http://localhost:4000/ai-native-sdlc-platform-services/; regenerates on source changes
 npm run docs:check  # Fail on undocumented exports or broken {@link}s in the documented scope
-npm run docs:build  # docs:check, then the static site into site/dist/
+npm run docs:build  # docs:check, then the static site into docs-site/dist/
 ```
 
-[site/typedoc.json](./site/typedoc.json) defines the documented scope and validation for both the site and `docs:check`. The documentation commands are not part of `verify`.
+[docs-site/typedoc.json](./docs-site/typedoc.json) defines the documented scope and validation for both the site and `docs:check`. The documentation commands are not part of `verify`.
 
 `GET /` is public and returns `200 OK` with `application/json`: `{"name":"platform-services"}`. It accepts no input and identifies the service; it does not check dependency health.
 

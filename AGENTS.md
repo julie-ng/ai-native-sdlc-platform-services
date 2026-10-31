@@ -42,10 +42,10 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 | --- | --- |
 | `npm ci` | Install locked dependencies; also runs Nuxt preparation |
 | `npm run dev` | Start local development |
-| `npm ci --prefix site` | Install the documentation site's locked dependencies (after the root `npm ci`) |
+| `npm ci --prefix docs-site` | Install the documentation site's locked dependencies (after the root `npm ci`) |
 | `npm run docs:dev` | Preview the documentation site on port 4000, regenerating on source changes |
 | `npm run docs:check` | Fail on undocumented exports or broken `{@link}`s in the JSDoc scope |
-| `npm run docs:build` | Run `docs:check`, then build the static documentation site into `site/dist/` |
+| `npm run docs:build` | Run `docs:check`, then build the static documentation site into `docs-site/dist/` |
 | `npm run check:guidance` | Check repository guidance links and portable skill metadata |
 | `npm run check:artifact-contract` | Alias for test:contract |
 | `npm run generate:artifact-openapi` | Generate OpenAPI from Zod schemas and TypeScript HTTP definitions |
