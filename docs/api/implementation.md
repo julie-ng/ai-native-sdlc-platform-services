@@ -69,7 +69,7 @@ if (!canAccessArtifact(caller, record.reference, action))    → 403
 v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 ```
 
-- [`createAzureUrlIssuer`](../../server/utils/artifact/azure-sas.utils.ts) issues HTTPS, single-blob user delegation SAS URLs (`sr=b`, `spr=https`) lasting 300 seconds, without a start time. The delegation key covers the full lifetime. Never persist or log SAS URLs.
+- [`createAzureUrlIssuer`](../../server/utils/artifact/azure-sas.utils.ts) issues HTTPS, single-blob user delegation SAS URLs (`sr=b`, `spr=https`) lasting 300 seconds, without a start time. The delegation key covers the full lifetime. Never persist SAS URLs; they may appear in logs (accepted risk, see the [decision log](../architecture.md#decision-log)).
 
 | Operation | SAS permission | Transfer |
 | --- | --- | --- |

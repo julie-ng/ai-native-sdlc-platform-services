@@ -109,7 +109,7 @@ The server writes JSON lines to stdout with [pino](https://getpino.io/); Kuberne
 | `db` | Failed idle database connections; the pool replaces them instead of the process exiting |
 | `readyz` | One `error` line per failed readiness check, with `check`, the driver `code` if any, and `err` |
 
-Request and response bodies, headers, SAS URLs and caller context are never logged. `NUXT_LOG_LEVEL=warn` suppresses access lines.
+Request and response bodies, headers and caller context are never logged. SAS URLs may appear in logs, for example in error messages; that is an [accepted risk](./docs/architecture.md#decision-log). `NUXT_LOG_LEVEL=warn` suppresses access lines.
 
 `GET /readyz` is the Kubernetes readiness probe: public, outside `/api`, no caller guard. It responds with `application/health+json` and `Cache-Control: no-store`:
 

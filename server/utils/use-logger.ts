@@ -20,7 +20,8 @@ const children = new Map<string, Logger>()
  *
  * Call inside handlers, hooks or callbacks, not at module top level: Nitro
  * bundles server files together, so imports may not be initialized yet.
- * Never log credentials, SAS URLs, request or response bodies, or caller context.
+ * Never log credentials, request or response bodies, or caller context. SAS URLs are
+ * an accepted exception (see the decision log).
  * @param domain - Area of the service that writes the log line.
  */
 export function useLogger(domain: string) {
