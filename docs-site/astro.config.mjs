@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'astro/config'
 import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi'
 import starlightTypeDoc from 'starlight-typedoc'
+import { openAPIComponentOverrides } from './src/openapi-overrides.mjs'
 
 export default defineConfig({
   site: 'https://julie-ng.github.io',
@@ -15,7 +16,7 @@ export default defineConfig({
     starlight({
       title: 'Platform Services',
       // Tailwind base and design tokens first, as Starlight's Tailwind guide requires.
-      customCss: ['./src/styles/global.css'],
+      customCss: ['./src/styles/global.css', './src/styles/openapi.css'],
       // Flat sidebar: src/route-data.ts reshapes the entries, src/components/Sidebar.astro renders them.
       routeMiddleware: './src/route-data.ts',
       components: { Sidebar: './src/components/Sidebar.astro' },
@@ -50,5 +51,17 @@ export default defineConfig({
       ],
     }),
   ],
-  vite: { plugins: [tailwindcss()] },
+  vite: {
+    plugins: [
+      tailwindcss(),
+      // Local Tailwind versions of selected starlight-openapi components, in src/components/openapi/.
+      openAPIComponentOverrides([
+        'Key.astro',
+        'Tag.astro',
+        'Tags.astro',
+        'Type.astro',
+        'operation/OperationMethodBadge.astro',
+      ]),
+    ],
+  },
 })

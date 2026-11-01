@@ -1,0 +1,21 @@
+---
+// Overrides starlight-openapi's OperationMethodBadge: colored method text, like the sidebar,
+// instead of a filled box. Colors are tokens in global.css.
+interface Props {
+  method: string
+}
+
+const { method } = Astro.props
+
+const methodColors: Record<string, string> = {
+  get: 'text-method-get',
+  post: 'text-method-post',
+  put: 'text-method-put',
+  patch: 'text-method-patch',
+  delete: 'text-method-delete',
+}
+---
+
+<div class:list={['flex items-center font-mono text-sm font-semibold uppercase', methodColors[method] ?? 'text-gray-500']}>
+  {method}
+</div>
