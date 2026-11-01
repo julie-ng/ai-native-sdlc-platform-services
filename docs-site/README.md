@@ -68,7 +68,7 @@ The design follows [Scalar](https://scalar.com/)'s API reference: neutral colors
 | --- | --- | --- |
 | Colors, fonts, heading sizes | `src/styles/global.css` | Tailwind `@theme` tokens. `@astrojs/starlight-tailwind` maps the `accent` and `gray` scales to Starlight's `--sl-*` variables, so generated pages pick them up. HTTP method colors are `--color-method-*` tokens with dark-mode values. |
 | Sidebar | `src/components/Sidebar.astro`, `SidebarEntries.astro` | Overrides Starlight's `Sidebar` only ([overriding components](https://starlight.astro.build/guides/overriding-components/)); keeps its scroll persistence and mobile footer. |
-| Sidebar structure | `src/route-data.ts` | [Route middleware](https://starlight.astro.build/guides/route-data/): lifts operations out of starlight-openapi's "Operations" group, groups modules by folder and lists each module's members, read from the generated `## Functions`-style headings. |
+| Sidebar structure | `src/route-data.ts` | [Route middleware](https://starlight.astro.build/guides/route-data/): groups modules by folder and lists each module's members, read from the generated `## Functions`-style headings. HTTP API operations are grouped by their OpenAPI tag (resource), set in `scripts/openapi/artifact-http.ts`. |
 | HTTP API rows, types, constraints, method label | `src/components/openapi/` | Tailwind replacements for starlight-openapi's `Key`, `Tag`, `Tags`, `Type` and `OperationMethodBadge`, swapped in by `src/openapi-overrides.mjs`. All other plugin components are unchanged. |
 | HTTP API panels, media type, object schemas | `src/styles/openapi.css` | `@apply` rules on the plugin's class names, for wrappers whose logic depends on plugin internals. |
 
