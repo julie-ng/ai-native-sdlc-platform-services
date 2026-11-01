@@ -63,6 +63,9 @@ function errors(...statuses: number[]) {
   return Object.fromEntries(statuses.map(status => [status, { description: errorDescriptions[status], content: jsonMedia('ErrorResponse') }]))
 }
 
+// Operations are tagged by resource; documentation tools such as the docs site group them by tag.
+const artifactTags = ['Artifacts']
+
 // The caller receives an independent tree through buildArtifactOpenApi().
 // There is no filesystem access, server validation or test-runner dependency.
 export function buildArtifactHttpContract() {
@@ -85,6 +88,7 @@ export function buildArtifactHttpContract() {
       '/api/artifacts': {
         post: {
           operationId: 'createArtifact',
+          tags: artifactTags,
           summary: 'Create artifact and upload SAS',
           description: 'Insert, or replace the descriptive metadata of, the caller\'s step/name artifact (last write wins; omitted optional fields are cleared). State, size and hash are kept. Every call issues a fresh write SAS for the same blob.',
           requestBody: requestBody('CreateArtifactRequest', examples.createRequest),
@@ -96,6 +100,7 @@ export function buildArtifactHttpContract() {
         },
         get: {
           operationId: 'listArtifacts',
+          tags: artifactTags,
           summary: 'List artifacts',
           description: 'List readable reserved/uploaded metadata, ordered by createdAt then id ascending. Possibly empty; never issues SAS URLs.',
           responses: {
@@ -107,6 +112,7 @@ export function buildArtifactHttpContract() {
       '/api/artifacts/{id}': {
         put: {
           operationId: 'completeArtifact',
+          tags: artifactTags,
           summary: 'Update upload status',
           description: 'After Azure accepts the upload, report its size and SHA-256. Each report replaces the latest values; no history. Uploaded bytes are not verified. Maximum reported size: 1,000,000 bytes.',
           parameters: idParameter,
@@ -118,6 +124,7 @@ export function buildArtifactHttpContract() {
         },
         get: {
           operationId: 'getArtifact',
+          tags: artifactTags,
           summary: 'Read artifact (without SAS)',
           parameters: idParameter,
           responses: {
@@ -129,6 +136,7 @@ export function buildArtifactHttpContract() {
       '/api/artifacts/{id}/sas': {
         get: {
           operationId: 'getArtifactSas',
+          tags: artifactTags,
           summary: 'Request download SAS URL',
           description: 'Issue a read SAS for the current blob; 409 until an upload has been reported.',
           parameters: idParameter,

@@ -15,6 +15,9 @@
     "/api/artifacts": {
       "post": {
         "operationId": "createArtifact",
+        "tags": [
+          "Artifacts"
+        ],
         "summary": "Create artifact and upload SAS",
         "description": "Insert, or replace the descriptive metadata of, the caller's step/name artifact (last write wins; omitted optional fields are cleared). State, size and hash are kept. Every call issues a fresh write SAS for the same blob.",
         "requestBody": {
@@ -153,6 +156,9 @@
       },
       "get": {
         "operationId": "listArtifacts",
+        "tags": [
+          "Artifacts"
+        ],
         "summary": "List artifacts",
         "description": "List readable reserved/uploaded metadata, ordered by createdAt then id ascending. Possibly empty; never issues SAS URLs.",
         "responses": {
@@ -207,6 +213,9 @@
     "/api/artifacts/{id}": {
       "put": {
         "operationId": "completeArtifact",
+        "tags": [
+          "Artifacts"
+        ],
         "summary": "Update upload status",
         "description": "After Azure accepts the upload, report its size and SHA-256. Each report replaces the latest values; no history. Uploaded bytes are not verified. Maximum reported size: 1,000,000 bytes.",
         "parameters": [
@@ -304,6 +313,9 @@
       },
       "get": {
         "operationId": "getArtifact",
+        "tags": [
+          "Artifacts"
+        ],
         "summary": "Read artifact (without SAS)",
         "parameters": [
           {
@@ -394,6 +406,9 @@
     "/api/artifacts/{id}/sas": {
       "get": {
         "operationId": "getArtifactSas",
+        "tags": [
+          "Artifacts"
+        ],
         "summary": "Request download SAS URL",
         "description": "Issue a read SAS for the current blob; 409 until an upload has been reported.",
         "parameters": [
