@@ -27,7 +27,8 @@ export const steps = pgTable('steps', {
  * blob-key columns: the blob key is derived from run/step/name.
  *
  * Constraints: `(producer_step_id, name)` is unique, and the check constraint ties
- * `state` to the size/hash columns (`reserved` requires both NULL, `uploaded` both set).
+ * `state` to the report columns: `reserved` has no size, hash or details; `uploaded`
+ * has size and hash; `failed` has neither. Details are optional after any report.
  */
 export const artifacts = pgTable('artifacts', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -40,11 +41,13 @@ export const artifacts = pgTable('artifacts', {
   state: text('state').$type<keyof typeof artifactStates>().notNull().default('reserved'),
   sizeBytes: integer('size_bytes'),
   sha256: text('sha256'),
+  details: text('details'),
   // Insert defaults only. Writes set updatedAt explicitly; reads never touch it.
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, table => [
   unique('artifacts_producer_step_id_name_unique').on(table.producerStepId, table.name),
-  check('artifacts_state_check', sql`(${table.state} = 'reserved' AND ${table.sizeBytes} IS NULL AND ${table.sha256} IS NULL)
-    OR (${table.state} = 'uploaded' AND ${table.sizeBytes} IS NOT NULL AND ${table.sha256} IS NOT NULL)`),
+  check('artifacts_state_check', sql`(${table.state} = 'reserved' AND ${table.sizeBytes} IS NULL AND ${table.sha256} IS NULL AND ${table.details} IS NULL)
+    OR (${table.state} = 'uploaded' AND ${table.sizeBytes} IS NOT NULL AND ${table.sha256} IS NOT NULL)
+    OR (${table.state} = 'failed' AND ${table.sizeBytes} IS NULL AND ${table.sha256} IS NULL)`),
 ])

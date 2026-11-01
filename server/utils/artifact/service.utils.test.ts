@@ -82,6 +82,41 @@ test('completion reports replace the latest size and hash', async () => {
   expect(info.body).toMatchObject({ sizeBytes: 13, sha256: 'b'.repeat(64) })
 })
 
+test('a failure report replaces an upload; readers see the details, downloads are 409', async () => {
+  const { service, urls } = setup()
+  const created = await service.createArtifact(contexts['planner-p1'], plan)
+  assert(created.ok)
+  await service.completeArtifact(contexts['planner-p1'], created.body.id, { ...report, details: 'First attempt' })
+  const failed = await service.completeArtifact(contexts['planner-p1'], created.body.id, { state: 'failed', details: 'Azure returned 403' })
+  assert(failed.ok)
+  expect(failed.body).toStrictEqual(completeArtifactResponseSchema.parse({ id: created.body.id, state: 'failed' }))
+
+  const info = await service.getArtifact(contexts['coder-c1'], created.body.id)
+  assert(info.ok)
+  expect(artifactInfoSchema.parse(info.body)).toStrictEqual(info.body)
+  expect(info.body).toMatchObject({ state: 'failed', details: 'Azure returned 403' })
+  expect(info.body).not.toHaveProperty('sizeBytes')
+  expect(await service.getArtifactSas(contexts['coder-c1'], created.body.id)).toStrictEqual({ ok: false, status: 409, message: 'No successful upload has been reported' })
+  expect(urls.issueDownload).not.toHaveBeenCalled()
+
+  // A later successful report without details clears them and allows downloads again.
+  await service.completeArtifact(contexts['planner-p1'], created.body.id, report)
+  const recovered = await service.getArtifact(contexts['coder-c1'], created.body.id)
+  assert(recovered.ok)
+  expect(recovered.body).toMatchObject({ state: 'uploaded', sizeBytes: 5 })
+  expect(recovered.body).not.toHaveProperty('details')
+  expect((await service.getArtifactSas(contexts['coder-c1'], created.body.id)).ok).toBe(true)
+})
+
+test('reporting a failure needs the same permissions as reporting an upload', async () => {
+  const { service, repository } = setup()
+  const created = await service.createArtifact(contexts['planner-p1'], plan)
+  assert(created.ok)
+  expect(await service.completeArtifact(contexts['coder-c1'], created.body.id, { state: 'failed' })).toStrictEqual({ ok: false, status: 403, message: 'Forbidden' })
+  expect(await service.completeArtifact(contexts['planner-p1'], p2Id, { state: 'failed' })).toStrictEqual({ ok: false, status: 404, message: 'Artifact not found' })
+  expect(repository.acknowledge).not.toHaveBeenCalled()
+})
+
 test('visible artifact with the wrong action is 403', async () => {
   const { service, repository, urls } = setup()
   const created = await service.createArtifact(contexts['planner-p1'], plan)

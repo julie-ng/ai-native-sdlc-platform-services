@@ -55,7 +55,7 @@ const errorDescriptions: Record<number, string> = {
   400: 'Invalid body or route parameter; `data` holds z.flattenError() output',
   403: 'Artifact is visible to the caller, but the requested action is not permitted',
   404: 'Artifact is missing or not visible to the caller; the two are indistinguishable',
-  409: 'Download requested before an upload was reported',
+  409: 'Download requested while the latest report is not a successful upload',
   500: 'Unexpected database or storage failure',
   503: 'Caller context unavailable, or the service is not configured',
 }
@@ -80,7 +80,7 @@ export function buildArtifactHttpContract() {
     'openapi': '3.0.3',
     'info': {
       title: 'Artifact service contract',
-      version: '0.4.0',
+      version: '0.5.0',
       description: 'One current artifact per producing step/name. The explicit requireCallerContext guard establishes event.context.caller; task policy and exact bindings determine access. Missing or not visible is 404; visible but wrong action is 403. Planners write their own plan; coders read bound plans. Bytes move directly between caller and Azure Blob Storage. Errors use Nitro\'s createError() JSON.',
     },
     'x-caller-context': { location: 'event.context.caller', schema: { $ref: '#/components/schemas/CallerContext' } },
@@ -102,7 +102,7 @@ export function buildArtifactHttpContract() {
           operationId: 'listArtifacts',
           tags: artifactTags,
           summary: 'List artifacts',
-          description: 'List readable reserved/uploaded metadata, ordered by createdAt then id ascending. Possibly empty; never issues SAS URLs.',
+          description: 'List readable metadata in any state, ordered by createdAt then id ascending. Possibly empty; never issues SAS URLs.',
           responses: {
             200: response('ListArtifactsResponse', { artifacts: [examples.info] }),
             ...errors(500, 503),
@@ -114,7 +114,7 @@ export function buildArtifactHttpContract() {
           operationId: 'completeArtifact',
           tags: artifactTags,
           summary: 'Update upload status',
-          description: 'After Azure accepts the upload, report its size and SHA-256. Each report replaces the latest values; no history. Uploaded bytes are not verified. Maximum reported size: 1,000,000 bytes.',
+          description: 'Report the outcome of the direct upload to Azure: `uploaded` with its size and SHA-256, or `failed`. Optional `details` carry free text, for example a short summary of why the upload failed. Each report replaces the previous state, size, hash and details (omitted details are cleared); no history. Uploaded bytes are not verified. Maximum reported size: 1,000,000 bytes.',
           parameters: idParameter,
           requestBody: requestBody('CompleteArtifactRequest', examples.completeRequest),
           responses: {
@@ -138,7 +138,7 @@ export function buildArtifactHttpContract() {
           operationId: 'getArtifactSas',
           tags: artifactTags,
           summary: 'Request download SAS URL',
-          description: 'Issue a read SAS for the current blob; 409 until an upload has been reported.',
+          description: 'Issue a read SAS for the current blob; 409 unless the latest report is a successful upload.',
           parameters: idParameter,
           responses: {
             200: response('DownloadSas', examples.download, 'Success', noStoreHeaders),

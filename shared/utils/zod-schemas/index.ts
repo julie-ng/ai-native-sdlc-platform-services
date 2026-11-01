@@ -1,12 +1,12 @@
 import {
   uuidSchema, nameSchema, utcInstantSchema, contentTypeSchema,
-  sizeBytesSchema, sha256Schema, titleSchema, descriptionSchema,
+  sizeBytesSchema, sha256Schema, titleSchema, descriptionSchema, detailsSchema,
 } from './common.schema.ts'
 import { artifactRefSchema, callerContextSchema } from './caller-context.schema.ts'
 import {
   artifactIdParametersSchema, createArtifactRequestSchema, completeArtifactRequestSchema,
   createArtifactResponseSchema, completeArtifactResponseSchema, reservedArtifactInfoSchema,
-  uploadedArtifactInfoSchema, artifactInfoSchema, listArtifactsResponseSchema, newArtifactResponseSchema,
+  uploadedArtifactInfoSchema, failedArtifactInfoSchema, artifactInfoSchema, listArtifactsResponseSchema, newArtifactResponseSchema,
 } from './artifact.schema.ts'
 import { uploadSasSchema, downloadSasSchema } from './sas.schema.ts'
 import { errorResponseSchema } from './error.schema.ts'
@@ -22,6 +22,7 @@ export const artifactSchemas = {
   Sha256: sha256Schema,
   Title: titleSchema,
   Description: descriptionSchema,
+  Details: detailsSchema,
   ArtifactRef: artifactRefSchema,
   CallerContext: callerContextSchema,
   ArtifactIdParameters: artifactIdParametersSchema,
@@ -33,6 +34,7 @@ export const artifactSchemas = {
   CompleteArtifactResponse: completeArtifactResponseSchema,
   ReservedArtifactInfo: reservedArtifactInfoSchema,
   UploadedArtifactInfo: uploadedArtifactInfoSchema,
+  FailedArtifactInfo: failedArtifactInfoSchema,
   ArtifactInfo: artifactInfoSchema,
   ListArtifactsResponse: listArtifactsResponseSchema,
   ErrorResponse: errorResponseSchema,

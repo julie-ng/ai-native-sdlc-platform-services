@@ -41,7 +41,7 @@ interface ArtifactBase {
   reference: ArtifactRef
   metadata: ArtifactMetadata
   createdAt: string // UTC ISO instant, fixed on first registration.
-  updatedAt: string // Refreshed by every accepted write (repeated POST or completion).
+  updatedAt: string // Refreshed by every accepted write (repeated POST or upload report).
 }
 /** Registered artifact whose upload has not been reported: size and hash are `null`. */
 export interface ReservedArtifact extends ArtifactBase {
@@ -49,16 +49,24 @@ export interface ReservedArtifact extends ArtifactBase {
   sizeBytes: null
   sha256: null
 }
-/** Artifact with a reported upload; the size and hash are the latest report. */
+/** Artifact whose latest upload report is a success; size, hash and details are from that report. */
 export interface UploadedArtifact extends ArtifactBase {
   state: 'uploaded'
   sizeBytes: number
   sha256: string
+  details?: string
+}
+/** Artifact whose latest upload report is a failure: size and hash are `null`. */
+export interface FailedArtifact extends ArtifactBase {
+  state: 'failed'
+  sizeBytes: null
+  sha256: null
+  details?: string
 }
 /** Stored artifact, discriminated by `state`. Internal: includes the producing step reference. */
-export type ArtifactRecord = ReservedArtifact | UploadedArtifact
-/** The size and hash from an upload report. */
-export type Completion = Pick<CompleteArtifactRequest, 'sizeBytes' | 'sha256'>
+export type ArtifactRecord = ReservedArtifact | UploadedArtifact | FailedArtifact
+/** An upload report: `uploaded` with size and hash, or `failed`; both with optional details. */
+export type Completion = CompleteArtifactRequest
 
 /**
  * Persistence port for artifact metadata. Adapters throw on unexpected failures; the
@@ -82,11 +90,11 @@ export interface ArtifactRepository {
    */
   listByReferences(references: readonly ArtifactRef[]): Promise<ArtifactRecord[]>
   /**
-   * Replaces the latest size/hash and marks the record `uploaded`; no history is kept.
-   * The caller has already checked access.
+   * Record an upload report: replaces the state, size, hash and details (cleared when
+   * omitted); no history is kept. The caller has already checked access.
    * @throws If the record no longer exists.
    */
-  acknowledge(id: string, completion: Completion): Promise<UploadedArtifact>
+  acknowledge(id: string, completion: Completion): Promise<UploadedArtifact | FailedArtifact>
 }
 /** Port that signs short-lived, single-blob URLs. Never persist or log the results. */
 export interface ArtifactUrlIssuer {

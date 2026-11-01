@@ -14,3 +14,5 @@ export const sizeBytesSchema = z.number().int().min(0).max(1000000)
 export const sha256Schema = z.string().regex(/^[0-9a-f]{64}$/)
 export const titleSchema = z.string().min(1).max(160).regex(/^[^\r\n]+$/)
 export const descriptionSchema = z.string().min(1).max(2000)
+// Free text from the producer about an upload report, e.g. a short summary of why it failed.
+export const detailsSchema = z.string().min(1).max(2000)
