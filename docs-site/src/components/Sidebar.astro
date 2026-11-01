@@ -1,0 +1,18 @@
+---
+// Replaces Starlight's Sidebar with a flat list, styled with Tailwind. Keeps Starlight's scroll
+// persistence and mobile footer. The entries are reshaped in src/route-data.ts.
+// https://starlight.astro.build/guides/overriding-components/
+import SidebarPersister from '@astrojs/starlight/components/SidebarPersister.astro'
+import MobileMenuFooter from 'virtual:starlight/components/MobileMenuFooter'
+import SidebarEntries from './SidebarEntries.astro'
+
+const { sidebar } = Astro.locals.starlightRoute
+---
+
+<SidebarPersister>
+  <SidebarEntries entries={sidebar} />
+</SidebarPersister>
+
+<div class="md:sl-hidden">
+  <MobileMenuFooter />
+</div>

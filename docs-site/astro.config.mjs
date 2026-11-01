@@ -16,8 +16,9 @@ export default defineConfig({
       title: 'Platform Services',
       // Tailwind base and design tokens first, as Starlight's Tailwind guide requires.
       customCss: ['./src/styles/global.css'],
-      // Flat sidebar: src/route-data.ts reshapes the generated entries.
+      // Flat sidebar: src/route-data.ts reshapes the entries, src/components/Sidebar.astro renders them.
       routeMiddleware: './src/route-data.ts',
+      components: { Sidebar: './src/components/Sidebar.astro' },
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/julie-ng/ai-native-sdlc-platform-services' },
       ],

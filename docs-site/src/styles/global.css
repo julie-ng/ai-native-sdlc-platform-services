@@ -39,3 +39,12 @@
   --color-method-patch: var(--color-violet-600);
   --color-method-delete: var(--color-red-600);
 }
+
+/* Lighter method colors keep contrast on dark backgrounds. */
+:root[data-theme='dark'] {
+  --color-method-get: var(--color-sky-400);
+  --color-method-post: var(--color-emerald-400);
+  --color-method-put: var(--color-amber-400);
+  --color-method-patch: var(--color-violet-400);
+  --color-method-delete: var(--color-red-400);
+}

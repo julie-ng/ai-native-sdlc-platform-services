@@ -1,0 +1,75 @@
+---
+// Flat sidebar list: top-level groups are section labels, nested groups are sub-headings,
+// and links carry their badge (HTTP method or member kind) as right-aligned text.
+import type { StarlightRouteData } from '@astrojs/starlight/route-data'
+
+type SidebarEntry = StarlightRouteData['sidebar'][number]
+
+interface Props {
+  entries: SidebarEntry[]
+  depth?: number
+}
+
+const { entries, depth = 0 } = Astro.props
+
+// starlight-openapi marks method badges with `sl-openapi-method-<method>`; colors are tokens in global.css.
+const methodColors: Record<string, string> = {
+  'sl-openapi-method-get': 'text-method-get',
+  'sl-openapi-method-post': 'text-method-post',
+  'sl-openapi-method-put': 'text-method-put',
+  'sl-openapi-method-patch': 'text-method-patch',
+  'sl-openapi-method-delete': 'text-method-delete',
+}
+
+function badgeColor(badgeClass: string | undefined) {
+  return methodColors[badgeClass ?? ''] ?? 'text-gray-400 dark:text-gray-500'
+}
+---
+
+<ul class:list={['list-none p-0', { 'space-y-6': depth === 0 }]}>
+  {
+    entries.map(entry => (
+      <li>
+        {entry.type === 'link' ? (
+          <a
+            {...entry.attrs}
+            href={entry.href}
+            aria-current={entry.isCurrent ? 'page' : undefined}
+            class:list={[
+              'flex items-baseline justify-between gap-3 rounded-md px-2 py-1 text-sm leading-snug no-underline',
+              'hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-gray-100',
+              entry.attrs['data-sidebar-kind'] === 'module'
+                ? 'font-medium text-gray-900 dark:text-gray-100'
+                : 'text-gray-600 dark:text-gray-400',
+              'aria-[current=page]:bg-gray-100 aria-[current=page]:font-medium aria-[current=page]:text-gray-900',
+              'dark:aria-[current=page]:bg-gray-800 dark:aria-[current=page]:text-white',
+              { 'pl-5': entry.attrs['data-sidebar-kind'] === 'member' },
+              entry.attrs.class,
+            ]}
+          >
+            <span class="min-w-0 break-words">{entry.label}</span>
+            {entry.badge && (
+              <span class:list={['shrink-0 font-mono text-[0.6875rem] font-medium uppercase', badgeColor(entry.badge.class)]}>
+                {entry.badge.text}
+              </span>
+            )}
+          </a>
+        ) : (
+          <>
+            <p
+              class:list={[
+                'mb-1 px-2',
+                depth === 0
+                  ? 'text-xs font-semibold uppercase tracking-wider text-gray-900 dark:text-gray-100'
+                  : 'mt-4 font-mono text-xs text-gray-400 dark:text-gray-500',
+              ]}
+            >
+              {entry.label}
+            </p>
+            <Astro.self entries={entry.entries} depth={depth + 1} />
+          </>
+        )}
+      </li>
+    ))
+  }
+</ul>
