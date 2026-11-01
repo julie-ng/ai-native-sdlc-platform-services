@@ -31,6 +31,8 @@ export default defineConfig({
           // Regenerate on source changes during `astro dev` only; builds run once.
           watch: process.argv.includes('dev'),
           typeDoc: {
+            // Title of the index page; defaults to the npm package name.
+            name: 'Code reference',
             // Module overview pages are only generated with an explicit entry file name.
             entryFileName: 'index.md',
             // Each module and its members on one page. Keep the kind headings (`## Functions`):

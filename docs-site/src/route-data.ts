@@ -90,7 +90,7 @@ function groupModulesByFolder(links: SidebarLink[], membersByTitle: Map<string, 
   for (const link of links) {
     const segments = link.label.split('/')
     if (segments.length < 2) {
-      // The TypeDoc project index, titled after the package name.
+      // The TypeDoc project index (`name` in astro.config.mjs).
       overview.push({ ...link, label: 'Overview' })
       continue
     }
