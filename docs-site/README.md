@@ -81,7 +81,7 @@ Other options: logo, fonts and social links in `astro.config.mjs` ([customizatio
 
 ## Deployment
 
-Planned: a GitHub Actions workflow builds this package on every push to `main` and deploys `docs-site/dist/` to GitHub Pages, with "GitHub Actions" as the Pages source. The workflow file is proposed in [#28](https://github.com/julie-ng/ai-native-sdlc-platform-services/issues/28) and added by the maintainer; it is not in the repository yet. A failing `docs:check` stops the deployment, so the published site never shows undocumented exports.
+[`.github/workflows/docs.yml`](../.github/workflows/docs.yml) builds this package on every push to `main` (or manually) and deploys `docs-site/dist/` to GitHub Pages. Pages must use "GitHub Actions" as its source, a one-time repository setting. Pull requests do not build the site. A failing `docs:check` stops the deployment, so the published site never shows undocumented exports.
 
 ## Troubleshooting
 

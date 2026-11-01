@@ -25,7 +25,7 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 | Vue naming | PascalCase reusable component filenames | Applies to new components; Nuxt special filenames retain framework conventions |
 | Agent guidance | Root and nested `AGENTS.md`; portable workflows under `.agents/skills/` | Shared guidance authored here; client adapters are managed separately |
 | Durable context | Repository documentation is the minimum; personal memory is optional | No personal memory or other repository is required |
-| Reference documentation | Astro Starlight site in `docs-site/`, published to GitHub Pages from `main` | Site with HTTP API and code reference sections implemented; Pages workflow to be added by the maintainer ([#28](https://github.com/julie-ng/ai-native-sdlc-platform-services/issues/28)) |
+| Reference documentation | Astro Starlight site in `docs-site/`, published to GitHub Pages from `main` | Site with HTTP API and code reference sections implemented; Pages workflow in `.github/workflows/docs.yml`, first deployment pending ([#28](https://github.com/julie-ng/ai-native-sdlc-platform-services/issues/28)) |
 
 ## Open decisions
 
