@@ -1,0 +1,27 @@
+---
+// Overrides starlight-openapi's Key (one property or parameter row): monospace name with inline
+// markers and a hairline between rows instead of spacing. Props match the original; the
+// `sl-openapi-key` class stays because the parent Keys grid selects on it.
+interface Props {
+  additional?: boolean
+  deprecated?: boolean
+  name: string
+  required?: boolean | undefined
+}
+
+const { additional, deprecated, name, required } = Astro.props
+---
+
+<div class="sl-openapi-key not-content col-span-full mt-0 grid grid-cols-subgrid border-t border-gray-200 py-3 first:border-t-0 first:pt-0 dark:border-gray-800">
+  <div class="min-w-0 break-words">
+    <span class:list={['font-mono text-sm font-semibold text-gray-900 dark:text-gray-100', { 'line-through': deprecated, 'italic': additional }]}>
+      {name}
+    </span>
+    {required && <div class="text-xs text-red-600 dark:text-red-400">required</div>}
+    {deprecated && <div class="text-xs text-amber-600 dark:text-amber-400">deprecated</div>}
+    {additional && <div class="text-xs text-gray-500 dark:text-gray-400">additional properties</div>}
+  </div>
+  <div class="min-w-0 text-sm [&_details]:my-2">
+    <slot />
+  </div>
+</div>

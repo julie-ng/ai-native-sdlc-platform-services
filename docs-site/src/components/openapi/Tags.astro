@@ -1,0 +1,28 @@
+---
+// Overrides starlight-openapi's Tags: constraints as one dot-separated line, like Scalar.
+// Props and filtering match the original.
+import Tag from './Tag.astro'
+
+interface Props {
+  label?: string
+  tags: unknown[]
+}
+
+const { label, tags: allTags } = Astro.props
+
+const tags = Array.isArray(allTags)
+  ? allTags.filter((tag): tag is string | number => typeof tag === 'string' || typeof tag === 'number')
+  : []
+---
+
+{tags.length > 0 && (
+  <div class="not-content mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+    {label && <span>{label}</span>}
+    {tags.map((tag, index) => (
+      <>
+        {index > 0 && <span aria-hidden="true">·</span>}
+        <Tag>{typeof tag === 'string' && tag.length === 0 ? '""' : tag}</Tag>
+      </>
+    ))}
+  </div>
+)}

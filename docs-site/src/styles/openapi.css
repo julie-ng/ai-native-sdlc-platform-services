@@ -1,0 +1,28 @@
+/* Flattens starlight-openapi wrappers that are not overridden as components (their logic depends
+   on plugin internals). The plugin's scoped styles are unlayered, so these rules are unlayered too
+   and add `.sl-markdown-content` for specificity. */
+@reference './global.css';
+
+/* Section panels: no gray box; content sits on the page like Scalar. */
+.sl-markdown-content .sl-openapi-section-panel {
+  @apply overflow-x-auto border-0 bg-transparent p-0;
+}
+
+/* Media type (application/json): a small label instead of a full-width gray field. */
+.sl-markdown-content .sl-openapi-content-picker-select {
+  @apply mb-3 text-xs text-gray-500 dark:text-gray-400;
+}
+.sl-markdown-content .sl-openapi-content-picker-select-value {
+  @apply w-auto border-0 bg-transparent p-0 font-mono;
+}
+.sl-markdown-content .sl-openapi-content-picker-select select {
+  @apply w-auto rounded-md border border-gray-200 bg-transparent py-1 font-mono dark:border-gray-700;
+}
+
+/* Object schemas: no vertical rule or indent at the top level; nested objects keep a light rule. */
+.sl-markdown-content details.sl-openapi-schema-object-root {
+  @apply border-0 ps-0;
+}
+.sl-markdown-content .sl-openapi-schema-object-root details {
+  @apply border-gray-200 dark:border-gray-800;
+}
