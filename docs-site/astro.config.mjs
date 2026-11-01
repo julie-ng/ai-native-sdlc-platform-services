@@ -1,6 +1,7 @@
 // Documentation site for Platform Services, published to GitHub Pages.
 // `site` and `base` match the project Pages URL: https://julie-ng.github.io/ai-native-sdlc-platform-services/
 import starlight from '@astrojs/starlight'
+import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'astro/config'
 import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi'
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc'
@@ -13,6 +14,8 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Platform Services',
+      // Tailwind base and design tokens first, as Starlight's Tailwind guide requires.
+      customCss: ['./src/styles/global.css'],
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/julie-ng/ai-native-sdlc-platform-services' },
       ],
@@ -42,4 +45,5 @@ export default defineConfig({
       ],
     }),
   ],
+  vite: { plugins: [tailwindcss()] },
 })

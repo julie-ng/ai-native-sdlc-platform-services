@@ -10,9 +10,12 @@
   },
   "devDependencies": {
     "@astrojs/starlight": "0.42.8",
+    "@astrojs/starlight-tailwind": "5.0.0",
+    "@tailwindcss/vite": "4.3.3",
     "astro": "7.4.4",
     "starlight-openapi": "0.27.0",
     "starlight-typedoc": "0.23.2",
+    "tailwindcss": "4.3.3",
     "typedoc": "0.28.20",
     "typedoc-plugin-markdown": "4.14.1"
   }
