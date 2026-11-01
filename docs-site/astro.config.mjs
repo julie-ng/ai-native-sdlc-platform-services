@@ -30,9 +30,20 @@ export default defineConfig({
           output: 'code',
           // Regenerate on source changes during `astro dev` only; builds run once.
           watch: process.argv.includes('dev'),
-          // Module overview pages are only generated with an explicit entry file name.
-          // The module router puts each module and its members on one page.
-          typeDoc: { entryFileName: 'index.md', router: 'module' },
+          typeDoc: {
+            // Module overview pages are only generated with an explicit entry file name.
+            entryFileName: 'index.md',
+            // Each module and its members on one page. Keep the kind headings (`## Functions`):
+            // src/route-data.ts reads them to list members in the sidebar.
+            router: 'module',
+            // Fewer headings: signatures as code blocks; parameters and properties as tables.
+            useCodeBlocks: true,
+            parametersFormat: 'table',
+            interfacePropertiesFormat: 'table',
+            typeAliasPropertiesFormat: 'table',
+            // Each member already links its source; the column squeezes the table.
+            tableColumnSettings: { hideSources: true },
+          },
         }),
         // Generated from Zod by `npm run generate:artifact-openapi`; `test:contract` keeps it fresh.
         starlightOpenAPI([
