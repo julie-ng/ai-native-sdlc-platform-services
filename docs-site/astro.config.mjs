@@ -4,7 +4,7 @@ import starlight from '@astrojs/starlight'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'astro/config'
 import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi'
-import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc'
+import starlightTypeDoc from 'starlight-typedoc'
 
 export default defineConfig({
   site: 'https://julie-ng.github.io',
@@ -16,6 +16,8 @@ export default defineConfig({
       title: 'Platform Services',
       // Tailwind base and design tokens first, as Starlight's Tailwind guide requires.
       customCss: ['./src/styles/global.css'],
+      // Flat sidebar: src/route-data.ts reshapes the generated entries.
+      routeMiddleware: './src/route-data.ts',
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/julie-ng/ai-native-sdlc-platform-services' },
       ],
@@ -24,11 +26,11 @@ export default defineConfig({
         // also uses, so the site and the documentation check cannot drift apart.
         starlightTypeDoc({
           output: 'code',
-          sidebar: { label: 'Code reference', collapsed: false },
           // Regenerate on source changes during `astro dev` only; builds run once.
           watch: process.argv.includes('dev'),
           // Module overview pages are only generated with an explicit entry file name.
-          typeDoc: { entryFileName: 'index.md' },
+          // The module router puts each module and its members on one page.
+          typeDoc: { entryFileName: 'index.md', router: 'module' },
         }),
         // Generated from Zod by `npm run generate:artifact-openapi`; `test:contract` keeps it fresh.
         starlightOpenAPI([
@@ -41,7 +43,9 @@ export default defineConfig({
       ],
       sidebar: [
         ...openAPISidebarGroups,
-        typeDocSidebarGroup,
+        // starlight-typedoc's own sidebar group expects one page per member, so list the
+        // generated module pages instead; src/route-data.ts groups them by folder.
+        { label: 'Code reference', items: [{ autogenerate: { directory: 'code' } }] },
       ],
     }),
   ],
