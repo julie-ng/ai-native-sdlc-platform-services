@@ -1,7 +1,8 @@
 import { expect, test } from 'vitest'
 import { contexts, otherP1, planP1, planP2, planRunB, stepIds } from '../../../tests/support/artifact-fixtures.ts'
-import { canAccessArtifact, deriveArtifactAccess, isArtifactVisible, visibleArtifactReferences, sameArtifactReference } from './policy.utils.ts'
-import type { ArtifactAction, CallerContext } from './ports.ts'
+import type { CallerContext } from '../../../shared/types/artifact.ts'
+import { canAccessArtifact, isArtifactVisible, readableArtifactReferences, sameArtifactReference } from './policy.utils.ts'
+import type { ArtifactAction } from './policy.utils.ts'
 
 test('planner creates/updates its own bound plan; coder reads its exact bound plan', () => {
   const planner = contexts['planner-p1']
@@ -13,6 +14,9 @@ test('planner creates/updates its own bound plan; coder reads its exact bound pl
   expect(canAccessArtifact(coder, planP1, 'read')).toBe(true)
   for (const action of ['create', 'update', 'delete', '__proto__', 'constructor']) {
     expect(canAccessArtifact(coder, planP1, action as ArtifactAction)).toBe(false)
+  }
+  for (const action of ['delete', '__proto__', 'constructor']) {
+    expect(canAccessArtifact(planner, planP1, action as ArtifactAction)).toBe(false)
   }
 })
 
@@ -27,7 +31,9 @@ test('a reference is not a permission: other names, runs and steps grant nothing
   expect(canAccessArtifact({ ...contexts['coder-c1'], inputs: [] }, planP1, 'read')).toBe(false)
   expect(canAccessArtifact({ ...contexts['planner-p1'], outputs: [] }, planP1, 'create')).toBe(false)
   for (const taskType of ['unknown', 'constructor', '__proto__']) {
-    expect(deriveArtifactAccess({ ...contexts['coder-c1'], taskType })).toStrictEqual({ readable: [], creatable: [], updatable: [] })
+    const caller = { ...contexts['coder-c1'], taskType }
+    expect(isArtifactVisible(caller, planP1)).toBe(false)
+    expect(readableArtifactReferences(caller)).toStrictEqual([])
   }
 })
 
@@ -45,28 +51,26 @@ test('visibility is any granted action; it separates 404 from 403', () => {
   }
 })
 
-test('policy fails closed on invalid JS callers and does not mutate or retain bindings', () => {
+test('policy fails closed on invalid JS callers and does not mutate bindings', () => {
   const caller = structuredClone(contexts['planner-p1']) as CallerContext
   const before = structuredClone(caller)
-  caller.outputs.push({ ...caller.outputs[0]! })
-  const access = deriveArtifactAccess(caller)
-  expect(access.creatable.length).toBe(1)
-  expect(access.updatable.length).toBe(1)
-  expect(visibleArtifactReferences(access).length).toBe(1)
-  ;(access.creatable[0] as { name: string }).name = 'changed'
-  expect(caller.outputs[0]).toStrictEqual(before.outputs[0])
-  expect(access.updatable[0]!.name).toBe('plan')
-  expect(deriveArtifactAccess(null as unknown as CallerContext)).toStrictEqual({ readable: [], creatable: [], updatable: [] })
+  expect(canAccessArtifact(caller, planP1, 'create')).toBe(true)
+  expect(readableArtifactReferences(caller)).toStrictEqual([])
+  expect(caller).toStrictEqual(before)
+  for (const invalid of [null, undefined, {}, { ...contexts['coder-c1'], inputs: [planRunB] }]) {
+    expect(canAccessArtifact(invalid as unknown as CallerContext, planP1, 'read')).toBe(false)
+    expect(readableArtifactReferences(invalid as unknown as CallerContext)).toStrictEqual([])
+  }
 })
 
-test('read scope follows declared bindings and de-duplicates without assuming persistence', () => {
+test('read scope follows declared bindings without assuming persistence', () => {
   for (const [name, count] of [['planner-p1', 0], ['coder-c1', 1], ['coder-multiple-inputs', 2], ['coder-no-inputs', 0], ['unknown-task', 0]] as const) {
-    expect(deriveArtifactAccess(contexts[name]).readable.length).toBe(count)
+    expect(readableArtifactReferences(contexts[name]).length).toBe(count)
   }
   const caller = structuredClone(contexts['coder-c1']) as CallerContext
   const unregistered = { ...planP1, producerStepId: '20000000-0000-4000-8000-000000000099' }
-  caller.inputs.push({ ...planP1 }, unregistered)
+  caller.inputs.push({ ...otherP1 }, unregistered)
   // Policy returns permitted references; the repository resolves which exist.
-  expect(deriveArtifactAccess(caller).readable).toStrictEqual([planP1, unregistered])
+  expect(readableArtifactReferences(caller)).toStrictEqual([planP1, unregistered])
   expect(sameArtifactReference(planP1, { ...planP1, producerStepId: stepIds.plannerP2 })).toBe(false)
 })

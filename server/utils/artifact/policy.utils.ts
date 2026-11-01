@@ -1,47 +1,44 @@
 /**
- * Artifact access policy: derives, from the trusted caller context, which exact
- * references a caller may read, create and update.
+ * Artifact access policy: decides, from the trusted caller context, whether a
+ * caller may read, create or update an exact reference.
  * @module
  */
-import type { ArtifactAction, ArtifactAccess, ArtifactRef, CallerContext, DeriveArtifactAccess } from './ports.ts'
+import type { ArtifactRef, CallerContext } from '../../../shared/types/artifact.ts'
 import { readCallerContext } from './context.utils.ts'
+
+/**
+ * Action a caller may be granted on an artifact reference. Create and update stay
+ * distinct, mirroring Azure's create (`c`) and write (`w`) SAS permissions, even
+ * though the POC planner currently holds both.
+ */
+export type ArtifactAction = 'create' | 'read' | 'update'
 
 /** Whether two references name the same run, producing step and slot. */
 export function sameArtifactReference(left: ArtifactRef, right: ArtifactRef): boolean {
   return left.runId === right.runId && left.producerStepId === right.producerStepId && left.name === right.name
 }
 
-/** Remove duplicate references, returning independent copies. */
-function unique(references: readonly ArtifactRef[]): ArtifactRef[] {
-  return references.filter((ref, index) => references.findIndex(other => sameArtifactReference(ref, other)) === index)
-    .map(ref => ({ ...ref }))
-}
-
-/** Every reference granted by any action, without duplicates. */
-export function visibleArtifactReferences(access: ArtifactAccess): ArtifactRef[] {
-  return unique([...access.readable, ...access.creatable, ...access.updatable])
-}
-
 /**
- * Task-type access policy.
+ * Task-type access policy for one reference and action.
  * - `planner`: creates and updates its own `plan` outputs; reads nothing.
  * - `coder`: reads `plan` references among its inputs and outputs; writes nothing.
  * - Any other task type, or an invalid context: no access.
+ *
+ * Check {@link isArtifactVisible} first: a visible artifact with a missing action is a 403.
  * @param caller - Trusted caller context.
  */
-export const deriveArtifactAccess: DeriveArtifactAccess = (caller) => {
+export function canAccessArtifact(caller: CallerContext, reference: ArtifactRef, action: ArtifactAction): boolean {
   // Fail closed even for typed values supplied by unvalidated JavaScript callers.
-  if (!readCallerContext({ caller }).ok) {
-    return { readable: [], creatable: [], updatable: [] }
+  if (!readCallerContext({ caller }).ok || reference.name !== 'plan') {
+    return false
   }
   if (caller.taskType === 'planner') {
-    const ownPlans = unique(caller.outputs.filter(ref => ref.name === 'plan'))
-    return { readable: [], creatable: ownPlans, updatable: unique(ownPlans) }
+    return (action === 'create' || action === 'update') && caller.outputs.some(ref => sameArtifactReference(ref, reference))
   }
   if (caller.taskType === 'coder') {
-    return { readable: unique([...caller.inputs, ...caller.outputs].filter(ref => ref.name === 'plan')), creatable: [], updatable: [] }
+    return action === 'read' && [...caller.inputs, ...caller.outputs].some(ref => sameArtifactReference(ref, reference))
   }
-  return { readable: [], creatable: [], updatable: [] }
+  return false
 }
 
 /**
@@ -49,19 +46,17 @@ export const deriveArtifactAccess: DeriveArtifactAccess = (caller) => {
  * reported as 404 so that a caller cannot learn whether they exist.
  */
 export function isArtifactVisible(caller: CallerContext, reference: ArtifactRef): boolean {
-  return visibleArtifactReferences(deriveArtifactAccess(caller)).some(ref => sameArtifactReference(ref, reference))
+  return (['create', 'read', 'update'] as const).some(action => canAccessArtifact(caller, reference, action))
 }
 
 /**
- * Whether the caller holds a specific action on the reference. Check
- * {@link isArtifactVisible} first: a visible artifact with a missing action is a 403.
+ * References the caller may read, for discovery. They need not be registered;
+ * listing returns only the records that exist.
+ * @param caller - Trusted caller context.
  */
-export function canAccessArtifact(caller: CallerContext, reference: ArtifactRef, action: ArtifactAction): boolean {
-  const access = deriveArtifactAccess(caller)
-  switch (action) {
-    case 'read': return access.readable.some(ref => sameArtifactReference(ref, reference))
-    case 'create': return access.creatable.some(ref => sameArtifactReference(ref, reference))
-    case 'update': return access.updatable.some(ref => sameArtifactReference(ref, reference))
-    default: return false
+export function readableArtifactReferences(caller: CallerContext): ArtifactRef[] {
+  if (!readCallerContext({ caller }).ok) {
+    return []
   }
+  return [...caller.inputs, ...caller.outputs].filter(ref => canAccessArtifact(caller, ref, 'read'))
 }

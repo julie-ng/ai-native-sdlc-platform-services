@@ -4,11 +4,12 @@
  * @module
  */
 import type {
-  ArtifactAction, ArtifactInfo, ArtifactRecord, ArtifactServiceDependencies, CallerContext,
+  ArtifactInfo, ArtifactRecord, ArtifactServiceDependencies, CallerContext,
   CompleteArtifactRequest, CompleteArtifactResponse, CreateArtifactRequest, CreateArtifactResponse,
   DownloadSas, ListArtifactsResponse, ServiceResult,
 } from './ports.ts'
-import { canAccessArtifact, deriveArtifactAccess, isArtifactVisible } from './policy.utils.ts'
+import { canAccessArtifact, isArtifactVisible, readableArtifactReferences } from './policy.utils.ts'
+import type { ArtifactAction } from './policy.utils.ts'
 
 /** 404 for missing and invisible artifacts alike, so IDs reveal nothing. */
 const notFound = { ok: false, status: 404, message: 'Artifact not found' } as const
@@ -109,7 +110,7 @@ export function createArtifactService({ repository, urls }: ArtifactServiceDepen
 
     /** List metadata of the artifacts the caller may read. Never issues SAS URLs. */
     async listArtifacts(caller: CallerContext): Promise<ServiceResult<ListArtifactsResponse>> {
-      const records = await repository.listByReferences(deriveArtifactAccess(caller).readable)
+      const records = await repository.listByReferences(readableArtifactReferences(caller))
       return { ok: true, status: 200, body: { artifacts: records.map(toArtifactInfo) } }
     },
 

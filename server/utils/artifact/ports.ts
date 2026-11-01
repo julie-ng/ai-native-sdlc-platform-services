@@ -5,33 +5,11 @@
  * @module
  */
 import type {
-  ArtifactInfo, ArtifactRef, CallerContext, CreateArtifactRequest, CompleteArtifactRequest,
+  ArtifactInfo, ArtifactRef, CreateArtifactRequest, CompleteArtifactRequest,
   UploadSas, DownloadSas,
 } from '../../../shared/types/artifact.ts'
 
 export type * from '../../../shared/types/artifact.ts'
-
-/**
- * Action a caller may be granted on an artifact reference. Create and update stay
- * distinct, mirroring Azure's create (`c`) and write (`w`) SAS permissions, even
- * though the POC planner currently holds both.
- */
-export type ArtifactAction = 'create' | 'read' | 'update'
-
-/**
- * References a caller may act on, per action. Derived server-side from the trusted
- * caller context; never supplied by the client.
- */
-export interface ArtifactAccess {
-  /** Artifacts whose metadata and download SAS the caller may obtain. */
-  readable: readonly ArtifactRef[]
-  /** Artifacts the caller may register for the first time. */
-  creatable: readonly ArtifactRef[]
-  /** Artifacts the caller may re-register, overwrite or re-report. */
-  updatable: readonly ArtifactRef[]
-}
-/** Access policy: maps a caller to the references it may read, create and update. */
-export type DeriveArtifactAccess = (caller: CallerContext) => ArtifactAccess
 
 /** Descriptive metadata of an artifact: the create request without the slot `name`. */
 export type ArtifactMetadata = Omit<CreateArtifactRequest, 'name'>
