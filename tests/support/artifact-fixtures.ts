@@ -1,5 +1,5 @@
 // Test-only server-owned contexts and records. Never import these into production wiring.
-import type { ArtifactRef, CallerContext, UploadedArtifact } from '../../server/utils/artifact/ports.ts'
+import type { ArtifactRecord, ArtifactRef, CallerContext } from '../../server/utils/artifact/ports.ts'
 
 export const runA = '10000000-0000-4000-8000-000000000001'
 export const runB = '10000000-0000-4000-8000-000000000002'
@@ -40,7 +40,7 @@ export const workflowRecords = {
   ],
 }
 
-export function uploadedRecord(id: string, reference: ArtifactRef): UploadedArtifact {
+export function uploadedRecord(id: string, reference: ArtifactRef): ArtifactRecord {
   return {
     id,
     reference: { ...reference },

@@ -10,10 +10,10 @@ Routes, service, PostgreSQL repository and Azure SAS issuer are implemented. Not
 | --- | --- |
 | `POST /api/artifacts` | Register or re-register the caller's artifact and issue an upload SAS. 201 for a new artifact; otherwise 200. |
 | `PUT <upload SAS URL>` | Upload or overwrite directly in Azure. |
-| `PUT /api/artifacts/{id}` | Report a successful upload: size and SHA-256. Returns 200. |
+| `PUT /api/artifacts/{id}` | Report the upload outcome: `uploaded` with size and SHA-256, or `failed`; optional `details`. Returns 200. |
 | `GET /api/artifacts` | List readable metadata. Returns 200, possibly an empty list. |
-| `GET /api/artifacts/{id}` | Read reserved or uploaded metadata. Returns 200. |
-| `GET /api/artifacts/{id}/sas` | Issue a download SAS. Returns 200; 409 until an upload is reported. |
+| `GET /api/artifacts/{id}` | Read metadata in any state. Returns 200. |
+| `GET /api/artifacts/{id}/sas` | Issue a download SAS. Returns 200; 409 unless the latest report is a successful upload. |
 | `GET <download SAS URL>` | Download directly from Azure. |
 
 ## Access policy
@@ -34,12 +34,18 @@ The `requireCallerContext` guard, called explicitly by every artifact route, est
 
 1. Write the local file and POST its name/content type, with optional kind/title/description.
 2. Upload using the returned SAS URL and headers.
-3. After Azure succeeds, PUT `state: uploaded`, `sizeBytes`, and `sha256` to the artifact endpoint.
+3. Report the outcome to the artifact endpoint: after Azure succeeds, PUT `state: uploaded`, `sizeBytes` and `sha256`; if the upload fails, PUT `state: failed`. Either may include `details`, free text such as a short summary of the failure.
 4. Consumers discover the artifact, request a download SAS, and fetch the file.
 
 Repeated POSTs replace the descriptive metadata (last write wins; omitted optional fields are cleared) and issue a fresh SAS for the same artifact. State, size and hash are unchanged until the next upload report.
 
-Each upload report replaces the latest size/hash. Reported size is limited to **1 MB (1,000,000 bytes)**; the service does not verify uploaded bytes or enforce their actual size.
+| State | Meaning | Size and hash | Download |
+| --- | --- | --- | --- |
+| `reserved` | Registered; no upload reported yet | No | 409 |
+| `uploaded` | Latest report: upload succeeded | Yes | 200 |
+| `failed` | Latest report: upload failed | No | 409 |
+
+Each upload report replaces the state, size, hash and details (omitted details are cleared); the last report wins, with no history. A failure after an earlier successful upload therefore makes downloads 409 until the next successful report, even though Azure keeps the previous blob. Reported size is limited to **1 MB (1,000,000 bytes)**; the service does not verify uploaded bytes or enforce their actual size.
 
 ## POC assumptions
 

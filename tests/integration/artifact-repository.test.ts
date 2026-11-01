@@ -40,16 +40,37 @@ test('register, replace metadata, report uploads and keep one stable record', as
   expect(again.record.updatedAt > first.record.updatedAt).toBe(true)
 
   await sleep(5)
-  const uploaded = await repository().acknowledge(first.record.id, { sizeBytes: 5, sha256: 'a'.repeat(64) })
+  const uploaded = await repository().acknowledge(first.record.id, { state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) })
   expect(uploaded).toMatchObject({ id: first.record.id, state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) })
   expect(uploaded.updatedAt > again.record.updatedAt).toBe(true)
 
-  const replaced = await repository().acknowledge(first.record.id, { sizeBytes: 13, sha256: 'b'.repeat(64) })
+  const replaced = await repository().acknowledge(first.record.id, { state: 'uploaded', sizeBytes: 13, sha256: 'b'.repeat(64) })
   expect(replaced).toMatchObject({ sizeBytes: 13, sha256: 'b'.repeat(64) })
 
   // A repeated POST after upload keeps the reported content.
   const afterUpload = await repository().upsert(planP1, { contentType: 'text/markdown' })
   expect(afterUpload.record).toMatchObject({ state: 'uploaded', sizeBytes: 13 })
+})
+
+test('each upload report replaces state, size, hash and details', async () => {
+  const { record } = await repository().upsert({ ...planP1, name: 'report' }, { contentType: 'text/markdown' })
+  const failed = await repository().acknowledge(record.id, { state: 'failed', details: 'Azure returned 403' })
+  expect(failed).toMatchObject({ state: 'failed', sizeBytes: null, sha256: null, details: 'Azure returned 403' })
+
+  const uploaded = await repository().acknowledge(record.id, { state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) })
+  // Omitted details are cleared, not kept from the previous report.
+  expect(uploaded).toStrictEqual({ ...uploaded, state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) })
+  expect(uploaded).not.toHaveProperty('details')
+
+  // Last report wins: a failure after an upload clears the size and hash.
+  const failedAgain = await repository().acknowledge(record.id, { state: 'failed' })
+  expect(failedAgain).toMatchObject({ state: 'failed', sizeBytes: null, sha256: null })
+  expect(failedAgain).not.toHaveProperty('details')
+  expect(await repository().findById(record.id)).toStrictEqual(failedAgain)
+
+  // A repeated POST keeps the reported state.
+  const afterFailure = await repository().upsert({ ...planP1, name: 'report' }, { contentType: 'text/markdown' })
+  expect(afterFailure.record.state).toBe('failed')
 })
 
 test('reads leave timestamps unchanged and survive a new connection pool', async () => {
@@ -85,6 +106,8 @@ test('PostgreSQL enforces the step foreign key, step/name uniqueness and upload 
   expect(await failure(insert({ producerStepId: planP1.producerStepId, name: 'plan' }))).toMatch(/artifacts_producer_step_id_name_unique/)
   expect(await failure(insert({ state: 'uploaded' }))).toMatch(/artifacts_state_check/)
   expect(await failure(insert({ sizeBytes: 5 }))).toMatch(/artifacts_state_check/)
+  expect(await failure(insert({ details: 'Not before a report' }))).toMatch(/artifacts_state_check/)
+  expect(await failure(insert({ state: 'failed', sizeBytes: 5, sha256: 'a'.repeat(64) }))).toMatch(/artifacts_state_check/)
   const [{ count }] = (await connection.db.execute<{ count: string }>(sql`SELECT count(*) FROM artifacts WHERE name = 'constraint'`)).rows as [{ count: string }]
   expect(count).toBe('0')
 })

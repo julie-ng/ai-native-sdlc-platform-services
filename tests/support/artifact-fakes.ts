@@ -35,9 +35,18 @@ export function createInMemoryRepository(seed: readonly ArtifactRecord[] = []) {
       if (index === -1) {
         throw new Error('Unknown artifact')
       }
-      const uploaded = { ...records[index]!, ...completion, state: 'uploaded' as const, updatedAt: now() }
-      records[index] = uploaded
-      return structuredClone(uploaded)
+      // Mirrors the PostgreSQL adapter: every report replaces state, size, hash and details.
+      const { details: _previous, ...current } = records[index]!
+      const reported = {
+        ...current,
+        state: completion.state,
+        sizeBytes: completion.state === 'uploaded' ? completion.sizeBytes : null,
+        sha256: completion.state === 'uploaded' ? completion.sha256 : null,
+        ...(completion.details === undefined ? {} : { details: completion.details }),
+        updatedAt: now(),
+      }
+      records[index] = reported
+      return structuredClone(reported)
     }),
   } satisfies ArtifactRepository
   return { repository, records }

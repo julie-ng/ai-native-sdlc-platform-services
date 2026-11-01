@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Artifact service contract",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "One current artifact per producing step/name. The explicit requireCallerContext guard establishes event.context.caller; task policy and exact bindings determine access. Missing or not visible is 404; visible but wrong action is 403. Planners write their own plan; coders read bound plans. Bytes move directly between caller and Azure Blob Storage. Errors use Nitro's createError() JSON."
   },
   "x-caller-context": {
@@ -160,7 +160,7 @@
           "Artifacts"
         ],
         "summary": "List artifacts",
-        "description": "List readable reserved/uploaded metadata, ordered by createdAt then id ascending. Possibly empty; never issues SAS URLs.",
+        "description": "List readable metadata in any state, ordered by createdAt then id ascending. Possibly empty; never issues SAS URLs.",
         "responses": {
           "200": {
             "description": "Success",
@@ -217,7 +217,7 @@
           "Artifacts"
         ],
         "summary": "Update upload status",
-        "description": "After Azure accepts the upload, report its size and SHA-256. Each report replaces the latest values; no history. Uploaded bytes are not verified. Maximum reported size: 1,000,000 bytes.",
+        "description": "Report the outcome of the direct upload to Azure: `uploaded` with its size and SHA-256, or `failed`. Optional `details` carry free text, for example a short summary of why the upload failed. Each report replaces the previous state, size, hash and details (omitted details are cleared); no history. Uploaded bytes are not verified. Maximum reported size: 1,000,000 bytes.",
         "parameters": [
           {
             "name": "id",
@@ -410,7 +410,7 @@
           "Artifacts"
         ],
         "summary": "Request download SAS URL",
-        "description": "Issue a read SAS for the current blob; 409 until an upload has been reported.",
+        "description": "Issue a read SAS for the current blob; 409 unless the latest report is a successful upload.",
         "parameters": [
           {
             "name": "id",
@@ -479,7 +479,7 @@
             }
           },
           "409": {
-            "description": "Download requested before an upload was reported",
+            "description": "Download requested while the latest report is not a successful upload",
             "content": {
               "application/json": {
                 "schema": {
@@ -552,6 +552,11 @@
         "pattern": "^[^\\r\\n]+$"
       },
       "Description": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      },
+      "Details": {
         "type": "string",
         "minLength": 1,
         "maxLength": 2000
@@ -662,27 +667,60 @@
         "additionalProperties": false
       },
       "CompleteArtifactRequest": {
-        "type": "object",
-        "properties": {
-          "state": {
-            "type": "string",
-            "enum": [
-              "uploaded"
-            ]
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "uploaded"
+                ]
+              },
+              "sizeBytes": {
+                "$ref": "#/components/schemas/SizeBytes"
+              },
+              "sha256": {
+                "$ref": "#/components/schemas/Sha256"
+              },
+              "details": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Details"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "state",
+              "sizeBytes",
+              "sha256"
+            ],
+            "additionalProperties": false
           },
-          "sizeBytes": {
-            "$ref": "#/components/schemas/SizeBytes"
-          },
-          "sha256": {
-            "$ref": "#/components/schemas/Sha256"
+          {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "failed"
+                ]
+              },
+              "details": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Details"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ],
+            "additionalProperties": false
           }
-        },
-        "required": [
-          "state",
-          "sizeBytes",
-          "sha256"
-        ],
-        "additionalProperties": false
+        ]
       },
       "UploadSas": {
         "type": "object",
@@ -762,7 +800,8 @@
             "type": "string",
             "enum": [
               "reserved",
-              "uploaded"
+              "uploaded",
+              "failed"
             ]
           },
           "upload": {
@@ -785,7 +824,8 @@
           "state": {
             "type": "string",
             "enum": [
-              "uploaded"
+              "uploaded",
+              "failed"
             ]
           }
         },
@@ -901,6 +941,13 @@
           },
           "sha256": {
             "$ref": "#/components/schemas/Sha256"
+          },
+          "details": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Details"
+              }
+            ]
           }
         },
         "required": [
@@ -915,6 +962,69 @@
         ],
         "additionalProperties": false
       },
+      "FailedArtifactInfo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "name": {
+            "$ref": "#/components/schemas/Name"
+          },
+          "contentType": {
+            "$ref": "#/components/schemas/ContentType"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Name"
+              }
+            ]
+          },
+          "title": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Title"
+              }
+            ]
+          },
+          "description": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Description"
+              }
+            ]
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/UtcInstant"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/UtcInstant"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "failed"
+            ]
+          },
+          "details": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Details"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "contentType",
+          "createdAt",
+          "updatedAt",
+          "state"
+        ],
+        "additionalProperties": false
+      },
       "ArtifactInfo": {
         "oneOf": [
           {
@@ -922,6 +1032,9 @@
           },
           {
             "$ref": "#/components/schemas/UploadedArtifactInfo"
+          },
+          {
+            "$ref": "#/components/schemas/FailedArtifactInfo"
           }
         ]
       },

@@ -8,6 +8,13 @@
       "when": 1793126753694,
       "tag": "0000_artifacts",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793541575733,
+      "tag": "0001_upload_failures",
+      "breakpoints": true
     }
   ]
 }

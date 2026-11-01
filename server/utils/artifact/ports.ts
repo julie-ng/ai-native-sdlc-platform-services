@@ -5,7 +5,7 @@
  * @module
  */
 import type {
-  ArtifactRef, CallerContext, CreateArtifactRequest, CompleteArtifactRequest,
+  ArtifactInfo, ArtifactRef, CallerContext, CreateArtifactRequest, CompleteArtifactRequest,
   UploadSas, DownloadSas,
 } from '../../../shared/types/artifact.ts'
 
@@ -35,30 +35,24 @@ export type DeriveArtifactAccess = (caller: CallerContext) => ArtifactAccess
 
 /** Descriptive metadata of an artifact: the create request without the slot `name`. */
 export type ArtifactMetadata = Omit<CreateArtifactRequest, 'name'>
-/** Fields of every stored artifact, regardless of state. */
-interface ArtifactBase {
+/**
+ * Stored artifact. Internal: includes the producing step reference. Size and hash are
+ * set only when `uploaded`, and details only after a report. The database CHECK
+ * constraint enforces this, so the type deliberately does not repeat it per state.
+ */
+export interface ArtifactRecord {
   id: string
   reference: ArtifactRef
   metadata: ArtifactMetadata
+  state: ArtifactInfo['state']
+  sizeBytes: number | null
+  sha256: string | null
+  details?: string
   createdAt: string // UTC ISO instant, fixed on first registration.
-  updatedAt: string // Refreshed by every accepted write (repeated POST or completion).
+  updatedAt: string // Refreshed by every accepted write (repeated POST or upload report).
 }
-/** Registered artifact whose upload has not been reported: size and hash are `null`. */
-export interface ReservedArtifact extends ArtifactBase {
-  state: 'reserved'
-  sizeBytes: null
-  sha256: null
-}
-/** Artifact with a reported upload; the size and hash are the latest report. */
-export interface UploadedArtifact extends ArtifactBase {
-  state: 'uploaded'
-  sizeBytes: number
-  sha256: string
-}
-/** Stored artifact, discriminated by `state`. Internal: includes the producing step reference. */
-export type ArtifactRecord = ReservedArtifact | UploadedArtifact
-/** The size and hash from an upload report. */
-export type Completion = Pick<CompleteArtifactRequest, 'sizeBytes' | 'sha256'>
+/** An upload report: `uploaded` with size and hash, or `failed`; both with optional details. */
+export type Completion = CompleteArtifactRequest
 
 /**
  * Persistence port for artifact metadata. Adapters throw on unexpected failures; the
@@ -82,18 +76,18 @@ export interface ArtifactRepository {
    */
   listByReferences(references: readonly ArtifactRef[]): Promise<ArtifactRecord[]>
   /**
-   * Replaces the latest size/hash and marks the record `uploaded`; no history is kept.
-   * The caller has already checked access.
+   * Record an upload report: replaces the state, size, hash and details (cleared when
+   * omitted); no history is kept. The caller has already checked access.
    * @throws If the record no longer exists.
    */
-  acknowledge(id: string, completion: Completion): Promise<UploadedArtifact>
+  acknowledge(id: string, completion: Completion): Promise<ArtifactRecord>
 }
 /** Port that signs short-lived, single-blob URLs. Never persist or log the results. */
 export interface ArtifactUrlIssuer {
   /** Issue an upload (create or overwrite) URL for the record's blob. */
   issueUpload(record: ArtifactRecord): Promise<UploadSas>
-  /** Issue a read URL; only uploaded artifacts have bytes to read. */
-  issueDownload(record: UploadedArtifact): Promise<DownloadSas>
+  /** Issue a read URL; only uploaded artifacts have bytes to read (the service checks). */
+  issueDownload(record: ArtifactRecord): Promise<DownloadSas>
 }
 /** Adapters injected into `createArtifactService`. */
 export interface ArtifactServiceDependencies {

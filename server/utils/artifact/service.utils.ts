@@ -31,9 +31,16 @@ function toArtifactInfo(record: ArtifactRecord): ArtifactInfo {
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   }
-  return record.state === 'uploaded'
-    ? { ...common, state: 'uploaded', sizeBytes: record.sizeBytes, sha256: record.sha256 }
-    : { ...common, state: 'reserved' }
+  const details = record.details === undefined ? {} : { details: record.details }
+  switch (record.state) {
+    case 'uploaded':
+      // The database CHECK constraint guarantees size and hash for uploaded records.
+      return { ...common, state: 'uploaded', sizeBytes: record.sizeBytes!, sha256: record.sha256!, ...details }
+    case 'failed':
+      return { ...common, state: 'failed', ...details }
+    case 'reserved':
+      return { ...common, state: 'reserved' }
+  }
 }
 
 /**
@@ -85,18 +92,19 @@ export function createArtifactService({ repository, urls }: ArtifactServiceDepen
     },
 
     /**
-     * Record the caller's report of a finished upload. Size and hash are reported, not
-     * verified. Each report replaces the previous one.
-     * @returns 200 with the ID and `uploaded` state; 404 or 403 when not permitted.
+     * Record the caller's upload report, successful or failed. Size and hash are
+     * reported, not verified. Each report replaces the previous state, size, hash and
+     * details; no history.
+     * @returns 200 with the ID and the reported state; 404 or 403 when not permitted.
      */
-    async completeArtifact(caller: CallerContext, id: string, { sizeBytes, sha256 }: CompleteArtifactRequest): Promise<ServiceResult<CompleteArtifactResponse>> {
-      // The first report creates the uploaded content; later reports replace it.
+    async completeArtifact(caller: CallerContext, id: string, report: CompleteArtifactRequest): Promise<ServiceResult<CompleteArtifactResponse>> {
+      // The first report on a reserved artifact needs create; later reports need update.
       const found = await findFor(caller, id, record => record.state === 'reserved' ? 'create' : 'update')
       if (!found.ok) {
         return found
       }
-      const record = await repository.acknowledge(id, { sizeBytes, sha256 })
-      return { ok: true, status: 200, body: { id: record.id, state: record.state } }
+      const record = await repository.acknowledge(id, report)
+      return { ok: true, status: 200, body: { id: record.id, state: report.state } }
     },
 
     /** List metadata of the artifacts the caller may read. Never issues SAS URLs. */
@@ -116,8 +124,8 @@ export function createArtifactService({ repository, urls }: ArtifactServiceDepen
 
     /**
      * Issue a just-in-time download SAS for a readable artifact.
-     * @returns 200 with the SAS; 409 until an upload has been reported; 404 or 403
-     * when not permitted.
+     * @returns 200 with the SAS; 409 unless the latest report is a successful upload;
+     * 404 or 403 when not permitted.
      */
     async getArtifactSas(caller: CallerContext, id: string): Promise<ServiceResult<DownloadSas>> {
       const found = await findFor(caller, id, () => 'read')
@@ -125,7 +133,7 @@ export function createArtifactService({ repository, urls }: ArtifactServiceDepen
         return found
       }
       if (found.record.state !== 'uploaded') {
-        return { ok: false, status: 409, message: 'Artifact upload has not been reported' }
+        return { ok: false, status: 409, message: 'No successful upload has been reported' }
       }
       return { ok: true, status: 200, body: await urls.issueDownload(found.record) }
     },
