@@ -1,6 +1,7 @@
 ---
-// Flat sidebar list: top-level groups are section labels, nested groups are sub-headings,
-// and links carry their badge (HTTP method or member kind) as right-aligned text.
+// Flat sidebar list, like Scalar: top-level groups are section labels; nested groups (API resources,
+// source folders) are labels whose entries are indented behind a hairline. Links carry their badge
+// (HTTP method or member kind) as right-aligned text.
 import type { StarlightRouteData } from '@astrojs/starlight/route-data'
 
 type SidebarEntry = StarlightRouteData['sidebar'][number]
@@ -26,7 +27,13 @@ function badgeColor(badgeClass: string | undefined) {
 }
 ---
 
-<ul class:list={['list-none p-0', { 'space-y-6': depth === 0 }]}>
+<ul
+  class:list={[
+    'list-none p-0',
+    { 'space-y-6': depth === 0 },
+    { 'ms-3 border-s border-gray-200 ps-1 dark:border-gray-800': depth >= 2 },
+  ]}
+>
   {
     entries.map(entry => (
       <li>
@@ -61,7 +68,7 @@ function badgeColor(badgeClass: string | undefined) {
                 'mb-1 px-2',
                 depth === 0
                   ? 'text-xs font-semibold uppercase tracking-wider text-gray-900 dark:text-gray-100'
-                  : 'mt-4 font-mono text-xs text-gray-400 dark:text-gray-500',
+                  : 'mt-2 py-1 text-sm font-medium text-gray-900 dark:text-gray-100',
               ]}
             >
               {entry.label}

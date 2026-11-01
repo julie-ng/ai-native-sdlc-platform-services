@@ -1,5 +1,5 @@
-// Reshapes the generated sidebar into a flat, scannable list.
-// - HTTP API: operations directly under the section, without starlight-openapi's "Operations" group.
+// Reshapes the generated sidebar into a flat, scannable list. The HTTP API section is left as
+// starlight-openapi builds it: one group per OpenAPI tag (resource), like Scalar.
 // - Code reference: one group per source folder; each module is followed by its exported members,
 //   like a classic JSDoc index. TypeDoc's module router renders a module and its members on one page.
 // https://starlight.astro.build/guides/route-data/
@@ -15,8 +15,7 @@ interface Member {
   kind: string
 }
 
-// Labels of the top-level groups configured in astro.config.mjs.
-const httpApiLabel = 'HTTP API'
+// Label of the top-level group configured in astro.config.mjs.
 const codeReferenceLabel = 'Code reference'
 
 // TypeDoc section headings (`## Functions`) and the short kind shown next to each member.
@@ -33,7 +32,7 @@ const memberKinds: Record<string, string> = {
 let membersByTitle: Promise<Map<string, Member[]>> | undefined
 
 export const onRequest = defineRouteMiddleware(async (context, next) => {
-  // starlight-openapi builds its sidebar group in a later ('post') middleware; reshape afterwards.
+  // Let later middleware (starlight-openapi's runs 'post') finish the sidebar first.
   await next()
   const route = context.locals.starlightRoute
   membersByTitle ??= loadMembers()
@@ -41,9 +40,6 @@ export const onRequest = defineRouteMiddleware(async (context, next) => {
   route.sidebar = route.sidebar.map((entry) => {
     if (entry.type !== 'group') {
       return entry
-    }
-    if (entry.label === httpApiLabel) {
-      return { ...entry, entries: entry.entries.flatMap(child => child.type === 'group' ? child.entries : [child]) }
     }
     if (entry.label === codeReferenceLabel) {
       return { ...entry, entries: groupModulesByFolder(collectLinks(entry.entries), members) }
