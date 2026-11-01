@@ -1,5 +1,6 @@
 // Test-only server-owned contexts and records. Never import these into production wiring.
-import type { ArtifactRecord, ArtifactRef, CallerContext } from '../../server/utils/artifact/ports.ts'
+import type { ArtifactRef, CallerContext } from '../../shared/types/artifact.ts'
+import type { ArtifactRecord } from '../../server/utils/artifact/repository.utils.ts'
 
 export const runA = '10000000-0000-4000-8000-000000000001'
 export const runB = '10000000-0000-4000-8000-000000000002'

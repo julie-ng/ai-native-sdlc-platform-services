@@ -70,7 +70,7 @@ Project knowledge belongs in repository documentation. Personal memories and oth
 
 ## Artifact service
 
-The [artifact API](./docs/api/README.md) and [artifact plan](./docs/plans/artifact-service.md) describe the service. Routes under `server/api/artifacts/` call a service that applies the planner/coder policy, a Drizzle/PostgreSQL repository, and an Azure user delegation SAS issuer. Artifacts belong to steps and keep one ID/blob across retries. Bytes go directly between callers and Azure.
+The [artifact API](./docs/api/README.md) and [artifact plan](./docs/plans/artifact-service.md) describe the service. Routes under `server/api/artifacts/` call explicit guards that apply the planner/coder policy, then plain Drizzle/PostgreSQL query and Azure user delegation SAS functions. Artifacts belong to steps and keep one ID/blob across retries. Bytes go directly between callers and Azure.
 
 Authentication is not implemented: each route explicitly calls the `requireCallerContext` guard, which today only validates an `event.context.caller` that nothing sets yet, so every artifact request currently returns 503. HMAC versus Kubernetes ServiceAccount authentication is undecided. Real Azure transfer has not been exercised.
 

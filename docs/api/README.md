@@ -2,7 +2,7 @@
 
 One current file and metadata record per producing step/name. Retries and later executions reuse the artifact ID and blob; bytes transfer directly between callers and Azure Blob Storage.
 
-Routes, service, PostgreSQL repository and Azure SAS issuer are implemented. Nothing sets the caller context yet: until the `requireCallerContext` guard authenticates callers (#13), every artifact request returns 503 (see [open decisions](../architecture.md#open-decisions)).
+Routes, guards, PostgreSQL queries and Azure SAS signing are implemented. Nothing sets the caller context yet: until the `requireCallerContext` guard authenticates callers (#13), every artifact request returns 503 (see [open decisions](../architecture.md#open-decisions)).
 
 ## Operations
 

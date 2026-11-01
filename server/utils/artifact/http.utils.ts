@@ -1,13 +1,14 @@
 /**
  * HTTP boundary helpers for the artifact routes: validated input, cache headers and
- * mapping service results to responses.
+ * the public projection of stored records.
  * @module
  */
-import { createError, getValidatedRouterParams, readValidatedBody, setResponseHeader, setResponseStatus } from 'h3'
+import { createError, getValidatedRouterParams, readValidatedBody, setResponseHeader } from 'h3'
 import type { H3Event } from 'h3'
 import { z } from 'zod'
+import type { ArtifactInfo } from '../../../shared/types/artifact.ts'
 import { artifactIdParametersSchema } from '../../../shared/utils/zod-schemas/artifact.schema.ts'
-import type { ServiceResult } from './ports.ts'
+import type { ArtifactRecord } from './repository.utils.ts'
 
 /**
  * Unwrap a Zod parse result or throw a 400.
@@ -47,14 +48,29 @@ export function preventCaching(event: H3Event) {
 }
 
 /**
- * Turn a {@link ServiceResult} into an HTTP response.
- * @returns The result body, after setting the success status.
- * @throws H3Error with the failure status and message when `result.ok` is false.
+ * Project a stored record onto its public metadata. Select public fields explicitly;
+ * internal references and SAS URLs never leave. Absent optional fields are omitted.
  */
-export function sendServiceResult<T>(event: H3Event, result: ServiceResult<T>): T {
-  if (!result.ok) {
-    throw createError({ statusCode: result.status, message: result.message })
+export function toArtifactInfo(record: ArtifactRecord): ArtifactInfo {
+  const { contentType, kind, title, description } = record.metadata
+  const common = {
+    id: record.id,
+    name: record.reference.name,
+    contentType,
+    ...(kind === undefined ? {} : { kind }),
+    ...(title === undefined ? {} : { title }),
+    ...(description === undefined ? {} : { description }),
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
   }
-  setResponseStatus(event, result.status)
-  return result.body
+  const details = record.details === undefined ? {} : { details: record.details }
+  switch (record.state) {
+    case 'uploaded':
+      // The database CHECK constraint guarantees size and hash for uploaded records.
+      return { ...common, state: 'uploaded', sizeBytes: record.sizeBytes!, sha256: record.sha256!, ...details }
+    case 'failed':
+      return { ...common, state: 'failed', ...details }
+    case 'reserved':
+      return { ...common, state: 'reserved' }
+  }
 }

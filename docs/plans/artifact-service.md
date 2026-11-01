@@ -1,7 +1,7 @@
 # Artifact service — POC contract
 
 > [!IMPORTANT]
-> The [API contract](../api/README.md) defines the current POC; [implementation details](../api/implementation.md) cover persistence and storage. Routes, service, PostgreSQL repository and Azure SAS issuer are implemented; caller authentication and live Azure verification remain. Accepted refinements are recorded in the [decision log](../architecture.md#decision-log).
+> The [API contract](../api/README.md) defines the current POC; [implementation details](../api/implementation.md) cover persistence and storage. Routes, guards, PostgreSQL queries and Azure SAS signing are implemented; caller authentication and live Azure verification remain. Accepted refinements are recorded in the [decision log](../architecture.md#decision-log).
 
 ## Ontology
 
@@ -57,14 +57,15 @@
 ## Implementation map
 
 - Read the applicable [server](../../server/AGENTS.md), [database](../../server/db/AGENTS.md) and [shared](../../shared/AGENTS.md) instructions before changing artifact code.
-- Start with the [overview](../api/README.md), then [implementation details](../api/implementation.md). [OpenAPI](../api/artifact.openapi.json) and [TypeScript ports](../../server/utils/artifact/ports.ts) define exact shapes.
-- Caller context is `{ runId, stepId, taskType, inputs, outputs }`; internal references are `{ runId, producerStepId, name }`. The service derives the producing step from the caller; bindings point to a step's current artifact, not a historical execution.
+- Start with the [overview](../api/README.md), then [implementation details](../api/implementation.md). [OpenAPI](../api/artifact.openapi.json) and [shared types](../../shared/types/artifact.ts) define exact shapes.
+- Caller context is `{ runId, stepId, taskType, inputs, outputs }`; internal references are `{ runId, producerStepId, name }`. Registration derives the producing step from the caller; bindings point to a step's current artifact, not a historical execution.
 - Artifacts keep `createdAt` and `updatedAt`. Every accepted write (repeated POST or upload report) refreshes `updatedAt`; reads and denials do not.
 
 | Piece | Location | Tests |
 | --- | --- | --- |
-| Routes and caller guard | `server/api/artifacts/`, `server/utils/guards/` | Manual HTTP smoke only; see remaining work |
-| Service (404/403/409 decisions) | `server/utils/artifact/service.utils.ts` | Unit tests with in-memory fakes |
+| Routes | `server/api/artifacts/` | Manual HTTP smoke only; HTTP tests follow authentication (#13) |
+| Guards (caller context, configuration, 404/403) | `server/utils/guards/` | Unit tests; access lookups via `npm run test:db` |
+| Policy | `server/utils/artifact/policy.utils.ts` | Unit tests |
 | PostgreSQL repository and migrations | `server/utils/artifact/repository.utils.ts`, `server/db/` | `npm run test:db` against disposable PostgreSQL 17 |
 | Azure user delegation SAS | `server/utils/artifact/azure-sas.utils.ts` | Offline signing with a fixed test key |
 
