@@ -2,13 +2,12 @@ import { setTimeout as sleep } from 'node:timers/promises'
 import { afterAll, assert, beforeAll, expect, test } from 'vitest'
 import { sql } from 'drizzle-orm'
 import { artifacts } from '../../server/db/schema.ts'
-import { createArtifactRepository } from '../../server/utils/artifact/repository.utils.ts'
+import { findArtifactById, listArtifactsByReferences, recordUploadReport, upsertArtifact } from '../../server/utils/artifact/repository.utils.ts'
 import { otherP1, planP1, planP2, planRunB, runA, stepIds } from '../support/artifact-fixtures.ts'
 import { createTestDatabase } from './support/database.ts'
 
 let database: Awaited<ReturnType<typeof createTestDatabase>>
 let connection: ReturnType<typeof database.connect>
-const repository = () => createArtifactRepository(connection.db)
 
 beforeAll(async () => {
   database = await createTestDatabase()
@@ -24,14 +23,14 @@ test('migrations can be applied again safely', async () => {
 })
 
 test('register, replace metadata, report uploads and keep one stable record', async () => {
-  const first = await repository().upsert(planP1, { contentType: 'text/markdown', title: 'Plan', kind: 'notes' })
+  const first = await upsertArtifact(connection.db, planP1, { contentType: 'text/markdown', title: 'Plan', kind: 'notes' })
   expect(first.created).toBe(true)
   expect(first.record).toMatchObject({ reference: planP1, state: 'reserved', sizeBytes: null, sha256: null, metadata: { contentType: 'text/markdown', title: 'Plan', kind: 'notes' } })
   expect(first.record.createdAt).toBe(first.record.updatedAt)
   expect(first.record.createdAt).toMatch(/Z$/)
 
   await sleep(5)
-  const again = await repository().upsert(planP1, { contentType: 'text/plain' })
+  const again = await upsertArtifact(connection.db, planP1, { contentType: 'text/plain' })
   expect(again.created).toBe(false)
   expect(again.record.id).toBe(first.record.id)
   // Last write wins; omitted optional metadata becomes NULL and is omitted.
@@ -40,58 +39,58 @@ test('register, replace metadata, report uploads and keep one stable record', as
   expect(again.record.updatedAt > first.record.updatedAt).toBe(true)
 
   await sleep(5)
-  const uploaded = await repository().acknowledge(first.record.id, { state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) })
+  const uploaded = await recordUploadReport(connection.db, first.record.id, { state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) })
   expect(uploaded).toMatchObject({ id: first.record.id, state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) })
   expect(uploaded.updatedAt > again.record.updatedAt).toBe(true)
 
-  const replaced = await repository().acknowledge(first.record.id, { state: 'uploaded', sizeBytes: 13, sha256: 'b'.repeat(64) })
+  const replaced = await recordUploadReport(connection.db, first.record.id, { state: 'uploaded', sizeBytes: 13, sha256: 'b'.repeat(64) })
   expect(replaced).toMatchObject({ sizeBytes: 13, sha256: 'b'.repeat(64) })
 
   // A repeated POST after upload keeps the reported content.
-  const afterUpload = await repository().upsert(planP1, { contentType: 'text/markdown' })
+  const afterUpload = await upsertArtifact(connection.db, planP1, { contentType: 'text/markdown' })
   expect(afterUpload.record).toMatchObject({ state: 'uploaded', sizeBytes: 13 })
 })
 
 test('each upload report replaces state, size, hash and details', async () => {
-  const { record } = await repository().upsert({ ...planP1, name: 'report' }, { contentType: 'text/markdown' })
-  const failed = await repository().acknowledge(record.id, { state: 'failed', details: 'Azure returned 403' })
+  const { record } = await upsertArtifact(connection.db, { ...planP1, name: 'report' }, { contentType: 'text/markdown' })
+  const failed = await recordUploadReport(connection.db, record.id, { state: 'failed', details: 'Azure returned 403' })
   expect(failed).toMatchObject({ state: 'failed', sizeBytes: null, sha256: null, details: 'Azure returned 403' })
 
-  const uploaded = await repository().acknowledge(record.id, { state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) })
+  const uploaded = await recordUploadReport(connection.db, record.id, { state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) })
   // Omitted details are cleared, not kept from the previous report.
   expect(uploaded).toStrictEqual({ ...uploaded, state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) })
   expect(uploaded).not.toHaveProperty('details')
 
   // Last report wins: a failure after an upload clears the size and hash.
-  const failedAgain = await repository().acknowledge(record.id, { state: 'failed' })
+  const failedAgain = await recordUploadReport(connection.db, record.id, { state: 'failed' })
   expect(failedAgain).toMatchObject({ state: 'failed', sizeBytes: null, sha256: null })
   expect(failedAgain).not.toHaveProperty('details')
-  expect(await repository().findById(record.id)).toStrictEqual(failedAgain)
+  expect(await findArtifactById(connection.db, record.id)).toStrictEqual(failedAgain)
 
   // A repeated POST keeps the reported state.
-  const afterFailure = await repository().upsert({ ...planP1, name: 'report' }, { contentType: 'text/markdown' })
+  const afterFailure = await upsertArtifact(connection.db, { ...planP1, name: 'report' }, { contentType: 'text/markdown' })
   expect(afterFailure.record.state).toBe('failed')
 })
 
 test('reads leave timestamps unchanged and survive a new connection pool', async () => {
-  const { record } = await repository().upsert(planP2, { contentType: 'text/markdown' })
-  expect(await repository().findById(record.id)).toStrictEqual(record)
+  const { record } = await upsertArtifact(connection.db, planP2, { contentType: 'text/markdown' })
+  expect(await findArtifactById(connection.db, record.id)).toStrictEqual(record)
   await connection.pool.end()
   connection = database.connect()
-  expect(await repository().findById(record.id)).toStrictEqual(record)
-  expect(await repository().findById('40000000-0000-4000-8000-000000000099')).toBeUndefined()
+  expect(await findArtifactById(connection.db, record.id)).toStrictEqual(record)
+  expect(await findArtifactById(connection.db, '40000000-0000-4000-8000-000000000099')).toBeUndefined()
 })
 
 test('listing matches exact references, including run, in creation order', async () => {
-  const listed = await repository().listByReferences([planP2, planP1, otherP1, planRunB])
+  const listed = await listArtifactsByReferences(connection.db, [planP2, planP1, otherP1, planRunB])
   expect(listed.map(record => record.reference)).toStrictEqual([planP1, planP2])
-  expect(await repository().listByReferences([{ ...planP1, runId: planRunB.runId }])).toStrictEqual([])
-  expect(await repository().listByReferences([])).toStrictEqual([])
+  expect(await listArtifactsByReferences(connection.db, [{ ...planP1, runId: planRunB.runId }])).toStrictEqual([])
+  expect(await listArtifactsByReferences(connection.db, [])).toStrictEqual([])
 })
 
 test('a producing step must exist in the caller\'s run', async () => {
-  await expect(repository().upsert({ ...planP1, runId: planRunB.runId, name: 'mismatch' }, { contentType: 'text/plain' })).rejects.toThrow('not registered')
-  await expect(repository().upsert({ runId: runA, producerStepId: '20000000-0000-4000-8000-000000000099', name: 'plan' }, { contentType: 'text/plain' })).rejects.toThrow('not registered')
+  await expect(upsertArtifact(connection.db, { ...planP1, runId: planRunB.runId, name: 'mismatch' }, { contentType: 'text/plain' })).rejects.toThrow('not registered')
+  await expect(upsertArtifact(connection.db, { runId: runA, producerStepId: '20000000-0000-4000-8000-000000000099', name: 'plan' }, { contentType: 'text/plain' })).rejects.toThrow('not registered')
 })
 
 test('PostgreSQL enforces the step foreign key, step/name uniqueness and upload fields', async () => {

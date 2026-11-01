@@ -3,7 +3,7 @@
  * @module
  */
 import { callerContextSchema } from '../../../shared/utils/zod-schemas/caller-context.schema.ts'
-import type { CallerContext } from './ports.ts'
+import type { CallerContext } from '../../../shared/types/artifact.ts'
 
 /** Result of {@link readCallerContext}; failures carry no detail about what was wrong. */
 export type ContextResult = { ok: true, value: CallerContext } | { ok: false, error: 'context_unavailable' }

@@ -1,11 +1,32 @@
 /**
- * PostgreSQL implementation of the artifact repository port, using Drizzle.
+ * PostgreSQL queries for artifact metadata, using Drizzle. Functions throw on
+ * unexpected failures, which the HTTP layer reports as 500s. Lookups are plain:
+ * the artifact guards authorize the caller.
  * @module
  */
 import { and, asc, eq, getTableColumns, or, sql } from 'drizzle-orm'
+import type { ArtifactInfo, ArtifactRef, CompleteArtifactRequest, CreateArtifactRequest } from '../../../shared/types/artifact.ts'
 import type { Database } from '../../db/connection.ts'
 import { artifacts, steps } from '../../db/schema.ts'
-import type { ArtifactRecord, ArtifactRepository } from './ports.ts'
+
+/** Descriptive metadata of an artifact: the create request without the slot `name`. */
+export type ArtifactMetadata = Omit<CreateArtifactRequest, 'name'>
+/**
+ * Stored artifact. Internal: includes the producing step reference. Size and hash are
+ * set only when `uploaded`, and details only after a report. The database CHECK
+ * constraint enforces this, so the type deliberately does not repeat it per state.
+ */
+export interface ArtifactRecord {
+  id: string
+  reference: ArtifactRef
+  metadata: ArtifactMetadata
+  state: ArtifactInfo['state']
+  sizeBytes: number | null
+  sha256: string | null
+  details?: string
+  createdAt: string // UTC ISO instant, fixed on first registration.
+  updatedAt: string // Refreshed by every accepted write (repeated POST or upload report).
+}
 
 /** Artifact columns plus the run ID from the workflow-owned step the artifact references. */
 const columns = { ...getTableColumns(artifacts), runId: steps.runId }
@@ -33,85 +54,84 @@ function toRecord(row: Row): ArtifactRecord {
 }
 
 /**
- * PostgreSQL artifact metadata. Every lookup joins the workflow-owned step so
- * the returned reference carries the step's actual run.
- * @param db - Drizzle client; the caller owns its connection pool.
+ * Look up a record by ID without any access check. The lookup joins the
+ * workflow-owned step, so the returned reference carries the step's actual run.
+ * @returns The record, or `undefined` when absent.
  */
-export function createArtifactRepository(db: Database): ArtifactRepository {
-  /** Look up one record by ID; `undefined` when absent. */
-  async function findById(id: string) {
-    const [row] = await db.select(columns).from(artifacts)
-      .innerJoin(steps, eq(steps.id, artifacts.producerStepId))
-      .where(eq(artifacts.id, id))
-    return row ? toRecord(row) : undefined
+export async function findArtifactById(db: Database, id: string): Promise<ArtifactRecord | undefined> {
+  const [row] = await db.select(columns).from(artifacts)
+    .innerJoin(steps, eq(steps.id, artifacts.producerStepId))
+    .where(eq(artifacts.id, id))
+  return row ? toRecord(row) : undefined
+}
+
+/**
+ * Insert the artifact, or replace its descriptive metadata when the step/name
+ * record exists, in one transaction. Last write wins for metadata; state, size and
+ * hash are kept. SAS URLs are never stored.
+ * @param reference - Exact step-owned slot; the step must belong to `reference.runId`.
+ * @returns The stored record and whether this call created it.
+ * @throws If the producing step is not registered in the reference's run.
+ */
+export async function upsertArtifact(db: Database, reference: ArtifactRef, { contentType, kind, title, description }: ArtifactMetadata) {
+  const metadata = { contentType, kind: kind ?? null, title: title ?? null, description: description ?? null }
+  const { id, created } = await db.transaction(async (tx) => {
+    const [step] = await tx.select({ id: steps.id }).from(steps)
+      .where(and(eq(steps.id, reference.producerStepId), eq(steps.runId, reference.runId)))
+    if (!step) {
+      throw new Error('Producing step is not registered in the caller\'s run')
+    }
+    const [inserted] = await tx.insert(artifacts)
+      .values({ producerStepId: reference.producerStepId, name: reference.name, ...metadata })
+      .onConflictDoNothing({ target: [artifacts.producerStepId, artifacts.name] })
+      .returning({ id: artifacts.id })
+    if (inserted) {
+      return { id: inserted.id, created: true }
+    }
+    const [updated] = await tx.update(artifacts)
+      .set({ ...metadata, updatedAt: sql`now()` })
+      .where(and(eq(artifacts.producerStepId, reference.producerStepId), eq(artifacts.name, reference.name)))
+      .returning({ id: artifacts.id })
+    return { id: updated!.id, created: false }
+  })
+  return { record: (await findArtifactById(db, id))!, created }
+}
+
+/**
+ * Records matching exactly the given references, ordered by `createdAt`, then `id`.
+ * @param references - Typically the caller's readable references; empty yields an empty list.
+ */
+export async function listArtifactsByReferences(db: Database, references: readonly ArtifactRef[]): Promise<ArtifactRecord[]> {
+  if (references.length === 0) {
+    return []
   }
+  const rows = await db.select(columns).from(artifacts)
+    .innerJoin(steps, eq(steps.id, artifacts.producerStepId))
+    .where(or(...references.map(ref => and(
+      eq(steps.runId, ref.runId),
+      eq(artifacts.producerStepId, ref.producerStepId),
+      eq(artifacts.name, ref.name),
+    ))))
+    .orderBy(asc(artifacts.createdAt), asc(artifacts.id))
+  return rows.map(toRecord)
+}
 
-  return {
-    findById,
-
-    /**
-     * Insert the artifact, or replace its descriptive metadata when the step/name
-     * record exists, in one transaction. State, size and hash are kept.
-     * @throws If the producing step is not registered in the reference's run.
-     */
-    async upsert(reference, { contentType, kind, title, description }) {
-      const metadata = { contentType, kind: kind ?? null, title: title ?? null, description: description ?? null }
-      const { id, created } = await db.transaction(async (tx) => {
-        const [step] = await tx.select({ id: steps.id }).from(steps)
-          .where(and(eq(steps.id, reference.producerStepId), eq(steps.runId, reference.runId)))
-        if (!step) {
-          throw new Error('Producing step is not registered in the caller\'s run')
-        }
-        const [inserted] = await tx.insert(artifacts)
-          .values({ producerStepId: reference.producerStepId, name: reference.name, ...metadata })
-          .onConflictDoNothing({ target: [artifacts.producerStepId, artifacts.name] })
-          .returning({ id: artifacts.id })
-        if (inserted) {
-          return { id: inserted.id, created: true }
-        }
-        // Last write wins for descriptive metadata; state, size and hash stay.
-        const [updated] = await tx.update(artifacts)
-          .set({ ...metadata, updatedAt: sql`now()` })
-          .where(and(eq(artifacts.producerStepId, reference.producerStepId), eq(artifacts.name, reference.name)))
-          .returning({ id: artifacts.id })
-        return { id: updated!.id, created: false }
-      })
-      return { record: (await findById(id))!, created }
-    },
-
-    /** Records matching exactly the given references, oldest first (then by ID). */
-    async listByReferences(references) {
-      if (references.length === 0) {
-        return []
-      }
-      const rows = await db.select(columns).from(artifacts)
-        .innerJoin(steps, eq(steps.id, artifacts.producerStepId))
-        .where(or(...references.map(ref => and(
-          eq(steps.runId, ref.runId),
-          eq(artifacts.producerStepId, ref.producerStepId),
-          eq(artifacts.name, ref.name),
-        ))))
-        .orderBy(asc(artifacts.createdAt), asc(artifacts.id))
-      return rows.map(toRecord)
-    },
-
-    /**
-     * Record the report's state, size, hash and details, replacing earlier values.
-     * A failure clears size and hash; omitted details are cleared.
-     * @throws If the artifact no longer exists.
-     */
-    async acknowledge(id, completion) {
-      const outcome = completion.state === 'uploaded'
-        ? { state: completion.state, sizeBytes: completion.sizeBytes, sha256: completion.sha256 }
-        : { state: completion.state, sizeBytes: null, sha256: null }
-      const [updated] = await db.update(artifacts)
-        .set({ ...outcome, details: completion.details ?? null, updatedAt: sql`now()` })
-        .where(eq(artifacts.id, id))
-        .returning({ id: artifacts.id })
-      if (!updated) {
-        throw new Error('Artifact disappeared before its upload was recorded')
-      }
-      return (await findById(id))!
-    },
+/**
+ * Record an upload report, replacing the state, size, hash and details; no history
+ * is kept. A failure clears size and hash; omitted details are cleared. The caller
+ * has already checked access.
+ * @throws If the artifact no longer exists.
+ */
+export async function recordUploadReport(db: Database, id: string, report: CompleteArtifactRequest): Promise<ArtifactRecord> {
+  const outcome = report.state === 'uploaded'
+    ? { state: report.state, sizeBytes: report.sizeBytes, sha256: report.sha256 }
+    : { state: report.state, sizeBytes: null, sha256: null }
+  const [updated] = await db.update(artifacts)
+    .set({ ...outcome, details: report.details ?? null, updatedAt: sql`now()` })
+    .where(eq(artifacts.id, id))
+    .returning({ id: artifacts.id })
+  if (!updated) {
+    throw new Error('Artifact disappeared before its upload was recorded')
   }
+  return (await findArtifactById(db, id))!
 }

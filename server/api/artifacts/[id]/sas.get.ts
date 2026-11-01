@@ -1,11 +1,20 @@
+import { requireArtifactAccess } from '#server/utils/guards/require-artifact-access'
+import { requireArtifactConfiguration } from '#server/utils/guards/require-artifact-configuration'
 import { requireCallerContext } from '#server/utils/guards/require-caller-context'
-import { preventCaching, readArtifactId, sendServiceResult } from '#server/utils/artifact/http.utils'
-import { useArtifactService } from '#server/utils/artifact/use-artifact-service'
+import { signDownload } from '#server/utils/artifact/azure-sas.utils'
+import { preventCaching, readArtifactId } from '#server/utils/artifact/http.utils'
+import { useArtifactStorage } from '#server/utils/artifact/use-artifact-storage'
 
 // Issue a just-in-time download SAS; 409 until an upload has been reported.
 export default defineEventHandler(async (event) => {
   requireCallerContext(event)
   const id = await readArtifactId(event)
   preventCaching(event)
-  return sendServiceResult(event, await useArtifactService().getArtifactSas(event.context.caller!, id))
+  requireArtifactConfiguration(event)
+  await requireArtifactAccess(event, id, () => 'read')
+  const record = event.context.artifact!
+  if (record.state !== 'uploaded') {
+    throw createError({ statusCode: 409, message: 'No successful upload has been reported' })
+  }
+  return signDownload(useArtifactStorage(event), record)
 })
