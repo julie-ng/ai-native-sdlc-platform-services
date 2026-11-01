@@ -44,7 +44,7 @@
 | --- | --- |
 | Request a fresh upload SAS for a local artifact | `POST /api/artifacts` → same artifact ID + scoped upload SAS |
 | Write or overwrite directly in Azure | `PUT <SAS URL>`; bytes bypass the service |
-| Report successful upload | `PUT /api/artifacts/{id}` → completion acknowledgment |
+| Report upload outcome (uploaded or failed) | `PUT /api/artifacts/{id}` → acknowledgment |
 | Discover readable artifacts | `GET /api/artifacts` → metadata list, no SAS |
 | Inspect one artifact | `GET /api/artifacts/{id}` → metadata, no SAS |
 | Obtain download access when needed | `GET /api/artifacts/{id}/sas` → read SAS |

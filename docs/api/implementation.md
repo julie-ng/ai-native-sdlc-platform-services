@@ -42,20 +42,20 @@ if (!canAccessArtifact(caller, record.reference, action))    → 403
 
 - Visible means any granted action. Responses for missing and invisible artifacts are identical, so the lookup itself does not need to be scoped.
 - POST derives the reference from the caller's own step and `name`. It needs both create and update because the issued SAS can overwrite.
-- An upload report needs create for a reserved artifact and update for an uploaded one. Metadata and download need read; download also needs `uploaded` state (otherwise 409).
+- An upload report needs create for a reserved artifact and update for an uploaded one. Metadata and download need read; download also needs `uploaded` state (otherwise 409, including after a `failed` report).
 - Discovery lists records matching the caller's readable references, ordered by `createdAt`, then `id`. Unregistered bindings produce no records.
 
 ## Metadata and repeat writes
 
 - `upsert` inserts one record per step/name or replaces its kind/title/description/content type (last write wins; omitted optional fields become NULL). State, size and hash are kept. Each permitted POST signs a fresh upload URL; signing failure leaves the registration for retry. URLs are never stored.
-- Reserved metadata omits size/hash; uploaded metadata includes them. Both include `createdAt`/`updatedAt` and descriptive fields, never internal references or SAS URLs.
-- Upload registration returns only `id`, current `state`, and `upload`; an upload report returns only `id` and `state: uploaded`.
-- Each accepted upload report, including identical retries, replaces size/hash and sets `state: uploaded`. No history; no blob HEAD/download/hash verification.
+- Reserved and failed metadata omit size/hash; uploaded metadata includes them. Uploaded and failed metadata include `details` when the latest report had them. All include `createdAt`/`updatedAt` and descriptive fields, never internal references or SAS URLs.
+- Upload registration returns only `id`, current `state`, and `upload`; an upload report returns only `id` and the reported `state` (`uploaded` or `failed`).
+- Each accepted upload report, including identical retries, replaces the state, size/hash and `details`: `uploaded` sets size/hash, `failed` clears them, and omitted details are cleared. Last report wins; no history; no blob HEAD/download/hash verification.
 
 ## Persistence and workflow ownership
 
 - PostgreSQL 17 with Drizzle/node-postgres. [Schema](../../server/db/schema.ts) and generated [migrations](../../server/db/migrations/) live under `server/db/`. One lazy `pg.Pool` (max 5) per Nitro process, shared with the readiness check through `useDB()`, closed on shutdown. Connecting or waiting for a free connection times out after 5 seconds. Idle connection errors are logged, not fatal.
-- `artifacts`: `id`, `producer_step_id`, `name`, `content_type`, `kind`, `title`, `description`, `state`, `size_bytes`, `sha256`, `created_at`, `updated_at`. Unique `(producer_step_id, name)`; `producer_step_id → steps(id) ON DELETE RESTRICT`; a CHECK keeps size/hash NULL when reserved and present when uploaded. No attempt, revision, SAS or blob-key columns.
+- `artifacts`: `id`, `producer_step_id`, `name`, `content_type`, `kind`, `title`, `description`, `state`, `size_bytes`, `sha256`, `details`, `created_at`, `updated_at`. Unique `(producer_step_id, name)`; `producer_step_id → steps(id) ON DELETE RESTRICT`; a CHECK ties state to the report columns: reserved has no size/hash/details, uploaded has size/hash, failed has neither size nor hash. No attempt, revision, SAS or blob-key columns.
 - Workflow-owned `runs(id)` and `steps(id, run_id → runs)` are minimal stubs until the workflow service exists. Lookups join `steps` so references carry the step's actual run; registration fails if the step is not in the caller's run.
 - `created_at` is fixed. `updated_at` is set explicitly to `now()` by every accepted write (repeated POST or upload report); reads and denials leave it unchanged.
 - [Repository tests](../../tests/integration/artifact-repository.test.ts) run against a disposable database: constraints, run membership, stable IDs, metadata replacement, report replacement, timestamps and a fresh connection pool.
