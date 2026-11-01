@@ -5,7 +5,7 @@
 import { and, asc, eq, getTableColumns, or, sql } from 'drizzle-orm'
 import type { Database } from '../../db/connection.ts'
 import { artifacts, steps } from '../../db/schema.ts'
-import type { ArtifactRecord, ArtifactRepository, FailedArtifact, UploadedArtifact } from './ports.ts'
+import type { ArtifactRecord, ArtifactRepository } from './ports.ts'
 
 /** Artifact columns plus the run ID from the workflow-owned step the artifact references. */
 const columns = { ...getTableColumns(artifacts), runId: steps.runId }
@@ -14,7 +14,7 @@ type Row = typeof artifacts.$inferSelect & { runId: string }
 
 /** Map a joined row to a record. Absent optional metadata is SQL NULL and omitted from records. */
 function toRecord(row: Row): ArtifactRecord {
-  const base = {
+  return {
     id: row.id,
     reference: { runId: row.runId, producerStepId: row.producerStepId, name: row.name },
     metadata: {
@@ -23,17 +23,13 @@ function toRecord(row: Row): ArtifactRecord {
       ...(row.title === null ? {} : { title: row.title }),
       ...(row.description === null ? {} : { description: row.description }),
     },
+    state: row.state,
+    sizeBytes: row.sizeBytes,
+    sha256: row.sha256,
+    ...(row.details === null ? {} : { details: row.details }),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }
-  const details = row.details === null ? {} : { details: row.details }
-  if (row.state === 'uploaded' && row.sizeBytes !== null && row.sha256 !== null) {
-    return { ...base, state: 'uploaded', sizeBytes: row.sizeBytes, sha256: row.sha256, ...details }
-  }
-  if (row.state === 'failed') {
-    return { ...base, state: 'failed', sizeBytes: null, sha256: null, ...details }
-  }
-  return { ...base, state: 'reserved', sizeBytes: null, sha256: null }
 }
 
 /**
@@ -115,7 +111,7 @@ export function createArtifactRepository(db: Database): ArtifactRepository {
       if (!updated) {
         throw new Error('Artifact disappeared before its upload was recorded')
       }
-      return (await findById(id)) as UploadedArtifact | FailedArtifact
+      return (await findById(id))!
     },
   }
 }

@@ -31,10 +31,11 @@ function toArtifactInfo(record: ArtifactRecord): ArtifactInfo {
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   }
-  const details = record.state !== 'reserved' && record.details !== undefined ? { details: record.details } : {}
+  const details = record.details === undefined ? {} : { details: record.details }
   switch (record.state) {
     case 'uploaded':
-      return { ...common, state: 'uploaded', sizeBytes: record.sizeBytes, sha256: record.sha256, ...details }
+      // The database CHECK constraint guarantees size and hash for uploaded records.
+      return { ...common, state: 'uploaded', sizeBytes: record.sizeBytes!, sha256: record.sha256!, ...details }
     case 'failed':
       return { ...common, state: 'failed', ...details }
     case 'reserved':
@@ -103,7 +104,7 @@ export function createArtifactService({ repository, urls }: ArtifactServiceDepen
         return found
       }
       const record = await repository.acknowledge(id, report)
-      return { ok: true, status: 200, body: { id: record.id, state: record.state } }
+      return { ok: true, status: 200, body: { id: record.id, state: report.state } }
     },
 
     /** List metadata of the artifacts the caller may read. Never issues SAS URLs. */

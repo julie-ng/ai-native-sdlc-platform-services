@@ -5,7 +5,7 @@
  */
 import { BlobSASPermissions, generateBlobSASQueryParameters, SASProtocol } from '@azure/storage-blob'
 import type { UserDelegationKey } from '@azure/storage-blob'
-import type { ArtifactRecord, ArtifactUrlIssuer, UploadedArtifact } from './ports.ts'
+import type { ArtifactRecord, ArtifactUrlIssuer } from './ports.ts'
 import { artifactStorageKey } from './storage-key.utils.ts'
 
 /** Lifetime of every issued SAS URL: 300 seconds (5 minutes). */
@@ -69,7 +69,7 @@ export function createAzureUrlIssuer({ service, container, now = () => new Date(
         headers: { 'x-ms-blob-type': 'BlockBlob', 'Content-Type': record.metadata.contentType },
       }
     },
-    async issueDownload(record: UploadedArtifact) {
+    async issueDownload(record: ArtifactRecord) {
       const { url, expiresAt } = await sign(record, 'r')
       return { url, method: 'GET', expiresAt }
     },
