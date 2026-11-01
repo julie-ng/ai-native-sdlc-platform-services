@@ -17,7 +17,6 @@
   "excludeExternals": true,
   "intentionallyNotExported": [
     "CreateArtifactRequest",
-    "CompleteArtifactRequest",
     "CallerContext"
   ],
   "validation": {

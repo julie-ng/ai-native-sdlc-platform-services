@@ -78,7 +78,7 @@ function collectLinks(entries: SidebarEntry[]): SidebarLink[] {
 
 /**
  * Module titles are paths relative to `server/`: `db/schema`, `utils/use-logger`,
- * `utils/artifact/service.utils`. The folder is the last directory, the label the file name.
+ * `utils/artifact/policy.utils`. The folder is the last directory, the label the file name.
  */
 function groupModulesByFolder(links: SidebarLink[], membersByTitle: Map<string, Member[]>) {
   const overview: SidebarEntry[] = []
