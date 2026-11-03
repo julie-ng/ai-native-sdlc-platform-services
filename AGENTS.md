@@ -68,7 +68,7 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 
 - Record accepted decisions in the dated decision log in [architecture and decisions](./docs/architecture.md), including reasoning and tradeoffs; update the current-state description when implementation changes.
 - Batch genuine open decisions in plain prose rather than multiple-choice forms.
-- Use available documentation tools when useful, with official documentation as a fallback. Do not require a named MCP server or personal skill for routine project work.
+- Use available documentation tools when useful, with official documentation as a fallback.
 - Reserve `IMPORTANT` callouts for load-bearing intent.
 
 ## Code Review Rules
