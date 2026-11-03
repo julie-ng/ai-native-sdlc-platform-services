@@ -2,17 +2,6 @@
 
 Shared instructions for every coding agent working in this repository.
 
-## Agent Identity
-
-Agents run under a separate identity from host.
-
--
-
-### In a Dev Container (default)
-
-- **Git**: See [credential setup](./.agents/instructions/git-setup-user-github.md) to configure your git credentials to be able to access the github CLI for full context.
-
-
 ### In Host environment
 
 - Do not commit or push – all credentials are on a physical YubiKey that agents have zero access to. Just work interactively with Julie (human).
@@ -29,7 +18,6 @@ Agents run under a separate identity from host.
 | Database schema and migrations | Server instructions, then [server/db/AGENTS.md](./server/db/AGENTS.md) |
 | Vue application and future UI | [app/AGENTS.md](./app/AGENTS.md) |
 | Shared schemas, types, constants, utilities | [shared/AGENTS.md](./shared/AGENTS.md) |
-| Branches, credentials, commits, issues, pull requests, delivery | [Git workflow](./.agents/instructions/git-workflow.md) |
 
 - When adding a REST route or HTTP method, read the [add-api-endpoint skill](./.agents/skills/add-api-endpoint/SKILL.md). Read it directly if your client does not discover skills.
 - Keep broadly applicable rules here and area-specific rules in nested `AGENTS.md` files. Skills describe procedures and reference those rules instead of duplicating them.
