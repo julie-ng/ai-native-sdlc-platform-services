@@ -1,16 +1,16 @@
 /**
- * Mapping from artifact references to physical blob keys.
+ * Mapping from artifact references to physical blob names.
  * @module
  */
 import { artifactRefSchema } from '../../../shared/utils/zod-schemas/caller-context.schema.ts'
 
 /**
- * Derive the blob key for an artifact: `v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}`.
- * Accepts a server-selected reference, never an HTTP path or key override.
+ * Derive the blob name for an artifact: `v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}`.
+ * Accepts a server-selected reference, never an HTTP path or blob name override.
  * @param reference - Validated against the artifact reference schema.
  * @throws TypeError when `reference` is not a valid artifact reference.
  */
-export function artifactStorageKey(reference: unknown): string {
+export function deriveBlobName(reference: unknown): string {
   const parsed = artifactRefSchema.safeParse(reference)
   if (!parsed.success) {
     throw new TypeError('Invalid artifact reference')

@@ -1,17 +1,17 @@
 import { expect, test } from 'vitest'
 import { contexts, otherP1, planP1, planP2, planRunB } from '../../../tests/support/artifact-fixtures.ts'
-import { artifactStorageKey } from './storage-key.utils.ts'
+import { deriveBlobName } from './blob.utils.ts'
 
-test('one stable key per step/name, shared by retries and later executions', () => {
-  const key = artifactStorageKey(planP1)
-  expect(key).toBe(`v1/runs/${planP1.runId}/steps/${planP1.producerStepId}/artifacts/plan`)
-  expect(artifactStorageKey(contexts['planner-p1-later-execution'].outputs[0])).toBe(key)
+test('one stable blob name per step/name, shared by retries and later executions', () => {
+  const blobName = deriveBlobName(planP1)
+  expect(blobName).toBe(`v1/runs/${planP1.runId}/steps/${planP1.producerStepId}/artifacts/plan`)
+  expect(deriveBlobName(contexts['planner-p1-later-execution'].outputs[0])).toBe(blobName)
   for (const other of [planP2, planRunB, otherP1]) {
-    expect(artifactStorageKey(other)).not.toBe(key)
+    expect(deriveBlobName(other)).not.toBe(blobName)
   }
 })
 
-test('reject invalid segments and physical key overrides rather than normalizing', () => {
+test('reject invalid segments and physical blob name overrides rather than normalizing', () => {
   for (const value of [
     null, 'v1/runs/anything',
     ...['../plan', 'a/b', 'a.b', 'plan/', '%2f', 'plän', '', 'a--b', 'a'.repeat(65)].map(name => ({ ...planP1, name })),
@@ -21,6 +21,6 @@ test('reject invalid segments and physical key overrides rather than normalizing
     { ...planP1, path: 'override' },
     { ...planP1, attemptId: '30000000-0000-4000-8000-000000000001' },
   ]) {
-    expect(() => artifactStorageKey(value)).toThrow(new TypeError('Invalid artifact reference'))
+    expect(() => deriveBlobName(value)).toThrow(new TypeError('Invalid artifact reference'))
   }
 })

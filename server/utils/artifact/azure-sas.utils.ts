@@ -7,7 +7,7 @@ import { BlobSASPermissions, generateBlobSASQueryParameters, SASProtocol } from 
 import type { UserDelegationKey } from '@azure/storage-blob'
 import type { DownloadSas, UploadSas } from '../../../shared/types/artifact.ts'
 import type { ArtifactRecord } from './repository.utils.ts'
-import { artifactStorageKey } from './storage-key.utils.ts'
+import { deriveBlobName } from './blob.utils.ts'
 
 /** Lifetime of every issued SAS URL: 300 seconds (5 minutes). */
 export const sasLifetimeSeconds = 300
@@ -45,7 +45,7 @@ async function sign({ service, container, now = () => new Date() }: ArtifactStor
   // The delegation key must cover the SAS lifetime. The SAS itself omits
   // startsOn so small clock differences cannot make it not-yet-valid.
   const key = await service.getUserDelegationKey(startsOn, expiresOn)
-  const blobName = artifactStorageKey(record.reference)
+  const blobName = deriveBlobName(record.reference)
   const query = generateBlobSASQueryParameters({
     containerName: container,
     blobName,
