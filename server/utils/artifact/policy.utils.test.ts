@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import { contexts, otherP1, planP1, planP2, planRunB, stepIds } from '../../../tests/support/artifact-fixtures.ts'
-import type { CallerContext } from '../../../shared/types/artifact.ts'
+import type { StepContext } from '../../../shared/types/artifact.ts'
 import { canAccessArtifact, isArtifactVisible, readableArtifactReferences, sameArtifactReference } from './policy.utils.ts'
 import type { ArtifactAction } from './policy.utils.ts'
 
@@ -31,9 +31,9 @@ test('a reference is not a permission: other names, runs and steps grant nothing
   expect(canAccessArtifact({ ...contexts['coder-c1'], inputs: [] }, planP1, 'read')).toBe(false)
   expect(canAccessArtifact({ ...contexts['planner-p1'], outputs: [] }, planP1, 'create')).toBe(false)
   for (const taskType of ['unknown', 'constructor', '__proto__']) {
-    const caller = { ...contexts['coder-c1'], taskType }
-    expect(isArtifactVisible(caller, planP1)).toBe(false)
-    expect(readableArtifactReferences(caller)).toStrictEqual([])
+    const step = { ...contexts['coder-c1'], taskType }
+    expect(isArtifactVisible(step, planP1)).toBe(false)
+    expect(readableArtifactReferences(step)).toStrictEqual([])
   }
 })
 
@@ -41,25 +41,25 @@ test('visibility is any granted action; it separates 404 from 403', () => {
   // Planner can write but not read its plan: visible, so a read is 403 rather than 404.
   expect(isArtifactVisible(contexts['planner-p1'], planP1)).toBe(true)
   expect(isArtifactVisible(contexts['coder-c1'], planP1)).toBe(true)
-  for (const [caller, reference] of [
+  for (const [step, reference] of [
     [contexts['planner-p2'], planP1],
     [contexts['coder-c1'], planP2],
     [contexts['planner-p1'], otherP1],
     [contexts['unknown-task'], planP1],
   ] as const) {
-    expect(isArtifactVisible(caller, reference)).toBe(false)
+    expect(isArtifactVisible(step, reference)).toBe(false)
   }
 })
 
 test('policy fails closed on invalid JS callers and does not mutate bindings', () => {
-  const caller = structuredClone(contexts['planner-p1']) as CallerContext
-  const before = structuredClone(caller)
-  expect(canAccessArtifact(caller, planP1, 'create')).toBe(true)
-  expect(readableArtifactReferences(caller)).toStrictEqual([])
-  expect(caller).toStrictEqual(before)
+  const step = structuredClone(contexts['planner-p1']) as StepContext
+  const before = structuredClone(step)
+  expect(canAccessArtifact(step, planP1, 'create')).toBe(true)
+  expect(readableArtifactReferences(step)).toStrictEqual([])
+  expect(step).toStrictEqual(before)
   for (const invalid of [null, undefined, {}, { ...contexts['coder-c1'], inputs: [planRunB] }]) {
-    expect(canAccessArtifact(invalid as unknown as CallerContext, planP1, 'read')).toBe(false)
-    expect(readableArtifactReferences(invalid as unknown as CallerContext)).toStrictEqual([])
+    expect(canAccessArtifact(invalid as unknown as StepContext, planP1, 'read')).toBe(false)
+    expect(readableArtifactReferences(invalid as unknown as StepContext)).toStrictEqual([])
   }
 })
 
@@ -67,10 +67,10 @@ test('read scope follows declared bindings without assuming persistence', () => 
   for (const [name, count] of [['planner-p1', 0], ['coder-c1', 1], ['coder-multiple-inputs', 2], ['coder-no-inputs', 0], ['unknown-task', 0]] as const) {
     expect(readableArtifactReferences(contexts[name]).length).toBe(count)
   }
-  const caller = structuredClone(contexts['coder-c1']) as CallerContext
+  const step = structuredClone(contexts['coder-c1']) as StepContext
   const unregistered = { ...planP1, producerStepId: '20000000-0000-4000-8000-000000000099' }
-  caller.inputs.push({ ...otherP1 }, unregistered)
+  step.inputs.push({ ...otherP1 }, unregistered)
   // Policy returns permitted references; the repository resolves which exist.
-  expect(readableArtifactReferences(caller)).toStrictEqual([planP1, unregistered])
+  expect(readableArtifactReferences(step)).toStrictEqual([planP1, unregistered])
   expect(sameArtifactReference(planP1, { ...planP1, producerStepId: stepIds.plannerP2 })).toBe(false)
 })

@@ -2,7 +2,7 @@ import { useLogger } from '#server/utils/use-logger'
 
 // Global HTTP access log, one JSON line per finished response (ported from tally-split-ai).
 // Global on purpose: the explicit-guard rule applies to authentication, not logging.
-// Logs only method, path, query, status and duration: never bodies, headers or caller context.
+// Logs only method, path, query, status and duration: never bodies, headers or step context.
 export default defineEventHandler((event) => {
   const url = getRequestURL(event)
   // /readyz is skipped so Kubernetes probes do not flood the logs.

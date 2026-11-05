@@ -2,14 +2,14 @@ import { completeArtifactRequestSchema } from '#shared/utils/zod-schemas/artifac
 import { useDB } from '#server/db/use-db'
 import { requireArtifactAccess } from '#server/utils/guards/require-artifact-access'
 import { requireArtifactConfiguration } from '#server/utils/guards/require-artifact-configuration'
-import { requireCallerContext } from '#server/utils/guards/require-caller-context'
+import { requireStepContext } from '#server/utils/guards/require-step-context'
 import { readArtifactBody, readArtifactId } from '#server/utils/artifact/http.utils'
 import { recordUploadReport } from '#server/utils/artifact/repository.utils'
 
 // Report the outcome of a direct upload to Azure: uploaded (reported, not verified,
 // size/hash) or failed, with optional details. Each report replaces the previous one.
 export default defineEventHandler(async (event) => {
-  requireCallerContext(event)
+  requireStepContext(event)
   const id = await readArtifactId(event)
   const report = await readArtifactBody(event, completeArtifactRequestSchema)
   requireArtifactConfiguration(event)

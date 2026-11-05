@@ -9,7 +9,7 @@ import { requireStorageConfiguration } from '../readiness.utils.ts'
 
 /**
  * Require the database URL and artifact storage settings. Call in every artifact
- * route after `requireCallerContext`, so a misconfigured service answers 503
+ * route after `requireStepContext`, so a misconfigured service answers 503
  * rather than 500. Checks configuration only; it does not connect to either.
  * @param event - The request event.
  * @throws H3Error 503 when the database URL, storage account URL or container is not configured.

@@ -1,10 +1,10 @@
 /**
- * Artifact access policy: decides, from the trusted caller context, whether a
+ * Artifact access policy: decides, from the trusted step context, whether a
  * caller may read, create or update an exact reference.
  * @module
  */
-import type { ArtifactRef, CallerContext } from '../../../shared/types/artifact.ts'
-import { readCallerContext } from './context.utils.ts'
+import type { ArtifactRef, StepContext } from '../../../shared/types/artifact.ts'
+import { readStepContext } from './context.utils.ts'
 
 /**
  * Action a caller may be granted on an artifact reference. Create and update stay
@@ -25,18 +25,18 @@ export function sameArtifactReference(left: ArtifactRef, right: ArtifactRef): bo
  * - Any other task type, or an invalid context: no access.
  *
  * Check {@link isArtifactVisible} first: a visible artifact with a missing action is a 403.
- * @param caller - Trusted caller context.
+ * @param step - Trusted step context.
  */
-export function canAccessArtifact(caller: CallerContext, reference: ArtifactRef, action: ArtifactAction): boolean {
+export function canAccessArtifact(step: StepContext, reference: ArtifactRef, action: ArtifactAction): boolean {
   // Fail closed even for typed values supplied by unvalidated JavaScript callers.
-  if (!readCallerContext({ caller }).ok || reference.name !== 'plan') {
+  if (!readStepContext({ step }).ok || reference.name !== 'plan') {
     return false
   }
-  if (caller.taskType === 'planner') {
-    return (action === 'create' || action === 'update') && caller.outputs.some(ref => sameArtifactReference(ref, reference))
+  if (step.taskType === 'planner') {
+    return (action === 'create' || action === 'update') && step.outputs.some(ref => sameArtifactReference(ref, reference))
   }
-  if (caller.taskType === 'coder') {
-    return action === 'read' && [...caller.inputs, ...caller.outputs].some(ref => sameArtifactReference(ref, reference))
+  if (step.taskType === 'coder') {
+    return action === 'read' && [...step.inputs, ...step.outputs].some(ref => sameArtifactReference(ref, reference))
   }
   return false
 }
@@ -45,18 +45,18 @@ export function canAccessArtifact(caller: CallerContext, reference: ArtifactRef,
  * Whether the caller holds any action on the reference. Invisible artifacts are
  * reported as 404 so that a caller cannot learn whether they exist.
  */
-export function isArtifactVisible(caller: CallerContext, reference: ArtifactRef): boolean {
-  return (['create', 'read', 'update'] as const).some(action => canAccessArtifact(caller, reference, action))
+export function isArtifactVisible(step: StepContext, reference: ArtifactRef): boolean {
+  return (['create', 'read', 'update'] as const).some(action => canAccessArtifact(step, reference, action))
 }
 
 /**
  * References the caller may read, for discovery. They need not be registered;
  * listing returns only the records that exist.
- * @param caller - Trusted caller context.
+ * @param step - Trusted step context.
  */
-export function readableArtifactReferences(caller: CallerContext): ArtifactRef[] {
-  if (!readCallerContext({ caller }).ok) {
+export function readableArtifactReferences(step: StepContext): ArtifactRef[] {
+  if (!readStepContext({ step }).ok) {
     return []
   }
-  return [...caller.inputs, ...caller.outputs].filter(ref => canAccessArtifact(caller, ref, 'read'))
+  return [...step.inputs, ...step.outputs].filter(ref => canAccessArtifact(step, ref, 'read'))
 }

@@ -72,7 +72,7 @@ Project knowledge belongs in repository documentation. Personal memories and oth
 
 The [artifact API](./docs/api/README.md) and [artifact plan](./docs/plans/artifact-service.md) describe the service. Routes under `server/api/artifacts/` call explicit guards that apply the planner/coder policy, then plain Drizzle/PostgreSQL query and Azure user delegation SAS functions. Artifacts belong to steps and keep one ID/blob across retries. Bytes go directly between callers and Azure.
 
-Authentication is not implemented: each route explicitly calls the `requireCallerContext` guard, which today only validates an `event.context.caller` that nothing sets yet, so every artifact request currently returns 503. HMAC versus Kubernetes ServiceAccount authentication is undecided. Real Azure transfer has not been exercised.
+Authentication is not implemented: each route explicitly calls the `requireStepContext` guard, which today only validates an `event.context.step` that nothing sets yet, so every artifact request currently returns 503. HMAC versus Kubernetes ServiceAccount authentication is undecided. Real Azure transfer has not been exercised.
 
 `shared/utils/zod-schemas/` is the schema source of truth. `npm run generate:artifact-openapi` generates `docs/api/artifact.openapi.json` from those schemas and the HTTP definitions in `scripts/openapi/artifact-http.ts`; edit those sources, not the JSON. See the [schema workflow](./docs/api/implementation.md#schema-workflow).
 
@@ -109,9 +109,9 @@ The server writes JSON lines to stdout with [pino](https://getpino.io/); Kuberne
 | `db` | Failed idle database connections; the pool replaces them instead of the process exiting |
 | `readyz` | One `error` line per failed readiness check, with `check`, the driver `code` if any, and `err` |
 
-Request and response bodies, headers and caller context are never logged. SAS URLs may appear in logs, for example in error messages; that is an [accepted risk](./docs/architecture.md#decision-log). `NUXT_LOG_LEVEL=warn` suppresses access lines.
+Request and response bodies, headers and step context are never logged. SAS URLs may appear in logs, for example in error messages; that is an [accepted risk](./docs/architecture.md#decision-log). `NUXT_LOG_LEVEL=warn` suppresses access lines.
 
-`GET /readyz` is the Kubernetes readiness probe: public, outside `/api`, no caller guard. It responds with `application/health+json` and `Cache-Control: no-store`:
+`GET /readyz` is the Kubernetes readiness probe: public, outside `/api`, no step context guard. It responds with `application/health+json` and `Cache-Control: no-store`:
 
 ```json
 {
