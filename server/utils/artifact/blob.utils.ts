@@ -2,7 +2,7 @@
  * Mapping from artifact references to physical blob names.
  * @module
  */
-import { artifactRefSchema } from '../../../shared/utils/zod-schemas/caller-context.schema.ts'
+import { artifactRefSchema } from '../../../shared/utils/zod-schemas/step-context.schema.ts'
 
 /**
  * Derive the blob name for an artifact: `v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}`.

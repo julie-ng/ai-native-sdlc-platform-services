@@ -2,7 +2,7 @@ import {
   uuidSchema, nameSchema, utcInstantSchema, contentTypeSchema,
   sizeBytesSchema, sha256Schema, titleSchema, descriptionSchema, detailsSchema,
 } from './common.schema.ts'
-import { artifactRefSchema, callerContextSchema } from './caller-context.schema.ts'
+import { artifactRefSchema, stepContextSchema } from './step-context.schema.ts'
 import {
   artifactIdParametersSchema, createArtifactRequestSchema, completeArtifactRequestSchema,
   createArtifactResponseSchema, completeArtifactResponseSchema, reservedArtifactInfoSchema,
@@ -24,7 +24,7 @@ export const artifactSchemas = {
   Description: descriptionSchema,
   Details: detailsSchema,
   ArtifactRef: artifactRefSchema,
-  CallerContext: callerContextSchema,
+  StepContext: stepContextSchema,
   ArtifactIdParameters: artifactIdParametersSchema,
   CreateArtifactRequest: createArtifactRequestSchema,
   CompleteArtifactRequest: completeArtifactRequestSchema,

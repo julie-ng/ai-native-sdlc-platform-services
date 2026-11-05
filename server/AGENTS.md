@@ -13,7 +13,7 @@ Applies to `server/**`, in addition to the root instructions. For schema or migr
 
 ## Logging and database
 
-- Log with `useLogger(domain)` from `server/utils/use-logger.ts`, called inside handlers or callbacks, not at module top level. Never log request or response bodies, credential headers or caller context. SAS URLs in logs are an accepted risk; do not add code to strip them.
+- Log with `useLogger(domain)` from `server/utils/use-logger.ts`, called inside handlers or callbacks, not at module top level. Never log request or response bodies, credential headers or step context. SAS URLs in logs are an accepted risk; do not add code to strip them.
 - The access log is the only global middleware. Readiness probes are excluded from it.
 - Use the shared pool through `useDB()` (`server/db/use-db.ts`); do not create another pool in application code. `createDatabase()` is for tests and tooling that own their pool.
 
@@ -35,7 +35,7 @@ Applies to `server/**`, in addition to the root instructions. For schema or migr
 ## Artifacts
 
 - Follow the [API overview](../docs/api/README.md), [implementation contract](../docs/api/implementation.md), and [shared types](../shared/types/artifact.ts).
-- Call `requireCallerContext(event)` explicitly and first in every artifact route; the guard establishes `event.context.caller`. Do not move this into global middleware. Never replace it with HTTP claims or a workflow-step lookup. Fixed caller contexts belong only in tests.
+- Call `requireStepContext(event)` explicitly and first in every artifact route; the guard establishes `event.context.step`. Do not move this into global middleware. Never replace it with HTTP claims or a workflow-step lookup. Fixed step contexts belong only in tests.
 - Logical steps own artifacts. Reuse IDs/blobs across retries; do not add attempt history or overlapping-writer coordination.
 - Keep discovery/metadata separate from SAS issuance. List readable records only; transfer bytes directly between caller and cloud storage.
 - Each permitted POST issues a fresh SAS for the same artifact. Never persist SAS URLs.

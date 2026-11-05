@@ -11,7 +11,7 @@ Applies to `shared/**`, in addition to the root instructions.
 ## Schemas and constants
 
 - Define validation once in Zod and infer types with `z.infer`; do not duplicate schemas or interfaces.
-- Keep request, persistence, and trusted caller-context schemas separate. Client-supplied roles and IDs never establish access.
+- Keep request, persistence, and trusted step-context schemas separate. Client-supplied roles and IDs never establish access.
 - Define statuses once with `as const`; reuse derived values in schemas, comparisons, and database mappings. Do not hide validator incompatibilities with tuple assertions.
 - Test invalid inputs, date/time edges, and serialization where applicable.
 

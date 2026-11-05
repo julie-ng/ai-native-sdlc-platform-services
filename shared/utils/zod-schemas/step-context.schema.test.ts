@@ -1,7 +1,7 @@
 import { assert, expect, test } from 'vitest'
-import { callerContextSchema } from './caller-context.schema.ts'
+import { stepContextSchema } from './step-context.schema.ts'
 
-const caller = {
+const step = {
   runId: '10000000-0000-4000-8000-000000000001',
   stepId: '20000000-0000-4000-8000-000000000001',
   taskType: 'planner',
@@ -10,18 +10,18 @@ const caller = {
 }
 
 test('context schema preserves valid values and rejects unknown nested fields', () => {
-  const result = callerContextSchema.safeParse(caller)
+  const result = stepContextSchema.safeParse(step)
   expect(result.success).toBe(true)
-  expect(result.data).toStrictEqual(caller)
-  const invalid = { ...caller, outputs: [{ ...caller.outputs[0], permissions: ['read-all'] }] }
-  const parsed = callerContextSchema.safeParse(invalid)
+  expect(result.data).toStrictEqual(step)
+  const invalid = { ...step, outputs: [{ ...step.outputs[0], permissions: ['read-all'] }] }
+  const parsed = stepContextSchema.safeParse(invalid)
   assert(!parsed.success)
   expect(parsed.error.issues.some(issue => issue.code === 'unrecognized_keys' && issue.path[0] === 'outputs')).toBe(true)
   expect('permissions' in invalid.outputs[0]!).toBe(true)
 })
 
 test('context shape requires bindings and rejects unknown top-level fields', () => {
-  const { outputs: _outputs, ...incomplete } = caller
-  expect(callerContextSchema.safeParse(incomplete).success).toBe(false)
-  expect(callerContextSchema.safeParse({ ...caller, attemptId: caller.stepId }).success).toBe(false)
+  const { outputs: _outputs, ...incomplete } = step
+  expect(stepContextSchema.safeParse(incomplete).success).toBe(false)
+  expect(stepContextSchema.safeParse({ ...step, attemptId: step.stepId }).success).toBe(false)
 })

@@ -14,13 +14,13 @@
 | Artifact | The current file and its metadata, with one stable ID per producing step/name. | P1's `plan`. |
 | Producer | The step that owns/creates an artifact; its executing agent writes the file. | P1 produces the plan. |
 | Consumer | A caller permitted to read that artifact. | C1 consumes P1's plan. |
-| Caller | Whoever is making the current service request, using context established by the caller guard. | Planner requesting upload access; coder downloading. |
+| Caller | Whoever is making the current service request, using context established by the step context guard. | Planner requesting upload access; coder downloading. |
 | Name | Logical artifact slot, not a filename or permission. | `plan`, not `plan.md`. |
 | SAS URL | A temporary cloud-storage capability scoped to one blob and permitted actions. | Upload or download URL. |
 
 ## Purpose: the airport counter
 
-- The `requireCallerContext` guard, called explicitly by each route, checks the caller's “passport” and records the trusted itinerary in `event.context.caller`.
+- The `requireStepContext` guard, called explicitly by each route, checks the caller's “passport” and records the trusted itinerary in `event.context.step`.
   - The service owns the access list. A caller can discover zero, one or several available artifacts without knowing IDs first; an ID only selects within that list.
 - The artifact service owns metadata; cloud storage owns bytes.
   - A SAS URL is the temporary ticket to those bytes. Metadata/discovery reads do not issue that ticket automatically.
@@ -28,14 +28,14 @@
 ## Agreed POC rules
 
 - One artifact ID and one blob per producing step/name, reused across retries and repeated writes.
-  - No attempt IDs in artifact ownership, references or caller context. No per-attempt records, blob keys, logs or artifact revision history.
+  - No attempt IDs in artifact ownership, references or step context. No per-attempt records, blob keys, logs or artifact revision history.
 - The planner can create and overwrite its own plan; a later execution of the same step can continue editing it.
   - A different step cannot overwrite it by default. Matching task type alone grants nothing; read, create and update capabilities stay distinct.
 - Each successful-upload acknowledgment replaces the latest size/hash and last-acknowledgment time.
   - Only the current values are stored. Consumers read after the producing step finishes.
 - Assume one active writer per step and no overlapping executions.
   - This is an operating assumption, not service-enforced isolation. No locks, leases or concurrent-writer coordination are required for this POC.
-- Authentication is outside this task; the caller guard will construct the context (#13).
+- Authentication is outside this task; the step context guard will construct the context (#13).
   - The service checks its required shape and binding consistency and fails closed if missing. Consume complete trusted context directly; defer workflow-step lookup, token parsing and context construction. HMAC versus Kubernetes ServiceAccount authentication remains undecided. Tests inject fixed server-owned context without production auth bypasses.
 
 ## Caller flow
@@ -58,20 +58,20 @@
 
 - Read the applicable [server](../../server/AGENTS.md), [database](../../server/db/AGENTS.md) and [shared](../../shared/AGENTS.md) instructions before changing artifact code.
 - Start with the [overview](../api/README.md), then [implementation details](../api/implementation.md). [OpenAPI](../api/artifact.openapi.json) and [shared types](../../shared/types/artifact.ts) define exact shapes.
-- Caller context is `{ runId, stepId, taskType, inputs, outputs }`; internal references are `{ runId, producerStepId, name }`. Registration derives the producing step from the caller; bindings point to a step's current artifact, not a historical execution.
+- Step context is `{ runId, stepId, taskType, inputs, outputs }`; internal references are `{ runId, producerStepId, name }`. Registration derives the producing step from the caller; bindings point to a step's current artifact, not a historical execution.
 - Artifacts keep `createdAt` and `updatedAt`. Every accepted write (repeated POST or upload report) refreshes `updatedAt`; reads and denials do not.
 
 | Piece | Location | Tests |
 | --- | --- | --- |
 | Routes | `server/api/artifacts/` | Manual HTTP smoke only; HTTP tests follow authentication (#13) |
-| Guards (caller context, configuration, 404/403) | `server/utils/guards/` | Unit tests; access lookups via `npm run test:db` |
+| Guards (step context, configuration, 404/403) | `server/utils/guards/` | Unit tests; access lookups via `npm run test:db` |
 | Policy | `server/utils/artifact/policy.utils.ts` | Unit tests |
 | PostgreSQL repository and migrations | `server/utils/artifact/repository.utils.ts`, `server/db/` | `npm run test:db` against disposable PostgreSQL 17 |
 | Azure user delegation SAS | `server/utils/artifact/azure-sas.utils.ts` | Offline signing with a fixed test key; checked once against Azure by hand (#20) |
 
 ## Remaining work
 
-1. Authentication inside the `requireCallerContext` guard that constructs `event.context.caller` (#13; HMAC vs Kubernetes ServiceAccount is still open). Until then every artifact request returns 503.
+1. Authentication inside the `requireStepContext` guard that constructs `event.context.step` (#13; HMAC vs Kubernetes ServiceAccount is still open). Until then every artifact request returns 503.
 2. Unit tests for the guard and a static check that every artifact route calls it before reading input (#19).
 3. Azure through the routes: upload, overwrite, report and download via HTTP once authentication exists (#13), then with workload identity in the cluster. The SAS functions alone were verified against Azure on 2026-11-04 (#20).
 4. Cluster execution, broader workflow endpoints, attempt logging, GitHub broker, webhook ingress, UI and LLM calls remain outside this slice. The [workflow reference](./workflow-service.md) preserves broader planning ideas, not POC requirements.

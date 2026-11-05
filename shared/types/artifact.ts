@@ -2,7 +2,7 @@ import type { z } from 'zod'
 import type { artifactSchemas } from '../utils/zod-schemas/index.ts'
 
 export type ArtifactRef = z.infer<typeof artifactSchemas.ArtifactRef>
-export type CallerContext = z.infer<typeof artifactSchemas.CallerContext>
+export type StepContext = z.infer<typeof artifactSchemas.StepContext>
 export type CreateArtifactRequest = z.infer<typeof artifactSchemas.CreateArtifactRequest>
 export type CompleteArtifactRequest = z.infer<typeof artifactSchemas.CompleteArtifactRequest>
 export type CreateArtifactResponse = z.infer<typeof artifactSchemas.CreateArtifactResponse>

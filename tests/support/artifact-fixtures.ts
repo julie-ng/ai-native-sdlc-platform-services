@@ -1,5 +1,5 @@
 // Test-only server-owned contexts and records. Never import these into production wiring.
-import type { ArtifactRef, CallerContext } from '../../shared/types/artifact.ts'
+import type { ArtifactRef, StepContext } from '../../shared/types/artifact.ts'
 import type { ArtifactRecord } from '../../server/utils/artifact/repository.utils.ts'
 
 export const runA = '10000000-0000-4000-8000-000000000001'
@@ -27,7 +27,7 @@ export const contexts = {
   'coder-multiple-inputs': { runId: runA, stepId: stepIds.coderC2, taskType: 'coder', inputs: [planP1, planP2], outputs: [] },
   'coder-no-inputs': { runId: runA, stepId: stepIds.coderC1, taskType: 'coder', inputs: [], outputs: [] },
   'unknown-task': { runId: runA, stepId: stepIds.coderC1, taskType: 'unrecognized', inputs: [planP1], outputs: [] },
-} satisfies Record<string, CallerContext>
+} satisfies Record<string, StepContext>
 
 // Workflow-owned rows that artifact persistence tests seed before inserting artifacts.
 export const workflowRecords = {

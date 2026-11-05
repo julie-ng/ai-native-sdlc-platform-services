@@ -57,7 +57,7 @@ const errorDescriptions: Record<number, string> = {
   404: 'Artifact is missing or not visible to the caller; the two are indistinguishable',
   409: 'Download requested while the latest report is not a successful upload',
   500: 'Unexpected database or storage failure',
-  503: 'Caller context unavailable, or the service is not configured',
+  503: 'Step context unavailable, or the service is not configured',
 }
 function errors(...statuses: number[]) {
   return Object.fromEntries(statuses.map(status => [status, { description: errorDescriptions[status], content: jsonMedia('ErrorResponse') }]))
@@ -81,9 +81,9 @@ export function buildArtifactHttpContract() {
     'info': {
       title: 'Artifact service contract',
       version: '0.5.0',
-      description: 'One current artifact per producing step/name. The explicit requireCallerContext guard establishes event.context.caller; task policy and exact bindings determine access. Missing or not visible is 404; visible but wrong action is 403. Planners write their own plan; coders read bound plans. Bytes move directly between caller and Azure Blob Storage. Errors use Nitro\'s createError() JSON.',
+      description: 'One current artifact per producing step/name. The explicit requireStepContext guard establishes event.context.step; task policy and exact bindings determine access. Missing or not visible is 404; visible but wrong action is 403. Planners write their own plan; coders read bound plans. Bytes move directly between caller and Azure Blob Storage. Errors use Nitro\'s createError() JSON.',
     },
-    'x-caller-context': { location: 'event.context.caller', schema: { $ref: '#/components/schemas/CallerContext' } },
+    'x-step-context': { location: 'event.context.step', schema: { $ref: '#/components/schemas/StepContext' } },
     'paths': {
       '/api/artifacts': {
         post: {

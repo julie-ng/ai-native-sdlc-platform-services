@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > **Reference plan, not an artifact implementation requirement.** Imported from [the issue-pinned snapshot](https://github.com/julie-ng/ai-native-sdlc-platform-services/blob/67c4f98d81c2a96d4f80c0bc8ecaf25a985ede6e/docs/plans/workflow-service.md). Historical proposals and validation claims are retained as background, not independently verified or adopted here. The architect has replaced attempt-owned/create-only artifacts with [step-owned current artifacts](./artifact-service.md). This POC requires only workflow-owned run/step identities, not attempt tracking or workflow endpoints.
 
-- The [artifact contract](../api/README.md) records current caller context, permissions, references and repeat-write behavior.
+- The [artifact contract](../api/README.md) records current step context, permissions, references and repeat-write behavior.
   - Its [implementation prerequisite](../api/implementation.md#persistence-and-workflow-ownership) replaces the old artifact-to-attempt FK with a proposed step FK. External infrastructure and ADR links below are background, not required inputs or proof of a deployed database.
 
 ## Context
@@ -40,7 +40,7 @@ Architect answers, 2026-10-25.
 
 ## Artifact handoff for this POC
 
-- Trusted middleware supplies artifact caller context `{ runId, stepId, taskType, inputs, outputs }`.
+- Trusted middleware supplies artifact step context `{ runId, stepId, taskType, inputs, outputs }`.
   - The artifact service does not authenticate the caller, accept replacement HTTP grants or require an attempt ID.
 - Artifact references are `{ runId, producerStepId, name }`, pointing to a step's current artifact.
   - A retry or later execution of the same step keeps the same artifact ID/blob. `steps.outputAttemptId` in the broader sketch below is not an artifact version selector or a dependency of this slice.

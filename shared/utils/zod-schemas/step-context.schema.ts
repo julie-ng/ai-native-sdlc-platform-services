@@ -7,9 +7,9 @@ export const artifactRefSchema = z.strictObject({
   name: nameSchema,
 })
 
-// Only the server's caller guard may establish this context. Shape validation does not
-// authenticate a caller. Cross-field ownership checks live in readCallerContext.
-export const callerContextSchema = z.strictObject({
+// Only the server's step context guard may establish this context. Shape validation does not
+// authenticate a caller. Cross-field ownership checks live in readStepContext.
+export const stepContextSchema = z.strictObject({
   runId: uuidSchema,
   stepId: uuidSchema,
   taskType: z.string().min(1).max(64),

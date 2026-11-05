@@ -6,7 +6,7 @@ See the [API overview](./README.md) for operations, access policy, and POC assum
 
 Each route under `server/api/artifacts/` runs, in order:
 
-1. `requireCallerContext(event)`: the explicit guard that establishes `event.context.caller`; 503 if it cannot. Today it only validates a context that nothing sets yet; #13 replaces its body with authentication that constructs the context.
+1. `requireStepContext(event)`: the explicit guard that establishes `event.context.step`; 503 if it cannot. Today it only validates a context that nothing sets yet; #13 replaces its body with authentication that constructs the context.
 2. Validate the body and `id` route parameter with the strict [Zod schemas](../../shared/utils/zod-schemas/index.ts); 400 on failure, with `z.flattenError()` output in `data`. h3 rejects malformed JSON with 400.
 3. [`requireArtifactConfiguration(event)`](../../server/utils/guards/require-artifact-configuration.ts): 503 unless the database URL and storage settings are configured.
 4. [`requireArtifactAccess`](../../server/utils/guards/require-artifact-access.ts) for routes with an ID, or `requireArtifactPermission` for registration: 404 or 403 as below.
@@ -17,9 +17,9 @@ Each route under `server/api/artifacts/` runs, in order:
 - Responses that carry SAS URLs set `Cache-Control: no-store`. Never redirect to SAS URLs.
 - Unknown `/api` paths return JSON 404. Unsupported methods on existing paths still fall through to the Nuxt page renderer; this is a known gap, not a contract.
 
-## Caller context and authorization
+## Step context and authorization
 
-The `requireCallerContext` guard establishes `event.context.caller`:
+The `requireStepContext` guard establishes `event.context.step`:
 
 ```ts
 {
@@ -32,7 +32,7 @@ The `requireCallerContext` guard establishes `event.context.caller`:
 // Each reference: { runId, producerStepId, name }
 ```
 
-- `readCallerContext` requires all bindings in the caller's run and outputs owned by its step. Context comes only from the guard's authentication, never HTTP claims or workflow-step lookups. Fixed contexts are test-only.
+- `readStepContext` requires all bindings in the caller's run and outputs owned by its step. Context comes only from the guard's authentication, never HTTP claims or workflow-step lookups. Fixed contexts are test-only.
 - [`canAccessArtifact`](../../server/utils/artifact/policy.utils.ts) applies the task policy to one exact reference and action: planners create and update their own `plan` outputs, coders read `plan` references among their bindings. Create and update stay distinct, mirroring Azure's `c`/`w` SAS permissions. Unknown tasks get nothing.
 - The `requireArtifactAccess` guard looks up an ID and sets `event.context.artifact`:
 
