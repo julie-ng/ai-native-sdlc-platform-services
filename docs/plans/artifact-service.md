@@ -1,7 +1,7 @@
 # Artifact service — POC contract
 
 > [!IMPORTANT]
-> The [API contract](../api/README.md) defines the current POC; [implementation details](../api/implementation.md) cover persistence and storage. Routes, guards, PostgreSQL queries and Azure SAS signing are implemented; caller authentication and live Azure verification remain. Accepted refinements are recorded in the [decision log](../architecture.md#decision-log).
+> The [API contract](../api/README.md) defines the current POC; [implementation details](../api/implementation.md) cover persistence and storage. Routes, guards, PostgreSQL queries and Azure SAS signing are implemented; the SAS functions were verified against Azure. Caller authentication and route-level Azure verification remain. Accepted refinements are recorded in the [decision log](../architecture.md#decision-log).
 
 ## Ontology
 
@@ -67,11 +67,11 @@
 | Guards (caller context, configuration, 404/403) | `server/utils/guards/` | Unit tests; access lookups via `npm run test:db` |
 | Policy | `server/utils/artifact/policy.utils.ts` | Unit tests |
 | PostgreSQL repository and migrations | `server/utils/artifact/repository.utils.ts`, `server/db/` | `npm run test:db` against disposable PostgreSQL 17 |
-| Azure user delegation SAS | `server/utils/artifact/azure-sas.utils.ts` | Offline signing with a fixed test key |
+| Azure user delegation SAS | `server/utils/artifact/azure-sas.utils.ts` | Offline signing with a fixed test key; checked once against Azure by hand (#20) |
 
 ## Remaining work
 
 1. Authentication inside the `requireCallerContext` guard that constructs `event.context.caller` (#13; HMAC vs Kubernetes ServiceAccount is still open). Until then every artifact request returns 503.
 2. Unit tests for the guard and a static check that every artifact route calls it before reading input (#19).
-3. Real Azure upload, overwrite, report and download with a provisioned storage account and service identity. Prove the same blob is reused, latest bytes/hash match and read SAS cannot write.
+3. Azure through the routes: upload, overwrite, report and download via HTTP once authentication exists (#13), then with workload identity in the cluster. The SAS functions alone were verified against Azure on 2026-11-04 (#20).
 4. Cluster execution, broader workflow endpoints, attempt logging, GitHub broker, webhook ingress, UI and LLM calls remain outside this slice. The [workflow reference](./workflow-service.md) preserves broader planning ideas, not POC requirements.

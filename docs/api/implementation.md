@@ -64,7 +64,7 @@ if (!canAccessArtifact(caller, record.reference, action))    → 403
 
 ## SAS and storage
 
-- Private runtime config: `NUXT_DATABASE_URL`, `NUXT_ARTIFACT_STORAGE_ACCOUNT_URL` (HTTPS) and `NUXT_ARTIFACT_STORAGE_CONTAINER` (default `artifacts`). Missing configuration returns 503. The Blob client authenticates with `DefaultAzureCredential` (workload identity in a cluster, `az login` locally) and needs container data access plus the user delegation key action at storage account scope or above (see [README](../../README.md#runtime-configuration)).
+- Private runtime config: `NUXT_DATABASE_URL`, `NUXT_ARTIFACT_STORAGE_ACCOUNT_URL` (HTTPS) and `NUXT_ARTIFACT_STORAGE_CONTAINER` (default `artifacts`). Missing configuration returns 503. The Blob client authenticates with `DefaultAzureCredential` (workload identity in a cluster, a service principal through `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET` locally) and needs container data access plus the user delegation key action at storage account scope or above (see [README](../../README.md#runtime-configuration)).
 - The blob key is derived from the reference, never from the request:
 
 ```text
@@ -79,7 +79,7 @@ v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 | Download | `sp=r` | GET the current blob. |
 
 - SAS issuance does not revoke earlier URLs or coordinate metadata with blob contents. Disable Blob versioning if storage must retain no revisions.
-- Real Azure upload, overwrite and download have not been exercised yet; signing tests run offline with a fixed test key.
+- `signUpload` and `signDownload` were checked once against real Azure on 2026-11-04 (#20), using a local service principal and no routes: upload, overwrite and download worked, and Azure returned 403 `AuthorizationPermissionMismatch` for writing with a read SAS, reading with a write SAS and using another container. The routes have not been exercised against Azure. Automated signing tests run offline with a fixed test key.
 
 References: [user delegation SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas), [Put Blob permissions](https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob#user-delegation-sas), and [Blob versioning](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview).
 
