@@ -97,7 +97,7 @@ npm run db:down      # Stop and discard the database
 | `NUXT_ARTIFACT_STORAGE_CONTAINER` | Container name; defaults to `artifacts` |
 | `NUXT_LOG_LEVEL` | pino log level (`fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`); defaults to `info`. Unknown values fall back to `info` with a warning |
 
-The Blob client uses `DefaultAzureCredential`. Its identity needs read/write data access to the container (for example, Storage Blob Data Contributor scoped to the container) plus Storage Blob Delegator at the storage account scope or above, because [Get User Delegation Key acts at the account level](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas). Missing configuration returns 503.
+The Blob client uses `DefaultAzureCredential`: workload identity in the cluster and, for local development, a service principal set through `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET` in `.env`. Its identity needs read/write data access to the container (for example, Storage Blob Data Contributor scoped to the container) plus Storage Blob Delegator at the storage account scope or above, because [Get User Delegation Key acts at the account level](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas). Missing configuration returns 503.
 
 ### Logging and readiness
 

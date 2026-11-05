@@ -64,7 +64,7 @@ if (!canAccessArtifact(caller, record.reference, action))    → 403
 
 ## SAS and storage
 
-- Private runtime config: `NUXT_DATABASE_URL`, `NUXT_ARTIFACT_STORAGE_ACCOUNT_URL` (HTTPS) and `NUXT_ARTIFACT_STORAGE_CONTAINER` (default `artifacts`). Missing configuration returns 503. The Blob client authenticates with `DefaultAzureCredential` (workload identity in a cluster, `az login` locally) and needs container data access plus the user delegation key action at storage account scope or above (see [README](../../README.md#runtime-configuration)).
+- Private runtime config: `NUXT_DATABASE_URL`, `NUXT_ARTIFACT_STORAGE_ACCOUNT_URL` (HTTPS) and `NUXT_ARTIFACT_STORAGE_CONTAINER` (default `artifacts`). Missing configuration returns 503. The Blob client authenticates with `DefaultAzureCredential` (workload identity in a cluster, a service principal through `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET` locally) and needs container data access plus the user delegation key action at storage account scope or above (see [README](../../README.md#runtime-configuration)).
 - The blob key is derived from the reference, never from the request:
 
 ```text
