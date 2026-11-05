@@ -12,13 +12,13 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 - The [documentation site](../docs-site/) (Astro Starlight) renders the OpenAPI contract and the JSDoc in `server/utils/` and `server/db/`; `npm run docs:dev` previews it on port 4000 and `npm run docs:check` validates the JSDoc scope (config in [docs-site/typedoc.json](../docs-site/typedoc.json)). See the [README](../README.md#documentation-site).
 - `npm run check:guidance` validates local Markdown file references and shared skill metadata. Nuxt ESLint checks JavaScript, TypeScript, and Vue with stylistic rules matching repository conventions. `npm run test:contract` validates generated OpenAPI freshness/validity and that documentation examples satisfy their schemas; `check:artifact-contract` is a compatibility alias. Source interfaces are covered by `typecheck`. `npm run verify` runs lint, guidance checks, named contract tests, unit tests, typechecking and the Nuxt production build. `npm run test:unit` executes offline Vitest tests; `npm run typecheck` covers Nuxt plus standalone tests/support and OpenAPI tooling. All are included in `verify`.
 - GitHub Actions runs verification on pull requests targeting `main` and pushes to `main`, with manual dispatch available. A non-blocking npm audit includes development dependencies and summarizes high and critical findings in the job summary.
-- Remaining artifact work: authentication inside the caller guard, guard tests with a static route check, and real Azure verification. See [remaining work](./plans/artifact-service.md#remaining-work); the [workflow reference](./plans/workflow-service.md) does not expand its scope.
+- Remaining artifact work: authentication inside the caller guard, guard tests with a static route check, and an end-to-end Azure check through the routes (the SAS functions were verified against Azure on 2026-11-04). See [remaining work](./plans/artifact-service.md#remaining-work); the [workflow reference](./plans/workflow-service.md) does not expand its scope.
 
 ## Agreed direction
 
 | Area | Decision | Implementation status |
 | --- | --- | --- |
-| First release | RESTful APIs, with UI deferred | [Artifact API](./api/README.md) implemented; authentication and live Azure verification pending |
+| First release | RESTful APIs, with UI deferred | [Artifact API](./api/README.md) implemented; SAS functions verified against Azure; authentication and route-level Azure verification pending |
 | Language | TypeScript by default, including Vue script logic | Applies to all server code and tests |
 | Persistence | Drizzle is the ORM | PostgreSQL 17 schema, migrations and artifact repository implemented; tested against disposable Docker PostgreSQL; no deployed database |
 | UI | Pinia, Tailwind CSS, Nuxt UI | Deferred; not installed |
