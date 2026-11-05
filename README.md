@@ -72,7 +72,7 @@ Project knowledge belongs in repository documentation. Personal memories and oth
 
 The [artifact API](./docs/api/README.md) and [artifact plan](./docs/plans/artifact-service.md) describe the service. Routes under `server/api/artifacts/` call explicit guards that apply the planner/coder policy, then plain Drizzle/PostgreSQL query and Azure user delegation SAS functions. Artifacts belong to steps and keep one ID/blob across retries. Bytes go directly between callers and Azure.
 
-Authentication is not implemented: each route explicitly calls the `requireStepContext` guard, which today only validates an `event.context.step` that nothing sets yet, so every artifact request currently returns 503. HMAC versus Kubernetes ServiceAccount authentication is undecided. Real Azure transfer has not been exercised.
+Authentication is not implemented: each route explicitly calls the `requireStepContext` guard, which validates an `event.context.step` that nothing sets yet, so every artifact request returns 503. The exception is the temporary [local development stub](#trying-the-artifact-routes-locally). Callers will authenticate with HMAC tokens (ADR-016 in the parent repository, #13). The SAS functions have been checked against real Azure. The routes have only been tried through the local stub.
 
 `shared/utils/zod-schemas/` is the schema source of truth. `npm run generate:artifact-openapi` generates `docs/api/artifact.openapi.json` from those schemas and the HTTP definitions in `scripts/openapi/artifact-http.ts`; edit those sources, not the JSON. See the [schema workflow](./docs/api/implementation.md#schema-workflow).
 
@@ -83,6 +83,7 @@ npm run db:up        # Disposable PostgreSQL 17 in Docker (compose.yaml, tmpfs d
 npm run test:db      # Repository integration tests; each file creates and drops its own database
 npm run db:generate  # Generate a migration after editing server/db/schema.ts
 npm run db:migrate   # Apply migrations to NUXT_DATABASE_URL
+npm run db:seed:stub # Insert the fixed local development run and steps (see below)
 npm run db:down      # Stop and discard the database
 ```
 
@@ -96,8 +97,45 @@ npm run db:down      # Stop and discard the database
 | `NUXT_ARTIFACT_STORAGE_ACCOUNT_URL` | Blob service endpoint, e.g. `https://<account>.blob.core.windows.net` |
 | `NUXT_ARTIFACT_STORAGE_CONTAINER` | Container name; defaults to `artifacts` |
 | `NUXT_LOG_LEVEL` | pino log level (`fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`); defaults to `info`. Unknown values fall back to `info` with a warning |
+| `NUXT_PUBLIC_ENVIRONMENT` | Deployment environment name, public (not a secret). `local` enables the step context stub under `npm run dev`; empty by default |
 
 The Blob client uses `DefaultAzureCredential`: workload identity in the cluster and, for local development, a service principal set through `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET` in `.env`. Its identity needs read/write data access to the container (for example, Storage Blob Data Contributor scoped to the container) plus Storage Blob Delegator at the storage account scope or above, because [Get User Delegation Key acts at the account level](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas). Missing configuration returns 503.
+
+### Trying the artifact routes locally
+
+Until callers authenticate (#13), a temporary stub (#38) lets you try the routes with `curl`. The stub only runs when both are true:
+
+- the server runs under `npm run dev` (`import.meta.dev`, which Nuxt sets to `false` in production builds). Checked by hand on 2026-11-05 (#38): the production bundle contained no stub code; nothing checks this automatically
+- `NUXT_PUBLIC_ENVIRONMENT=local`
+
+The unauthenticated `x-sdlc-task-type` header then picks a fixed step context:
+
+- `planner` (the default): writes its own `plan`
+- `coder`: reads that `plan`
+
+Any other value returns 503. The policy is unchanged, so the artifact name must be `plan`.
+
+```bash
+# .env: NUXT_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres,
+# NUXT_PUBLIC_ENVIRONMENT=local, plus the Azure settings above
+npm run db:up
+NUXT_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres npm run db:migrate
+npm run db:seed:stub # fixed run, planner and coder steps; safe to repeat
+npm run dev
+
+# Planner: register, upload to the returned SAS URL, then report the upload
+curl -X POST localhost:3000/api/artifacts -H 'x-sdlc-task-type: planner' \
+  -H 'content-type: application/json' -d '{"name":"plan","contentType":"text/plain"}'
+curl -X PUT "<upload.url>" -H 'x-ms-blob-type: BlockBlob' -H 'Content-Type: text/plain' --data-binary @plan.txt
+curl -X PUT localhost:3000/api/artifacts/<id> -H 'x-sdlc-task-type: planner' \
+  -H 'content-type: application/json' -d '{"state":"uploaded","sizeBytes":<size>,"sha256":"<hex>"}'
+
+# Coder: discover, read metadata, get a download SAS, download
+curl localhost:3000/api/artifacts -H 'x-sdlc-task-type: coder'
+curl localhost:3000/api/artifacts/<id> -H 'x-sdlc-task-type: coder'
+curl localhost:3000/api/artifacts/<id>/sas -H 'x-sdlc-task-type: coder'
+curl "<url>" -o downloaded.txt
+```
 
 ### Logging and readiness
 

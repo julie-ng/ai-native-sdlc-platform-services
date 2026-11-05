@@ -63,7 +63,7 @@
 
 | Piece | Location | Tests |
 | --- | --- | --- |
-| Routes | `server/api/artifacts/` | Manual HTTP smoke only; HTTP tests follow authentication (#13) |
+| Routes | `server/api/artifacts/` | Manual `curl` check through the local stub (#38); HTTP tests follow authentication (#13) |
 | Guards (step context, configuration, 404/403) | `server/utils/guards/` | Unit tests; access lookups via `npm run test:db` |
 | Policy | `server/utils/artifact/policy.utils.ts` | Unit tests |
 | PostgreSQL repository and migrations | `server/utils/artifact/repository.utils.ts`, `server/db/` | `npm run test:db` against disposable PostgreSQL 17 |
@@ -71,7 +71,7 @@
 
 ## Remaining work
 
-1. Authentication inside the `requireStepContext` guard that constructs `event.context.step` (#13; HMAC vs Kubernetes ServiceAccount is still open). Until then every artifact request returns 503.
+1. Authentication inside the `requireStepContext` guard that constructs `event.context.step` (#13; HMAC tokens per ADR-016 in the parent repository). Until then every artifact request returns 503, except through the local development stub (#38).
 2. Unit tests for the guard and a static check that every artifact route calls it before reading input (#19).
 3. Azure through the routes: upload, overwrite, report and download via HTTP once authentication exists (#13), then with workload identity in the cluster. The SAS functions alone were verified against Azure on 2026-11-04 (#20).
 4. Cluster execution, broader workflow endpoints, attempt logging, GitHub broker, webhook ingress, UI and LLM calls remain outside this slice. The [workflow reference](./workflow-service.md) preserves broader planning ideas, not POC requirements.
