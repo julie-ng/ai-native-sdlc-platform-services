@@ -2,7 +2,7 @@
 
 One current file and metadata record per producing step/name. Retries and later executions reuse the artifact ID and blob; bytes transfer directly between callers and Azure Blob Storage.
 
-Routes, guards, PostgreSQL queries and Azure SAS signing are implemented. Nothing sets the step context yet: until the `requireStepContext` guard authenticates callers (#13), every artifact request returns 503 (see [open decisions](../architecture.md#open-decisions)).
+Routes, guards, PostgreSQL queries and Azure SAS signing are implemented. Nothing sets the step context yet: until the `requireStepContext` guard authenticates callers (#13), every artifact request returns 503, except through the temporary [local development stub](../../README.md#trying-the-artifact-routes-locally) (#38).
 
 ## Operations
 

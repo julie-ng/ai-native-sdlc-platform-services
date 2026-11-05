@@ -11,6 +11,11 @@ export default defineNuxtConfig({
     artifactStorageAccountUrl: '',
     artifactStorageContainer: 'artifacts',
     logLevel: 'info',
+    public: {
+      // NUXT_PUBLIC_ENVIRONMENT. Not a secret: public values reach the client.
+      // `local` enables the dev-only step context stub (#38) under `nuxt dev`.
+      environment: '',
+    },
   },
   compatibilityDate: '2025-07-15',
   hooks: {
