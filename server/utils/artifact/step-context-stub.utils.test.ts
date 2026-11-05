@@ -1,19 +1,19 @@
 import { expect, test } from 'vitest'
-import { devStepContext } from './dev-step-context.utils.ts'
+import { stubStepContext } from './step-context-stub.utils.ts'
 import { readStepContext } from './context.utils.ts'
 import { canAccessArtifact } from './policy.utils.ts'
 
 test('planner is the default and both stub contexts are valid', () => {
-  expect(devStepContext(undefined)).toStrictEqual(devStepContext('planner'))
+  expect(stubStepContext(undefined)).toStrictEqual(stubStepContext('planner'))
   for (const taskType of ['planner', 'coder']) {
-    const step = devStepContext(taskType)
+    const step = stubStepContext(taskType)
     expect(readStepContext({ step }).ok).toBe(true)
   }
 })
 
 test('the coder reads exactly the plan the planner writes', () => {
-  const planner = devStepContext('planner')!
-  const coder = devStepContext('coder')!
+  const planner = stubStepContext('planner')!
+  const coder = stubStepContext('coder')!
   const [plan] = planner.outputs
   expect(coder.inputs).toStrictEqual([plan])
   expect(canAccessArtifact(planner, plan!, 'update')).toBe(true)
@@ -24,11 +24,11 @@ test('the coder reads exactly the plan the planner writes', () => {
 
 test('other task types get no context', () => {
   for (const taskType of ['', 'admin', 'Planner']) {
-    expect(devStepContext(taskType)).toBeUndefined()
+    expect(stubStepContext(taskType)).toBeUndefined()
   }
 })
 
 test('each call returns an independent copy', () => {
-  devStepContext('coder')!.inputs.length = 0
-  expect(devStepContext('coder')!.inputs).toHaveLength(1)
+  stubStepContext('coder')!.inputs.length = 0
+  expect(stubStepContext('coder')!.inputs).toHaveLength(1)
 })

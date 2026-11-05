@@ -6,7 +6,7 @@ import { createError, getHeader } from 'h3'
 import type { H3Event } from 'h3'
 import { useRuntimeConfig } from 'nitropack/runtime'
 import { readStepContext } from '../artifact/context.utils.ts'
-import { devStepContext } from '../artifact/dev-step-context.utils.ts'
+import { stubStepContext } from '../artifact/step-context-stub.utils.ts'
 
 /**
  * Establish the trusted step context. Call explicitly at the start of every
@@ -27,7 +27,7 @@ import { devStepContext } from '../artifact/dev-step-context.utils.ts'
  */
 export function requireStepContext(event: H3Event) {
   if (import.meta.dev && useRuntimeConfig(event).public.environment === 'local') {
-    event.context.step = devStepContext(getHeader(event, 'x-sdlc-task-type'))
+    event.context.step = stubStepContext(getHeader(event, 'x-sdlc-task-type'))
   }
   const result = readStepContext(event.context)
   if (!result.ok) {

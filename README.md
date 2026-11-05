@@ -83,7 +83,7 @@ npm run db:up        # Disposable PostgreSQL 17 in Docker (compose.yaml, tmpfs d
 npm run test:db      # Repository integration tests; each file creates and drops its own database
 npm run db:generate  # Generate a migration after editing server/db/schema.ts
 npm run db:migrate   # Apply migrations to NUXT_DATABASE_URL
-npm run db:seed      # Insert the fixed local development run and steps (see below)
+npm run db:seed:stub # Insert the fixed local development run and steps (see below)
 npm run db:down      # Stop and discard the database
 ```
 
@@ -120,7 +120,7 @@ Any other value returns 503. The policy is unchanged, so the artifact name must 
 # NUXT_PUBLIC_ENVIRONMENT=local, plus the Azure settings above
 npm run db:up
 NUXT_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres npm run db:migrate
-npm run db:seed      # fixed run, planner and coder steps; safe to repeat
+npm run db:seed:stub # fixed run, planner and coder steps; safe to repeat
 npm run dev
 
 # Planner: register, upload to the returned SAS URL, then report the upload
