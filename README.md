@@ -105,7 +105,7 @@ The Blob client uses `DefaultAzureCredential`: workload identity in the cluster 
 
 Until callers authenticate (#13), a temporary stub (#38) lets you try the routes with `curl`. The stub only runs when both are true:
 
-- the server runs under `npm run dev` (`import.meta.dev`; a production build doesn't contain the stub at all)
+- the server runs under `npm run dev` (`import.meta.dev`, which Nuxt sets to `false` in production builds). Checked by hand on 2026-11-05 (#38): the production bundle contained no stub code; nothing checks this automatically
 - `NUXT_PUBLIC_ENVIRONMENT=local`
 
 The unauthenticated `x-sdlc-task-type` header then picks a fixed step context:
