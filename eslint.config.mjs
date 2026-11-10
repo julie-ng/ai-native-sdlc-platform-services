@@ -1,3 +1,4 @@
+import jsdoc from 'eslint-plugin-jsdoc'
 import withNuxt from './.nuxt/eslint.config.mjs'
 
 export default withNuxt({
@@ -6,5 +7,14 @@ export default withNuxt({
 }, {
   rules: {
     curly: ['error', 'all'],
+  },
+}, {
+  files: ['server/utils/**/*.ts', 'server/db/**/*.ts'],
+  ignores: ['**/*.test.ts', 'server/db/migrations/**'],
+  plugins: { jsdoc },
+  settings: { jsdoc: { mode: 'typescript' } },
+  rules: {
+    'jsdoc/require-param': 'error',
+    'jsdoc/require-returns': 'error',
   },
 })

@@ -19,6 +19,7 @@ import type { ArtifactRecord } from '../artifact/repository.utils.ts'
  * references that need not exist yet, such as a registration. Call after
  * `requireStepContext`.
  * @param event - The request event; reads `event.context.step`.
+ * @param reference - Exact server-selected artifact slot to authorize, even before registration.
  * @param actions - All are required.
  * @throws H3Error 404 when the reference is not visible to the caller, 403 when an action is missing.
  */

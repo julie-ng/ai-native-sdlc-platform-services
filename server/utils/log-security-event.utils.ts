@@ -1,4 +1,7 @@
-/** Security rejection logging with request metadata and an explicit context allowlist. @module */
+/**
+ * Security rejection logging with request metadata and an explicit context allowlist.
+ * @module
+ */
 import { getHeader, getRequestIP, getRequestURL } from 'h3'
 import type { H3Event } from 'h3'
 import { useLogger } from './use-logger.ts'
@@ -11,7 +14,12 @@ export interface SecurityContext {
   grantedActions?: readonly string[]
 }
 
-/** Record one rejection; omit queries, bodies, authorization headers and arbitrary context properties. */
+/**
+ * Record one rejection; omit queries, bodies, authorization headers and arbitrary context properties.
+ * @param event - Rejected request; supplies IP, user agent, method and pathname only.
+ * @param reason - Server-selected rejection code; never include credentials or request content.
+ * @param context - Validated IDs and server-derived actions; other properties are omitted.
+ */
 export function logSecurityEvent(event: H3Event, reason: string, context: SecurityContext = {}) {
   useLogger('security').warn({
     reason,

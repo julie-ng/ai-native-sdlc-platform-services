@@ -40,6 +40,11 @@ Applies to `server/**`, in addition to the root instructions. For schema or migr
 - Keep discovery/metadata separate from SAS issuance. List readable records only; transfer bytes directly between caller and cloud storage.
 - Each permitted POST issues a fresh SAS for the same artifact. Never persist SAS URLs.
 
+## JSDoc
+
+- Document every exported server utility/database function, type and constant, with an `@module` overview on its own line per file. Tests do not need JSDoc.
+- ESLint enforces `jsdoc/require-param` and `jsdoc/require-returns` in `server/utils/**` and `server/db/**`, excluding tests and migrations. Explain parameter intent and returned results without repeating TypeScript types. Document `@throws` where it adds failure information; it is not lint-enforced. Run `npm run docs:check` after changing exports or JSDoc.
+
 ## Verification
 
 - Test success, malformed input, missing resources, authentication/authorization failures, and response-field permissions.

@@ -23,6 +23,7 @@ const children = new Map<string, Logger>()
  * Never log credentials, request or response bodies, or step context. SAS URLs are
  * an accepted exception (see the decision log).
  * @param domain - Area of the service that writes the log line.
+ * @returns The cached pino child logger carrying the requested domain.
  */
 export function useLogger(domain: string) {
   root ??= createRootLogger(useRuntimeConfig().logLevel)

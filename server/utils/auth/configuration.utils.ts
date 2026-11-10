@@ -1,10 +1,15 @@
-/** Private authentication configuration validation shared by issuance and verification. @module */
+/**
+ * Private authentication configuration validation shared by issuance and verification.
+ * @module
+ */
 import { createError } from 'h3'
 import type { H3Event } from 'h3'
 import { useRuntimeConfig } from 'nitropack/runtime'
 
 /**
  * Require a signing key, database URL and a finite positive expiry window.
+ * @param event - Request whose private runtime settings supply signing and expiry configuration.
+ * @returns The signing key and validated positive expiry window in minutes.
  * @throws H3Error 503 for missing or invalid server configuration, without disclosing settings.
  */
 export function requireStepTokenConfiguration(event: H3Event) {

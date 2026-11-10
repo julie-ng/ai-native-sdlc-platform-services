@@ -1,4 +1,7 @@
-/** Explicit admin authentication for run creation. @module */
+/**
+ * Explicit admin authentication for run creation.
+ * @module
+ */
 import { createError, getHeader } from 'h3'
 import type { H3Event } from 'h3'
 import { useRuntimeConfig } from 'nitropack/runtime'
@@ -7,6 +10,7 @@ import { logSecurityEvent } from '../log-security-event.utils.ts'
 
 /**
  * Require the configured admin Bearer credential before creating a run.
+ * @param event - Request carrying the admin Bearer credential in its Authorization header.
  * @throws H3Error 401 for missing/invalid credentials, 503 when no admin token is configured.
  */
 export function requireAdminToken(event: H3Event) {

@@ -46,7 +46,7 @@ npm run verify          # All checks above and Nuxt production build
 npm run preview         # Preview the completed build
 ```
 
-`npm run build` is available separately. [Nuxt ESLint](https://eslint.nuxt.com/packages/module) checks JavaScript, TypeScript, and Vue using the repository's style conventions. `npm ci` generates its Nuxt configuration through the existing preparation hook. `typecheck` runs `nuxt typecheck` plus the strict standalone [test/support project](./tsconfig.unit.json). `test:unit` and `test:contract` use [Vitest](https://vitest.dev/) with each test file isolated. No cloud credentials or database are needed; `test:db` (below) needs Docker.
+`npm run build` is available separately. [Nuxt ESLint](https://eslint.nuxt.com/packages/module) checks JavaScript, TypeScript, and Vue using the repository's style conventions. `npm ci` generates its Nuxt configuration through the existing preparation hook. ESLint also requires JSDoc parameter and return tags in server utilities and database modules, excluding tests and migrations; TypeDoc checks exported documentation separately. `typecheck` runs `nuxt typecheck` plus the strict standalone [test/support project](./tsconfig.unit.json). `test:unit` and `test:contract` use [Vitest](https://vitest.dev/) with each test file isolated. No cloud credentials or database are needed; `test:db` (below) needs Docker.
 
 [CI](./.github/workflows/ci.yml) runs on pull requests targeting `main`, pushes to `main`, and manual dispatch. It installs locked dependencies with Node.js 24 from `.node-version`, then runs `npm run verify`, including lint, guidance/contract checks, unit tests, typechecking and one production build.
 
@@ -145,7 +145,7 @@ curl "<url>" -o downloaded.txt
 
 Missing, malformed, expired or mismatched step credentials all return generic 401. Coder upload reports for the visible planner artifact return 403; registration still targets the caller's own slot, which is invisible to a coder and therefore returns 404. Missing authentication configuration returns 503. A new run is needed after token expiry; there is no renewal endpoint.
 
-Verified locally on 2026-11-10 (#41) against the production build, disposable PostgreSQL 17 and the configured `local-dev` Azure container: admin run issuance, planner upload/report, coder discovery and byte-for-byte download, invalid admin and wrong-step 401s, coder report 403, and actual expiry using a shortened window. Each tested rejection emitted exactly one security event; captured logs and error responses contained no test credentials or SAS URLs. The temporary blob was deleted. Automated coverage remains direct Vitest unit/guard tests and PostgreSQL integration tests; project-wide HTTP automation is tracked in #42. Cluster execution is unverified.
+Verified locally on 2026-11-10 (#41) against the production build, disposable PostgreSQL 17 and the configured `local-dev` Azure container: admin run issuance, planner upload/report, coder discovery and byte-for-byte download, invalid admin and wrong-step 401s, coder report 403, and actual expiry using a shortened window. Each tested rejection emitted exactly one security event; captured logs and error responses contained no test credentials or SAS URLs. The temporary blob was deleted. Automated coverage remains direct Vitest unit/guard tests and PostgreSQL integration tests; HTTP flows are checked manually. The proposed additional HTTP testing layer (#42) was declined. Cluster execution is unverified.
 
 ### Logging and readiness
 

@@ -1,4 +1,7 @@
-/** Explicit HMAC authentication and server-owned step context for artifact routes. @module */
+/**
+ * Explicit HMAC authentication and server-owned step context for artifact routes.
+ * @module
+ */
 import { createError, getHeader } from 'h3'
 import type { H3Event } from 'h3'
 import { uuidSchema } from '../../../shared/utils/zod-schemas/common.schema.ts'
@@ -13,6 +16,8 @@ import { logSecurityEvent } from '../log-security-event.utils.ts'
  * Authenticate the run/step Bearer credential, then establish validated context.
  * Call explicitly and await at the start of each artifact route. Header IDs select
  * stored records; neither headers nor pre-existing context establish permissions.
+ * @param event - Request whose headers select stored run/step records and present their credential.
+ * @returns Resolves after setting validated step context; rejects instead of returning context on failure.
  * @throws H3Error 401 for all invalid credentials; 503 for missing authentication configuration.
  */
 export async function requireStepContext(event: H3Event) {

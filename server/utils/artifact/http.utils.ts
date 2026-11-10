@@ -12,6 +12,8 @@ import type { ArtifactRecord } from './repository.utils.ts'
 
 /**
  * Unwrap a Zod parse result or throw a 400.
+ * @param result - Zod validation result for request input.
+ * @returns The parsed input when validation succeeds.
  * @throws H3Error 400 with `z.flattenError()` output as `data`.
  */
 function orBadRequest<T>(result: z.ZodSafeParseResult<T>): T {
@@ -27,6 +29,7 @@ function orBadRequest<T>(result: z.ZodSafeParseResult<T>): T {
  * malformed JSON is already a 400 from h3.
  * @param event - The request event.
  * @param schema - Strict Zod schema for the body.
+ * @returns The validated body with its schema-inferred shape.
  * @throws H3Error 400 when the body is invalid.
  */
 export async function readArtifactBody<T>(event: H3Event, schema: z.ZodType<T>): Promise<T> {
@@ -35,6 +38,7 @@ export async function readArtifactBody<T>(event: H3Event, schema: z.ZodType<T>):
 
 /**
  * Read and validate the `id` route parameter.
+ * @param event - Request containing the id route parameter.
  * @returns The artifact ID as a canonical UUID v4.
  * @throws H3Error 400 when the parameter is not a valid ID.
  */
@@ -42,7 +46,10 @@ export async function readArtifactId(event: H3Event): Promise<string> {
   return orBadRequest(await getValidatedRouterParams(event, params => artifactIdParametersSchema.safeParse(params))).id
 }
 
-/** Send `Cache-Control: no-store`. SAS URLs are short-lived capabilities; keep them out of caches. */
+/**
+ * Send `Cache-Control: no-store`. SAS URLs are short-lived capabilities; keep them out of caches.
+ * @param event - Response receiving the no-store cache directive.
+ */
 export function preventCaching(event: H3Event) {
   setResponseHeader(event, 'Cache-Control', 'no-store')
 }
@@ -50,6 +57,8 @@ export function preventCaching(event: H3Event) {
 /**
  * Project a stored record onto its public metadata. Select public fields explicitly;
  * internal references and SAS URLs never leave. Absent optional fields are omitted.
+ * @param record - Stored record already authorized for metadata reads.
+ * @returns Public metadata appropriate to the current upload state, without internal references.
  */
 export function toArtifactInfo(record: ArtifactRecord): ArtifactInfo {
   const { contentType, kind, title, description } = record.metadata

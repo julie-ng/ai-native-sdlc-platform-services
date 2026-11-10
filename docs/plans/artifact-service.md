@@ -63,7 +63,7 @@
 
 | Piece | Location | Tests |
 | --- | --- | --- |
-| Routes | `server/api/artifacts/` | Manual `curl` check through the local stub (#38); HTTP tests follow authentication (#13) |
+| Routes | `server/api/artifacts/` | Authenticated production-build flow checked locally against Azure (#41); HTTP checks remain manual |
 | Guards (step context, configuration, 404/403) | `server/utils/guards/` | Unit tests; access lookups via `npm run test:db` |
 | Policy | `server/utils/artifact/policy.utils.ts` | Unit tests |
 | PostgreSQL repository and migrations | `server/utils/artifact/repository.utils.ts`, `server/db/` | `npm run test:db` against disposable PostgreSQL 17 |
@@ -72,6 +72,6 @@
 ## Remaining work
 
 1. HMAC authentication and admin run creation are implemented in #41, with direct guard tests and PostgreSQL integration tests. The temporary local stub is removed.
-2. A static check that every artifact route awaits its guard before reading input remains in #19. Project-wide automated HTTP coverage is separate (#42); #41 uses existing testing patterns.
+2. A static check that every artifact route awaits its guard before reading input remains in #19. The proposed additional HTTP testing layer (#42) was declined; use existing testing patterns and manual HTTP checks.
 3. Workload identity and execution in the cluster remain unverified. Local live verification is recorded in the README.
 4. Broader workflow endpoints, attempt logging, GitHub broker, webhook ingress, UI and LLM calls remain outside this slice. The [workflow reference](./workflow-service.md) preserves broader planning ideas, not POC requirements.
