@@ -239,21 +239,20 @@ On every push to `main`, the CI `publish` job runs after `verify` succeeds. It b
 
 ### Apply
 
-The repository is public, so the manifests use placeholders for resource names. Copy [manifests/.env.example](./manifests/.env.example) to `manifests/.env` (gitignored), fill in the real values, then render with `envsubst` (GNU gettext) and apply:
+The repository is public, so the manifests use placeholders for resource names. Copy [manifests/.env.example](./manifests/.env.example) to `manifests/.env` (gitignored) and fill in the real values as plain `KEY=value` lines without quotes. The [Makefile](./Makefile) renders the manifests with `envsubst` (GNU gettext), replacing only those variables, and needs `kubectl` set to the cluster context:
 
-```bash
-set -a; . manifests/.env; set +a
-cat manifests/*.yaml \
-  | envsubst '$AZURE_ACR_NAME $POSTGRES_SERVER $ARTIFACT_STORAGE_ACCOUNT_URL $ARTIFACT_STORAGE_CONTAINER' \
-  | kubectl apply -f -
-kubectl rollout status deployment/platform-services -n platform
-```
+| Command | Purpose |
+| --- | --- |
+| `make render` / `make diff` | Print the rendered manifests / compare them with the cluster |
+| `make deploy` | Apply the Deployment and Service and wait for the rollout |
+| `make restart` | Roll out a newly published `latest` image (`imagePullPolicy: Always`) |
+| `make status` / `make logs` / `make readyz` | Show the pods / recent logs / readiness report from inside the pod |
 
-The Deployment pulls `latest` with `imagePullPolicy: Always`. To deploy a newly published image, run `kubectl rollout restart deployment/platform-services -n platform`. On startup, the pod migrates the database as `platform-services-mi` and becomes ready once `/readyz` passes. A failed migration exits the container, so a crash loop means checking `kubectl logs` for the `db` line `Database migrations failed`.
+Plain `make` only lists the targets. On startup, the pod migrates the database as `platform-services-mi` and becomes ready once `/readyz` passes. A failed migration exits the container, so a crash loop means checking `make logs` for the `db` line `Database migrations failed`.
 
 ### Verify in the cluster
 
-1. Readiness: `kubectl get pods -n platform -l app.kubernetes.io/name=platform-services` shows `1/1` ready. For the report itself, run `kubectl exec -n platform deploy/platform-services -- node -e "fetch('http://localhost:3000/readyz').then(r => r.text()).then(console.log)"`.
+1. Readiness: `make status` shows `1/1` ready, and `make readyz` prints the report.
 2. Start a test pod in `agents`: `kubectl run -n agents curl-check --rm -it --restart=Never --image=curlimages/curl -- sh`.
 3. In that shell, set `BASE=http://platform-services.platform.svc.cluster.local` and the admin token from Key Vault (`platform-services-admin-token`). Repeat the [local walkthrough](#trying-the-artifact-routes-locally) with `$BASE` in place of `localhost:3000`: `POST /api/runs` returns 201, the planner uploads a plan and the coder downloads it.
 

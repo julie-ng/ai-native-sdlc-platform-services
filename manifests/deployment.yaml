@@ -1,5 +1,5 @@
 ---
-# Apply with envsubst; see README "Deployment". ${...} values come from manifests/.env.
+# Apply with `make deploy`; see README "Deployment". ${...} values come from manifests/.env.
 # Terraform owns the ServiceAccount (annotated for platform-services-mi); the infrastructure
 # repository owns the SecretProviderClass platform-services-secrets.
 apiVersion: apps/v1
