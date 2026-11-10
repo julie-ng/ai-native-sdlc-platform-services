@@ -1,0 +1,14 @@
+# Allowlist: only what the build needs reaches the build context, so local
+# secrets (.env, credentials, tmp/) can never be copied into the image.
+*
+!package.json
+!package-lock.json
+!nuxt.config.ts
+!tsconfig.json
+!app/
+!public/
+!server/
+!shared/
+!scripts/entrypoint.sh
+**/*.test.ts
+**/AGENTS.md
