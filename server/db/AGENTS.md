@@ -6,7 +6,7 @@ Applies to `server/db/**`, in addition to the root and [server instructions](../
 
 - Use PostgreSQL 17 with Drizzle and node-postgres. Keep connections, schemas, and migrations server-side; export client-safe types through `shared/`.
 - Separate request and persistence schemas. Allowlist inputs and derive ownership and identity from trusted context.
-- Generate and review migrations. Preserve existing data and test migrations in a disposable database; do not silently apply them to shared or production databases.
+- Generate and review migrations. Preserve existing data and test migrations in a disposable database. Production builds apply them at startup as the app identity (`server/plugins/migrations.ts`); never apply them manually to shared or production databases.
 - Store instants as `timestamptz` with UTC sessions. Reserve timezone-independent columns for wall-clock or calendar values.
 - Define timestamp updates explicitly; insert defaults do not handle later writes. Check existing hooks/triggers, keep `createdAt` fixed, and leave reads and failed operations timestamp-neutral.
 - Pass native objects to JSON/JSONB columns; do not double-encode. Match date values to Drizzle's column mapping.

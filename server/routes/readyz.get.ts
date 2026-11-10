@@ -1,14 +1,17 @@
 import { sql } from 'drizzle-orm'
+import { requireMigrations } from '#server/db/migrate'
 import { useDB } from '#server/db/use-db'
 import { checkReadiness, requireStorageConfiguration } from '#server/utils/readiness.utils'
+import type { ReadinessProbe } from '#server/utils/readiness.utils'
 import { useLogger } from '#server/utils/use-logger'
 
 // Kubernetes readiness probe: public, outside /api, no step context guard, excluded from the access log.
-// 200 when PostgreSQL answers and artifact storage is configured, else 503. Causes are logged,
+// 200 when PostgreSQL answers, startup migrations have completed (production builds only; see
+// server/plugins/migrations.ts) and artifact storage is configured, else 503. Causes are logged,
 // never returned. The storage check reads configuration only; it does not call Azure.
 export default defineEventHandler(async (event) => {
   const { artifactStorageAccountUrl, artifactStorageContainer } = useRuntimeConfig(event)
-  const { statusCode, body, failures } = await checkReadiness([
+  const probes: ReadinessProbe[] = [
     {
       name: 'postgres:connection',
       componentType: 'datastore',
@@ -19,7 +22,11 @@ export default defineEventHandler(async (event) => {
       componentType: 'component',
       run: () => requireStorageConfiguration(artifactStorageAccountUrl, artifactStorageContainer),
     },
-  ], process.uptime())
+  ]
+  if (!import.meta.dev) {
+    probes.push({ name: 'postgres:migrations', componentType: 'datastore', run: requireMigrations })
+  }
+  const { statusCode, body, failures } = await checkReadiness(probes, process.uptime())
   for (const { name, error } of failures) {
     // Driver errors arrive wrapped (e.g. DrizzleQueryError); surface the cause's code, e.g. ECONNREFUSED.
     const cause = error instanceof Error ? error.cause : undefined

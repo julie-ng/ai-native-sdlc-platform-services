@@ -48,7 +48,7 @@ npm run preview         # Preview the completed build
 
 `npm run build` is available separately. [Nuxt ESLint](https://eslint.nuxt.com/packages/module) checks JavaScript, TypeScript, and Vue using the repository's style conventions. `npm ci` generates its Nuxt configuration through the existing preparation hook. ESLint also requires JSDoc parameter and return tags in server utilities and database modules, excluding tests and migrations; TypeDoc checks exported documentation separately. `typecheck` runs `nuxt typecheck` plus the strict standalone [test/support project](./tsconfig.unit.json). `test:unit` and `test:contract` use [Vitest](https://vitest.dev/) with each test file isolated. No cloud credentials or database are needed; `test:db` (below) needs Docker.
 
-[CI](./.github/workflows/ci.yml) runs on pull requests targeting `main`, pushes to `main`, and manual dispatch. It installs locked dependencies with Node.js 24 from `.node-version`, then runs `npm run verify`, including lint, guidance/contract checks, unit tests, typechecking and one production build.
+[CI](./.github/workflows/ci.yml) runs on pull requests targeting `main`, pushes to `main`, and manual dispatch. It installs locked dependencies with Node.js 24 from `.node-version`, then runs `npm run verify`, including lint, guidance/contract checks, unit tests, typechecking and one production build. On pushes to `main`, a `publish` job then builds and pushes the container image (see [Deployment](#publish)).
 
 CI also runs [`npm audit --json --audit-level=high`](https://docs.npmjs.com/cli/v11/commands/npm-audit/) across production and development dependencies. Audit failures are non-blocking. The workflow summary describes high and critical findings with affected packages and ranges, dependency relationships, advisory descriptions and links, and reported fixes. Lower severity findings remain in the audit step's JSON log; an unavailable audit is reported as unavailable rather than clean. Review high and critical findings for exposure and compatible upgrades; CI does not apply fixes automatically.
 
@@ -88,6 +88,8 @@ npm run db:down      # Stop and discard the database
 
 `test:db` connects to `TEST_DATABASE_URL` (default `postgres://postgres:postgres@localhost:5432/postgres`, matching `compose.yaml`). It is not part of `verify` or CI because it needs Docker.
 
+A production build (`npm run preview`, the container image) applies pending migrations to its `NUXT_DATABASE_URL` at startup, as the configured database user, so in the cluster `platform-services-mi` owns the tables. `/readyz` fails until migrations complete, and a failed migration exits the process. Migrations run from `server/db/migrations` relative to the working directory. `npm run dev` never migrates, so pointing it at a shared database with a personal role cannot take ownership of the tables; use `npm run db:migrate` locally.
+
 ### Runtime configuration
 
 | Variable | Purpose |
@@ -124,7 +126,7 @@ For a manual check on your development machine (with Azure CLI installed):
 3. Set the opt-in and a URL using your own PostgreSQL Entra admin role as the username, not `platform-services-mi`. URL-encode the username, for example `julie%40example.com`. Use the actual server hostname and `workflow` database.
 4. Keep the existing storage URL/container configured (readiness checks their configuration only), start `npm run dev`, and run `curl -i http://localhost:3000/readyz`.
 
-Expect HTTP 200 with `checks["postgres:connection"][0].status` equal to `pass`. This proves the current connection can execute `select 1`; it does not verify cluster workload identity or schema/migration permissions. The Azure check is human-run; cluster migrations and deployment remain separate work.
+Expect HTTP 200 with `checks["postgres:connection"][0].status` equal to `pass`. This proves the current connection can execute `select 1`; it does not verify cluster workload identity or schema/migration permissions. The Azure check is human-run; for cluster migrations and deployment, see [Deployment](#deployment).
 
 ### Trying the artifact routes locally
 
@@ -201,6 +203,58 @@ Request and response bodies, authorization headers and full step context are nev
 
 - `postgres:connection` runs `select 1` on the shared pool. It fails when the database is unreachable or `NUXT_DATABASE_URL` is unset.
 - `azure-storage:configuration` checks that `NUXT_ARTIFACT_STORAGE_ACCOUNT_URL` is HTTPS and `NUXT_ARTIFACT_STORAGE_CONTAINER` is set. It does not call Azure, so it cannot detect missing credentials or roles.
+- `postgres:migrations` (production builds only) passes once startup migrations have completed in this process; see [Database](#database).
 - `200` when every check passes; otherwise `503` with `status: fail` and the failing check marked `fail`. Causes go to the log only.
 
-Probe manifests belong in the infrastructure repository. There is no liveness endpoint.
+The readiness probe is configured in [manifests/deployment.yaml](./manifests/deployment.yaml). There is no liveness endpoint.
+
+## Deployment
+
+The service runs in the AKS `platform` namespace as Deployment and ClusterIP Service `platform-services`, reachable in the cluster at `http://platform-services.platform.svc.cluster.local`. Ingress, autoscaling and multiple replicas are out of scope.
+
+| Piece | Owner |
+| --- | --- |
+| [Dockerfile](./Dockerfile), [entrypoint](./scripts/entrypoint.sh), [manifests/](./manifests/) | This repository |
+| ServiceAccount `platform-services` (workload identity for `platform-services-mi`), database role, Blob and Key Vault grants | Terraform, infrastructure repository |
+| SecretProviderClass `platform-services-secrets`, federated credential for this repository's `production` environment | Infrastructure repository |
+
+### Image
+
+The image holds only the Nitro output and the generated migrations, runs as the base image's `node` user, and reads `NUXT_ADMIN_TOKEN` and `NUXT_HMAC_KEY` at startup from the CSI-mounted files `/mnt/secrets/platform-services-admin-token` and `/mnt/secrets/platform-services-hmac-key`. [.dockerignore](./.dockerignore) is an allowlist, so `.env` files and other local credentials never reach the build context. To build and run it locally against the disposable database:
+
+```bash
+docker build -t platform-services:check .
+npm run db:up
+docker run --rm --network host -v "$PWD/tmp/secrets:/mnt/secrets:ro" \
+  -e NUXT_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres \
+  -e NUXT_ARTIFACT_STORAGE_ACCOUNT_URL=https://<account>.blob.core.windows.net \
+  platform-services:check
+```
+
+`tmp/secrets/` holds the two secret files, named as above. `--network host` works on Linux; on Docker Desktop, use `host.docker.internal` in the database URL with `-p 3000:3000` instead.
+
+### Publish
+
+On every push to `main`, the CI `publish` job runs after `verify` succeeds. It builds the image for `linux/amd64`, signs in to Azure with OIDC and pushes `<acr>.azurecr.io/platform-services` as `latest` and `sha-<commit>`. It uses the `production` environment's `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID` secrets and its `AZURE_ACR_NAME` variable, like the agent-images repository. Pull requests and manual runs only verify.
+
+### Apply
+
+The repository is public, so the manifests use placeholders for resource names. Copy [manifests/.env.example](./manifests/.env.example) to `manifests/.env` (gitignored), fill in the real values, then render with `envsubst` (GNU gettext) and apply:
+
+```bash
+set -a; . manifests/.env; set +a
+cat manifests/*.yaml \
+  | envsubst '$AZURE_ACR_NAME $POSTGRES_SERVER $ARTIFACT_STORAGE_ACCOUNT_URL $ARTIFACT_STORAGE_CONTAINER' \
+  | kubectl apply -f -
+kubectl rollout status deployment/platform-services -n platform
+```
+
+The Deployment pulls `latest` with `imagePullPolicy: Always`. To deploy a newly published image, run `kubectl rollout restart deployment/platform-services -n platform`. On startup, the pod migrates the database as `platform-services-mi` and becomes ready once `/readyz` passes. A failed migration exits the container, so a crash loop means checking `kubectl logs` for the `db` line `Database migrations failed`.
+
+### Verify in the cluster
+
+1. Readiness: `kubectl get pods -n platform -l app.kubernetes.io/name=platform-services` shows `1/1` ready. For the report itself, run `kubectl exec -n platform deploy/platform-services -- node -e "fetch('http://localhost:3000/readyz').then(r => r.text()).then(console.log)"`.
+2. Start a test pod in `agents`: `kubectl run -n agents curl-check --rm -it --restart=Never --image=curlimages/curl -- sh`.
+3. In that shell, set `BASE=http://platform-services.platform.svc.cluster.local` and the admin token from Key Vault (`platform-services-admin-token`). Repeat the [local walkthrough](#trying-the-artifact-routes-locally) with `$BASE` in place of `localhost:3000`: `POST /api/runs` returns 201, the planner uploads a plan and the coder downloads it.
+
+Cluster execution has not been verified yet.

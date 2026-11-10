@@ -1,0 +1,17 @@
+---
+# In-cluster address: http://platform-services.platform.svc.cluster.local
+apiVersion: v1
+kind: Service
+metadata:
+  name: platform-services
+  namespace: platform
+  labels:
+    app.kubernetes.io/name: platform-services
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: platform-services
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
