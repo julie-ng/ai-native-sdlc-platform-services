@@ -49,7 +49,7 @@ help:
 check-env:
 	@test -f $(ENV_FILE) || { echo "$(RED_TEXT)Missing $(ENV_FILE): copy manifests/.env.example and fill it in$(RESET)"; exit 1; }
 	@$(foreach v,$(MANIFEST_VARS),test -n "$($(v))" || { echo "$(RED_TEXT)$(v) is empty in $(ENV_FILE)$(RESET)"; exit 1; };)
-	@echo "$(GREEN_TEXT)$(ENV_FILE) okay$(RESET)" >&2
+	@echo "$(GREEN_TEXT)$(ENV_FILE) - configured$(RESET)" >&2
 
 render: check-env
 	@$(RENDER)
