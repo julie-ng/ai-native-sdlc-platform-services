@@ -93,6 +93,7 @@ npm run db:down      # Stop and discard the database
 | Variable | Purpose |
 | --- | --- |
 | `NUXT_DATABASE_URL` | PostgreSQL connection string |
+| `NUXT_DATABASE_ENTRA_AUTH` | Set to `true` to use an Entra token for PostgreSQL; defaults to `false` (URL password) |
 | `NUXT_HMAC_KEY` | Private server-side HMAC signing secret; required for step authentication and issuance |
 | `NUXT_HMAC_TOKEN_EXPIRY_MINUTES` | Positive finite step-token lifetime from run creation; defaults to 15 minutes |
 | `NUXT_ADMIN_TOKEN` | Private admin Bearer credential for `POST /api/runs` |
@@ -102,6 +103,28 @@ npm run db:down      # Stop and discard the database
 | `NUXT_PUBLIC_ENVIRONMENT` | Deployment environment name, public (not a secret); empty by default; does not affect authentication |
 
 The Blob client uses `DefaultAzureCredential`: workload identity in the cluster and, for local development, a service principal set through `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET` in `.env`. Its identity needs read/write data access to the container (for example, Storage Blob Data Contributor scoped to the container) plus Storage Blob Delegator at the storage account scope or above, because [Get User Delegation Key acts at the account level](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas). Missing configuration returns 503.
+
+### Azure PostgreSQL with Microsoft Entra
+
+Set `NUXT_DATABASE_ENTRA_AUTH=true` to authenticate with `DefaultAzureCredential` instead of a URL password. For the cluster identity, use:
+
+```dotenv
+NUXT_DATABASE_ENTRA_AUTH=true
+NUXT_DATABASE_URL=postgresql://platform-services-mi@<server>.postgres.database.azure.com:5432/workflow
+```
+
+Entra mode reads the host, port (default 5432), database and username from this URL, ignores URL passwords and query parameters, and always requires TLS with certificate verification. Use a passwordless URL. One credential is reused; each new pool connection calls `getToken('https://ossrdbms-aad.database.windows.net/.default')` and supplies the returned token as its password. Azure Identity manages token caching; no token is stored in the URL or logged by application code. Without the opt-in, the existing URL-based Docker connection is unchanged. See [node-postgres dynamic passwords](https://node-postgres.com/features/connecting#programmatic).
+
+The scope is defined by Azure PostgreSQL, independently of the application's hosting service: [PostgreSQL's managed-identity documentation](https://learn.microsoft.com/en-us/azure/postgresql/security/security-connect-with-managed-identity#connect-by-using-managed-identity-in-c) shows the exact `https://ossrdbms-aad.database.windows.net/.default` value. [AKS workload identity guidance](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview#azure-identity-client-libraries) documents using `DefaultAzureCredential` (which attempts `WorkloadIdentityCredential`) and requesting scopes in `<resource>/.default` format. In AKS, the projected service-account token is exchanged through Entra for a PostgreSQL access token; the scope identifies the target database service. `AZURE_DATABASE_RESOURCE` names the fixed public-cloud database resource `https://ossrdbms-aad.database.windows.net` in code; `/.default` is appended when requesting a token.
+
+For a manual check on your development machine (with Azure CLI installed):
+
+1. Run `az login --tenant <tenant-id>` as your Entra PostgreSQL administrator.
+2. Remove `AZURE_CLIENT_SECRET` and other service-principal credentials from the process environment and local `.env` for this check, so the configured service principal does not take precedence over Azure CLI. This also affects the Blob client's credential selection.
+3. Set the opt-in and a URL using your own PostgreSQL Entra admin role as the username, not `platform-services-mi`. URL-encode the username, for example `julie%40example.com`. Use the actual server hostname and `workflow` database.
+4. Keep the existing storage URL/container configured (readiness checks their configuration only), start `npm run dev`, and run `curl -i http://localhost:3000/readyz`.
+
+Expect HTTP 200 with `checks["postgres:connection"][0].status` equal to `pass`. This proves the current connection can execute `select 1`; it does not verify cluster workload identity or schema/migration permissions. The Azure check is human-run; cluster migrations and deployment remain separate work.
 
 ### Trying the artifact routes locally
 

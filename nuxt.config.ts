@@ -8,6 +8,7 @@ export default defineNuxtConfig({
   // NUXT_ARTIFACT_STORAGE_ACCOUNT_URL, NUXT_ARTIFACT_STORAGE_CONTAINER and NUXT_LOG_LEVEL.
   runtimeConfig: {
     databaseUrl: '',
+    databaseEntraAuth: false,
     hmacKey: '',
     hmacTokenExpiryMinutes: 15,
     adminToken: '',
