@@ -7,9 +7,9 @@ import pg from 'pg'
 import { DefaultAzureCredential } from '@azure/identity'
 import * as schema from './schema.ts'
 
-// Azure Database for PostgreSQL's public-cloud resource, using Entra v2 scope syntax.
+// Azure Database for PostgreSQL resource ID; "/.default" requests all permissions granted on it.
 // https://learn.microsoft.com/en-us/azure/postgresql/security/security-connect-with-managed-identity
-const POSTGRES_ENTRA_TOKEN_SCOPE = 'https://ossrdbms-aad.database.windows.net/.default'
+const AZURE_DATABASE_RESOURCE = 'https://ossrdbms-aad.database.windows.net'
 
 /**
  * Create a Drizzle client over its own node-postgres pool. The application
@@ -39,7 +39,7 @@ export function createDatabase(connectionString: string, entraAuth = false) {
       user: decodeURIComponent(url.username),
       ssl: { rejectUnauthorized: true },
       password: async () => {
-        const token = await credential.getToken(POSTGRES_ENTRA_TOKEN_SCOPE)
+        const token = await credential.getToken(`${AZURE_DATABASE_RESOURCE}/.default`)
         return token.token
       },
     }
