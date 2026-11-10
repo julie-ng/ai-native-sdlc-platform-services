@@ -7,6 +7,10 @@ import pg from 'pg'
 import { DefaultAzureCredential } from '@azure/identity'
 import * as schema from './schema.ts'
 
+// Azure Database for PostgreSQL's public-cloud resource, using Entra v2 scope syntax.
+// https://learn.microsoft.com/en-us/azure/postgresql/security/security-connect-with-managed-identity
+const POSTGRES_ENTRA_TOKEN_SCOPE = 'https://ossrdbms-aad.database.windows.net/.default'
+
 /**
  * Create a Drizzle client over its own node-postgres pool. The application
  * shares one per Nitro process (see `useDB` in `use-db.ts`); tests create their own.
@@ -35,7 +39,7 @@ export function createDatabase(connectionString: string, entraAuth = false) {
       user: decodeURIComponent(url.username),
       ssl: { rejectUnauthorized: true },
       password: async () => {
-        const token = await credential.getToken('https://ossrdbms-aad.database.windows.net/.default')
+        const token = await credential.getToken(POSTGRES_ENTRA_TOKEN_SCOPE)
         return token.token
       },
     }
