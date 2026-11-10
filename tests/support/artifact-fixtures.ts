@@ -33,11 +33,11 @@ export const contexts = {
 export const workflowRecords = {
   runs: [{ id: runA }, { id: runB }],
   steps: [
-    { id: stepIds.plannerP1, runId: runA },
-    { id: stepIds.coderC1, runId: runA },
-    { id: stepIds.plannerP2, runId: runA },
-    { id: stepIds.coderC2, runId: runA },
-    { id: stepIds.plannerRunB, runId: runB },
+    { id: stepIds.plannerP1, runId: runA, taskType: 'planner' as const },
+    { id: stepIds.coderC1, runId: runA, taskType: 'coder' as const },
+    { id: stepIds.plannerP2, runId: runA, taskType: 'planner' as const },
+    { id: stepIds.coderC2, runId: runA, taskType: 'coder' as const },
+    { id: stepIds.plannerRunB, runId: runB, taskType: 'planner' as const },
   ],
 }
 
