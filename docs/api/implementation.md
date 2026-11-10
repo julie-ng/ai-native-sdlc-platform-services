@@ -6,7 +6,7 @@ See the [API overview](./README.md) for operations, access policy, and POC assum
 
 Each route under `server/api/artifacts/` runs, in order:
 
-1. `requireStepContext(event)`: the explicit guard that establishes `event.context.step`; 503 if it cannot. Today it only validates a context that nothing sets yet; #13 replaces its body with authentication that constructs the context.
+1. `await requireStepContext(event)`: authenticate the Bearer token plus `X-Run-Id`/`X-Step-Id` against stored run creation and step role, check expiry, and establish `event.context.step`. Invalid credentials always return generic 401; missing configuration returns 503.
 2. Validate the body and `id` route parameter with the strict [Zod schemas](../../shared/utils/zod-schemas/index.ts); 400 on failure, with `z.flattenError()` output in `data`. h3 rejects malformed JSON with 400.
 3. [`requireArtifactConfiguration(event)`](../../server/utils/guards/require-artifact-configuration.ts): 503 unless the database URL and storage settings are configured.
 4. [`requireArtifactAccess`](../../server/utils/guards/require-artifact-access.ts) for routes with an ID, or `requireArtifactPermission` for registration: 404 or 403 as below.
@@ -17,6 +17,18 @@ Each route under `server/api/artifacts/` runs, in order:
 - Responses that carry SAS URLs set `Cache-Control: no-store`. Never redirect to SAS URLs.
 - Unknown `/api` paths return JSON 404. Unsupported methods on existing paths still fall through to the Nuxt page renderer; this is a known gap, not a contract.
 
+## Run creation and authentication
+
+`POST /api/runs` explicitly calls `requireAdminToken` first. The admin Bearer credential is compared using constant-time comparison of fixed-length SHA-256 digests. No body is consumed. Missing admin configuration returns 503; missing or invalid admin credentials return the same 401.
+
+After validating private signing/database configuration, the route inserts a run and one step of each role in a transaction. It returns 201 with `Cache-Control: no-store`, `runId`, a shared UTC `expiresAt`, and `steps.planner` / `steps.coder` credentials (`stepId`, `token`). Tokens are not persisted. The signing key is never returned.
+
+Each step token is HMAC-SHA256 lowercase hex over the JSON tuple `[runId, createdAt.toISOString(), "step:" + stepId, sortedActions]`. Planner actions are `create/update`; coder actions are `read`. Verification uses `timingSafeEqual`. Expiry is measured from the stored run timestamp, defaults to 15 minutes, and includes the exact deadline. Changing the key invalidates existing tokens; changing the configured window changes their effective deadlines. Issuance and verification must use the same settings.
+
+The step guard makes one database query per authenticated request. It rejects steps outside the selected run, invalid signatures, expiry, and workflow shapes other than exactly one planner and one coder. Planner outputs its own `plan`; coder reads that plan. Context is established only after successful verification and existing context validation.
+
+Authentication failures and artifact 403s each emit one `security` event with a reason, request metadata, and allowlisted validated IDs/actions. These events never include credentials, query strings or SAS URLs. Unknown IDs and invalid signatures have identical public 401 responses.
+
 ## Step context and authorization
 
 The `requireStepContext` guard establishes `event.context.step`:
@@ -25,15 +37,15 @@ The `requireStepContext` guard establishes `event.context.step`:
 {
   runId,     // workflow instance
   stepId,    // caller's logical step
-  taskType,  // server-established work type
+  role,  // server-established work type
   inputs,    // bound input references
   outputs,   // bound own-output references
 }
 // Each reference: { runId, producerStepId, name }
 ```
 
-- `readStepContext` requires all bindings in the caller's run and outputs owned by its step. Context comes only from the guard's authentication, never HTTP claims or workflow-step lookups. Fixed contexts are test-only.
-- [`canAccessArtifact`](../../server/utils/artifact/policy.utils.ts) applies the task policy to one exact reference and action: planners create and update their own `plan` outputs, coders read `plan` references among their bindings. Create and update stay distinct, mirroring Azure's `c`/`w` SAS permissions. Unknown tasks get nothing.
+- `readStepContext` requires all bindings in the caller's run and outputs owned by its step. Context comes only from the guard's authentication, never unverified HTTP claims. The guard looks up stored run/step records and derives the fixed bindings. Fixed contexts are test-only.
+- [`canAccessArtifact`](../../server/utils/artifact/policy.utils.ts) applies the role policy to one exact reference and action: planners create and update their own `plan` outputs, coders read `plan` references among their bindings. Create and update stay distinct, mirroring Azure's `c`/`w` SAS permissions. Unknown tasks get nothing.
 - The `requireArtifactAccess` guard looks up an ID and sets `event.context.artifact`:
 
 ```ts
@@ -58,7 +70,7 @@ if (!canAccessArtifact(caller, record.reference, action))    → 403
 
 - PostgreSQL 17 with Drizzle/node-postgres. [Schema](../../server/db/schema.ts) and generated [migrations](../../server/db/migrations/) live under `server/db/`. One lazy `pg.Pool` (max 5) per Nitro process, shared with the readiness check through `useDB()`, closed on shutdown. Connecting or waiting for a free connection times out after 5 seconds. Idle connection errors are logged, not fatal.
 - `artifacts`: `id`, `producer_step_id`, `name`, `content_type`, `kind`, `title`, `description`, `state`, `size_bytes`, `sha256`, `details`, `created_at`, `updated_at`. Unique `(producer_step_id, name)`; `producer_step_id → steps(id) ON DELETE RESTRICT`; a CHECK ties state to the report columns: reserved has no size/hash/details, uploaded has size/hash, failed has neither size nor hash. No attempt, revision, SAS or blob-key columns.
-- Workflow-owned `runs(id)` and `steps(id, run_id → runs)` are minimal stubs until the workflow service exists. Lookups join `steps` so references carry the step's actual run; registration fails if the step is not in the caller's run.
+- Runs store immutable `created_at` timestamps; steps store a required `role` (`planner` or `coder`) and reference their run. Run creation inserts one planner and one coder atomically; no bindings table is stored. Lookups join `steps` so references carry the step's actual run; registration fails if the step is not in the caller's run.
 - `created_at` is fixed. `updated_at` is set explicitly to `now()` by every accepted write (repeated POST or upload report); reads and denials leave it unchanged.
 - [Repository tests](../../tests/integration/artifact-repository.test.ts) run against a disposable database: constraints, run membership, stable IDs, metadata replacement, report replacement, timestamps and a fresh connection pool. [Guard tests](../../tests/integration/artifact-guards.test.ts) cover the planner-to-coder handoff and 404/403 decisions on stored artifacts.
 
@@ -79,13 +91,13 @@ v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 | Download | `sp=r` | GET the current blob. |
 
 - SAS issuance does not revoke earlier URLs or coordinate metadata with blob contents. Disable Blob versioning if storage must retain no revisions.
-- `signUpload` and `signDownload` were checked once against real Azure on 2026-11-04 (#20), using a local service principal and no routes: upload, overwrite and download worked, and Azure returned 403 `AuthorizationPermissionMismatch` for writing with a read SAS, reading with a write SAS and using another container. The routes have not been exercised against Azure. Automated signing tests run offline with a fixed test key.
+- `signUpload` and `signDownload` were checked once against real Azure on 2026-11-04 (#20), using a local service principal and no routes: upload, overwrite and download worked, and Azure returned 403 `AuthorizationPermissionMismatch` for writing with a read SAS, reading with a write SAS and using another container. The authenticated routes passed a local production-build upload/report/discovery/download flow against Azure on 2026-11-10 (#41); see the [README verification record](../../README.md#trying-the-artifact-routes-locally). Cluster workload identity remains unverified. Automated signing tests run offline with a fixed test key.
 
 References: [user delegation SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas), [Put Blob permissions](https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob#user-delegation-sas), and [Blob versioning](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview).
 
 ## Code boundaries
 
-- Routes call guards, then plain functions; there is no service layer or adapter interface. Guards and routes throw `createError()` for expected 403/404/409/503 results. Repository and SAS functions throw ordinary errors on unexpected failures, which Nitro reports as sanitized 500s.
+- Routes call guards, then plain functions; there is no service layer or adapter interface. Guards and routes throw `createError()` for expected 401/403/404/409/503 results. Repository and SAS functions throw ordinary errors on unexpected failures, which Nitro reports as sanitized 500s.
 - Internal types live with their code: `ArtifactRecord` in the repository, `ArtifactAction` in the policy.
 - Payload types in [shared types](../../shared/types/artifact.ts) use `z.infer`.
 

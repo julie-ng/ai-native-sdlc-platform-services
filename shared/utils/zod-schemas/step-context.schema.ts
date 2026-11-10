@@ -12,7 +12,7 @@ export const artifactRefSchema = z.strictObject({
 export const stepContextSchema = z.strictObject({
   runId: uuidSchema,
   stepId: uuidSchema,
-  taskType: z.string().min(1).max(64),
+  role: z.string().min(1).max(64),
   inputs: z.array(artifactRefSchema),
   outputs: z.array(artifactRefSchema),
 })

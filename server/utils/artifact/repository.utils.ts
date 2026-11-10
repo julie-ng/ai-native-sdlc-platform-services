@@ -33,7 +33,11 @@ const columns = { ...getTableColumns(artifacts), runId: steps.runId }
 /** An artifact row joined with its step's run ID. */
 type Row = typeof artifacts.$inferSelect & { runId: string }
 
-/** Map a joined row to a record. Absent optional metadata is SQL NULL and omitted from records. */
+/**
+ * Map a joined row to a record. Absent optional metadata is SQL NULL and omitted from records.
+ * @param row - Artifact row joined with its producing step's run ID.
+ * @returns Internal artifact metadata with ISO instants and absent optional fields omitted.
+ */
 function toRecord(row: Row): ArtifactRecord {
   return {
     id: row.id,
@@ -56,6 +60,8 @@ function toRecord(row: Row): ArtifactRecord {
 /**
  * Look up a record by ID without any access check. The lookup joins the
  * workflow-owned step, so the returned reference carries the step's actual run.
+ * @param db - Database containing artifact and workflow records.
+ * @param id - Validated artifact UUID; access is checked separately by the caller.
  * @returns The record, or `undefined` when absent.
  */
 export async function findArtifactById(db: Database, id: string): Promise<ArtifactRecord | undefined> {
@@ -69,11 +75,14 @@ export async function findArtifactById(db: Database, id: string): Promise<Artifa
  * Insert the artifact, or replace its descriptive metadata when the step/name
  * record exists, in one transaction. Last write wins for metadata; state, size and
  * hash are kept. SAS URLs are never stored.
+ * @param db - Database containing the producing step and artifact metadata.
  * @param reference - Exact step-owned slot; the step must belong to `reference.runId`.
+ * @param fields - Descriptive metadata replacing the previous values; omitted optional values are cleared.
  * @returns The stored record and whether this call created it.
  * @throws If the producing step is not registered in the reference's run.
  */
-export async function upsertArtifact(db: Database, reference: ArtifactRef, { contentType, kind, title, description }: ArtifactMetadata) {
+export async function upsertArtifact(db: Database, reference: ArtifactRef, fields: ArtifactMetadata) {
+  const { contentType, kind, title, description } = fields
   const metadata = { contentType, kind: kind ?? null, title: title ?? null, description: description ?? null }
   const { id, created } = await db.transaction(async (tx) => {
     const [step] = await tx.select({ id: steps.id }).from(steps)
@@ -99,7 +108,9 @@ export async function upsertArtifact(db: Database, reference: ArtifactRef, { con
 
 /**
  * Records matching exactly the given references, ordered by `createdAt`, then `id`.
+ * @param db - Database containing artifacts and their producing steps.
  * @param references - Typically the caller's readable references; empty yields an empty list.
+ * @returns Matching current records in deterministic creation order; no SAS URLs are issued.
  */
 export async function listArtifactsByReferences(db: Database, references: readonly ArtifactRef[]): Promise<ArtifactRecord[]> {
   if (references.length === 0) {
@@ -120,6 +131,10 @@ export async function listArtifactsByReferences(db: Database, references: readon
  * Record an upload report, replacing the state, size, hash and details; no history
  * is kept. A failure clears size and hash; omitted details are cleared. The caller
  * has already checked access.
+ * @param db - Database containing the authorized artifact.
+ * @param id - Validated artifact UUID whose latest outcome is replaced.
+ * @param report - Validated uploaded or failed outcome; omitted details are cleared.
+ * @returns The updated internal record with the replacement report and refreshed update timestamp.
  * @throws If the artifact no longer exists.
  */
 export async function recordUploadReport(db: Database, id: string, report: CompleteArtifactRequest): Promise<ArtifactRecord> {

@@ -1,37 +1,70 @@
 /**
- * Explicit guard that establishes the trusted step context for artifact routes.
+ * Explicit HMAC authentication and server-owned step context for artifact routes.
  * @module
  */
 import { createError, getHeader } from 'h3'
 import type { H3Event } from 'h3'
-import { useRuntimeConfig } from 'nitropack/runtime'
+import { uuidSchema } from '../../../shared/utils/zod-schemas/common.schema.ts'
+import { useDB } from '../../db/use-db.ts'
 import { readStepContext } from '../artifact/context.utils.ts'
-import { stubStepContext } from '../artifact/step-context-stub.utils.ts'
+import { requireStepTokenConfiguration } from '../auth/configuration.utils.ts'
+import { isStepTokenExpired, verifyStepToken } from '../auth/step-token.utils.ts'
+import { findRunSteps } from '../run/repository.utils.ts'
+import { logSecurityEvent } from '../log-security-event.utils.ts'
 
 /**
- * Establish the trusted step context. Call explicitly at the start of every
- * artifact route, before reading input; this is deliberately not global
- * middleware, so each guarded route is visible and testable.
- *
- * Authentication is not implemented yet (ADR-016: HMAC tokens, #13). It will live
- * here and construct `event.context.step`. Until then:
- * - TEMPORARY (#38): on a local dev server, both `import.meta.dev` (false in any
- *   production build) and `NUXT_PUBLIC_ENVIRONMENT=local`, the unauthenticated
- *   `x-sdlc-task-type` header picks a fixed planner or coder context.
- * - Otherwise nothing sets the context, so every request fails with 503.
- *
- * Outside that stub, never build the context from body, query or headers.
- * After this call, `event.context.step` is set and validated.
- * @param event - The request event.
- * @throws H3Error 503 when no valid step context is available.
+ * Authenticate the run/step Bearer credential, then establish validated context.
+ * Call explicitly and await at the start of each artifact route. Header IDs select
+ * stored records; neither headers nor pre-existing context establish permissions.
+ * @param event - Request whose headers select stored run/step records and present their credential.
+ * @returns Resolves after setting validated step context; rejects instead of returning context on failure.
+ * @throws H3Error 401 for all invalid credentials; 503 for missing authentication configuration.
  */
-export function requireStepContext(event: H3Event) {
-  if (import.meta.dev && useRuntimeConfig(event).public.environment === 'local') {
-    event.context.step = stubStepContext(getHeader(event, 'x-sdlc-task-type'))
+export async function requireStepContext(event: H3Event) {
+  delete event.context.step
+  const { key, expiryMinutes } = requireStepTokenConfiguration(event)
+  const token = /^Bearer ([0-9a-f]{64})$/i.exec(getHeader(event, 'authorization') ?? '')?.[1]
+  const runId = uuidSchema.safeParse(getHeader(event, 'x-run-id'))
+  const stepId = uuidSchema.safeParse(getHeader(event, 'x-step-id'))
+  const reject = (reason: string): never => {
+    logSecurityEvent(event, reason, {
+      runId: runId.success ? runId.data : undefined,
+      stepId: stepId.success ? stepId.data : undefined,
+    })
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
   }
-  const result = readStepContext(event.context)
-  if (!result.ok) {
-    throw createError({ statusCode: 503, message: 'Step context unavailable' })
+  if (!token || !runId.success || !stepId.success) {
+    return reject('missing_or_malformed_credentials')
   }
-  event.context.step = result.value
+  const records = await findRunSteps(useDB(), runId.data)
+  const caller = records.find(record => record.step.id === stepId.data)
+  if (!caller) {
+    return reject('run_or_step_not_found')
+  }
+  const { run, step } = caller
+  if (isStepTokenExpired(run.createdAt, expiryMinutes)) {
+    return reject('token_expired')
+  }
+  if (!verifyStepToken(token, key, { runId: run.id, createdAt: run.createdAt, stepId: step.id, role: step.role })) {
+    return reject('invalid_hmac')
+  }
+  const planners = records.filter(record => record.step.role === 'planner')
+  const coders = records.filter(record => record.step.role === 'coder')
+  if (records.length !== 2 || planners.length !== 1 || coders.length !== 1) {
+    return reject('invalid_workflow')
+  }
+  const plan = { runId: run.id, producerStepId: planners[0]!.step.id, name: 'plan' }
+  const context = readStepContext({
+    step: {
+      runId: run.id,
+      stepId: step.id,
+      role: step.role,
+      inputs: step.role === 'coder' ? [plan] : [],
+      outputs: step.role === 'planner' ? [plan] : [],
+    },
+  })
+  if (!context.ok) {
+    return reject('invalid_step_context')
+  }
+  event.context.step = context.value
 }

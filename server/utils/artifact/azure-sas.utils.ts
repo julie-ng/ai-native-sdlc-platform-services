@@ -19,7 +19,13 @@ export const sasLifetimeSeconds = 300
 export interface UserDelegationKeySource {
   accountName: string
   url: string
-  /** Request a key valid from `startsOn` to `expiresOn`; it must cover the SAS lifetime. */
+  /**
+   * Request a key that covers the complete SAS lifetime.
+   * @param startsOn - Beginning of the delegation key validity window.
+   * @param expiresOn - End of the delegation key validity window.
+   * @returns The Azure-issued user delegation key used to sign blob URLs.
+   * @throws When Azure credentials or delegation permissions are unavailable.
+   */
   getUserDelegationKey(startsOn: Date, expiresOn: Date): Promise<UserDelegationKey>
 }
 
@@ -36,6 +42,11 @@ export interface ArtifactStorage {
 /**
  * Sign a single-blob, HTTPS-only user delegation SAS URL for the record's blob.
  * No account keys. Never log or persist the result.
+ * @param storage - Configured user delegation client, container and optional clock.
+ * @param storage.service - Azure identity-backed source of delegation keys and account URL.
+ * @param storage.container - Container holding the artifact blob.
+ * @param storage.now - Optional signing clock; defaults to the current time.
+ * @param record - Stored record supplying the blob reference.
  * @param permissions - `r` for download, `w` for upload.
  * @returns The full SAS URL and its expiry as an ISO string.
  */
@@ -61,6 +72,9 @@ async function sign({ service, container, now = () => new Date() }: ArtifactStor
 /**
  * Sign an upload URL for the record's blob. It uses `w` (create or overwrite)
  * because planners revise their plan.
+ * @param storage - Configured user delegation signer and destination container.
+ * @param record - Authorized artifact whose reference and content type define the upload.
+ * @returns A write SAS with required PUT headers and its expiry; never log or persist it.
  * @throws When the delegation key cannot be obtained or the reference is invalid.
  */
 export async function signUpload(storage: ArtifactStorage, record: ArtifactRecord): Promise<UploadSas> {
@@ -76,6 +90,9 @@ export async function signUpload(storage: ArtifactStorage, record: ArtifactRecor
 /**
  * Sign a read-only URL for the record's blob. Only uploaded artifacts have bytes
  * to read; the route checks the state first.
+ * @param storage - Configured user delegation signer and source container.
+ * @param record - Authorized, successfully uploaded artifact whose blob may be read.
+ * @returns A read-only GET SAS and its expiry; never log or persist it.
  * @throws When the delegation key cannot be obtained or the reference is invalid.
  */
 export async function signDownload(storage: ArtifactStorage, record: ArtifactRecord): Promise<DownloadSas> {

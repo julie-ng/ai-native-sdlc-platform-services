@@ -46,7 +46,7 @@ npm run verify          # All checks above and Nuxt production build
 npm run preview         # Preview the completed build
 ```
 
-`npm run build` is available separately. [Nuxt ESLint](https://eslint.nuxt.com/packages/module) checks JavaScript, TypeScript, and Vue using the repository's style conventions. `npm ci` generates its Nuxt configuration through the existing preparation hook. `typecheck` runs `nuxt typecheck` plus the strict standalone [test/support project](./tsconfig.unit.json). `test:unit` and `test:contract` use [Vitest](https://vitest.dev/) with each test file isolated. No cloud credentials or database are needed; `test:db` (below) needs Docker.
+`npm run build` is available separately. [Nuxt ESLint](https://eslint.nuxt.com/packages/module) checks JavaScript, TypeScript, and Vue using the repository's style conventions. `npm ci` generates its Nuxt configuration through the existing preparation hook. ESLint also requires JSDoc parameter and return tags in server utilities and database modules, excluding tests and migrations; TypeDoc checks exported documentation separately. `typecheck` runs `nuxt typecheck` plus the strict standalone [test/support project](./tsconfig.unit.json). `test:unit` and `test:contract` use [Vitest](https://vitest.dev/) with each test file isolated. No cloud credentials or database are needed; `test:db` (below) needs Docker.
 
 [CI](./.github/workflows/ci.yml) runs on pull requests targeting `main`, pushes to `main`, and manual dispatch. It installs locked dependencies with Node.js 24 from `.node-version`, then runs `npm run verify`, including lint, guidance/contract checks, unit tests, typechecking and one production build.
 
@@ -72,7 +72,7 @@ Project knowledge belongs in repository documentation. Personal memories and oth
 
 The [artifact API](./docs/api/README.md) and [artifact plan](./docs/plans/artifact-service.md) describe the service. Routes under `server/api/artifacts/` call explicit guards that apply the planner/coder policy, then plain Drizzle/PostgreSQL query and Azure user delegation SAS functions. Artifacts belong to steps and keep one ID/blob across retries. Bytes go directly between callers and Azure.
 
-Authentication is not implemented: each route explicitly calls the `requireStepContext` guard, which validates an `event.context.step` that nothing sets yet, so every artifact request returns 503. The exception is the temporary [local development stub](#trying-the-artifact-routes-locally). Callers will authenticate with HMAC tokens (ADR-016 in the parent repository, #13). The SAS functions have been checked against real Azure. The routes have only been tried through the local stub.
+Each route explicitly awaits `requireStepContext`, which authenticates HMAC step credentials against stored run/step records and constructs `event.context.step`. Admin-protected `POST /api/runs` creates one planner and one coder atomically, returning their tokens and a shared `expiresAt` (15 minutes by default). See the [authentication contract](./docs/api/implementation.md#run-creation-and-authentication). The dev context stub has been removed.
 
 `shared/utils/zod-schemas/` is the schema source of truth. `npm run generate:artifact-openapi` generates `docs/api/artifact.openapi.json` from those schemas and the HTTP definitions in `scripts/openapi/artifact-http.ts`; edit those sources, not the JSON. See the [schema workflow](./docs/api/implementation.md#schema-workflow).
 
@@ -83,7 +83,6 @@ npm run db:up        # Disposable PostgreSQL 17 in Docker (compose.yaml, tmpfs d
 npm run test:db      # Repository integration tests; each file creates and drops its own database
 npm run db:generate  # Generate a migration after editing server/db/schema.ts
 npm run db:migrate   # Apply migrations to NUXT_DATABASE_URL
-npm run db:seed:stub # Insert the fixed local development run and steps (see below)
 npm run db:down      # Stop and discard the database
 ```
 
@@ -94,48 +93,59 @@ npm run db:down      # Stop and discard the database
 | Variable | Purpose |
 | --- | --- |
 | `NUXT_DATABASE_URL` | PostgreSQL connection string |
+| `NUXT_HMAC_KEY` | Private server-side HMAC signing secret; required for step authentication and issuance |
+| `NUXT_HMAC_TOKEN_EXPIRY_MINUTES` | Positive finite step-token lifetime from run creation; defaults to 15 minutes |
+| `NUXT_ADMIN_TOKEN` | Private admin Bearer credential for `POST /api/runs` |
 | `NUXT_ARTIFACT_STORAGE_ACCOUNT_URL` | Blob service endpoint, e.g. `https://<account>.blob.core.windows.net` |
 | `NUXT_ARTIFACT_STORAGE_CONTAINER` | Container name; defaults to `artifacts` |
 | `NUXT_LOG_LEVEL` | pino log level (`fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`); defaults to `info`. Unknown values fall back to `info` with a warning |
-| `NUXT_PUBLIC_ENVIRONMENT` | Deployment environment name, public (not a secret). `local` enables the step context stub under `npm run dev`; empty by default |
+| `NUXT_PUBLIC_ENVIRONMENT` | Deployment environment name, public (not a secret); empty by default; does not affect authentication |
 
 The Blob client uses `DefaultAzureCredential`: workload identity in the cluster and, for local development, a service principal set through `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET` in `.env`. Its identity needs read/write data access to the container (for example, Storage Blob Data Contributor scoped to the container) plus Storage Blob Delegator at the storage account scope or above, because [Get User Delegation Key acts at the account level](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas). Missing configuration returns 503.
 
 ### Trying the artifact routes locally
 
-Until callers authenticate (#13), a temporary stub (#38) lets you try the routes with `curl`. The stub only runs when both are true:
+Set `NUXT_DATABASE_URL`, `NUXT_HMAC_KEY` and `NUXT_ADMIN_TOKEN` in your local `.env`, alongside the Azure settings above. Generate separate random signing/admin secrets; neither belongs in source control. Optional `NUXT_HMAC_TOKEN_EXPIRY_MINUTES` defaults to 15. `NUXT_PUBLIC_ENVIRONMENT` no longer enables authentication bypasses.
 
-- the server runs under `npm run dev` (`import.meta.dev`, which Nuxt sets to `false` in production builds). Checked by hand on 2026-11-05 (#38): the production bundle contained no stub code; nothing checks this automatically
-- `NUXT_PUBLIC_ENVIRONMENT=local`
-
-The unauthenticated `x-sdlc-task-type` header then picks a fixed step context:
-
-- `planner` (the default): writes its own `plan`
-- `coder`: reads that `plan`
-
-Any other value returns 503. The policy is unchanged, so the artifact name must be `plan`.
+For the #41 migration, discard old disposable local data with `npm run db:down` before starting PostgreSQL again: old steps have no trustworthy role to backfill. Do not apply this migration to a populated shared database.
 
 ```bash
-# .env: NUXT_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres,
-# NUXT_PUBLIC_ENVIRONMENT=local, plus the Azure settings above
 npm run db:up
 NUXT_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres npm run db:migrate
-npm run db:seed:stub # fixed run, planner and coder steps; safe to repeat
 npm run dev
+```
 
-# Planner: register, upload to the returned SAS URL, then report the upload
-curl -X POST localhost:3000/api/artifacts -H 'x-sdlc-task-type: planner' \
-  -H 'content-type: application/json' -d '{"name":"plan","contentType":"text/plain"}'
+In another terminal, use the admin token to create a run (no request body):
+
+```bash
+curl -X POST localhost:3000/api/runs -H "Authorization: Bearer $NUXT_ADMIN_TOKEN"
+```
+
+The 201 response has `runId`, UTC `expiresAt`, and `steps.planner` / `steps.coder`, each containing `stepId` and `token`. Both tokens expire together. Set `RUN_ID`, `PLANNER_STEP_ID`, `PLANNER_TOKEN`, `CODER_STEP_ID` and `CODER_TOKEN` from that response in your shell. Keep credentials private. These requests assume the shell has the admin variable set; Nuxt loading `.env` does not export it into your terminal.
+
+```bash
+# Planner: register, upload to the returned SAS URL, then report the upload.
+curl -X POST localhost:3000/api/artifacts \
+  -H "Authorization: Bearer $PLANNER_TOKEN" -H "X-Run-Id: $RUN_ID" -H "X-Step-Id: $PLANNER_STEP_ID" \
+  -H 'Content-Type: application/json' -d '{"name":"plan","contentType":"text/plain"}'
 curl -X PUT "<upload.url>" -H 'x-ms-blob-type: BlockBlob' -H 'Content-Type: text/plain' --data-binary @plan.txt
-curl -X PUT localhost:3000/api/artifacts/<id> -H 'x-sdlc-task-type: planner' \
-  -H 'content-type: application/json' -d '{"state":"uploaded","sizeBytes":<size>,"sha256":"<hex>"}'
+curl -X PUT localhost:3000/api/artifacts/<id> \
+  -H "Authorization: Bearer $PLANNER_TOKEN" -H "X-Run-Id: $RUN_ID" -H "X-Step-Id: $PLANNER_STEP_ID" \
+  -H 'Content-Type: application/json' -d '{"state":"uploaded","sizeBytes":<size>,"sha256":"<hex>"}'
 
-# Coder: discover, read metadata, get a download SAS, download
-curl localhost:3000/api/artifacts -H 'x-sdlc-task-type: coder'
-curl localhost:3000/api/artifacts/<id> -H 'x-sdlc-task-type: coder'
-curl localhost:3000/api/artifacts/<id>/sas -H 'x-sdlc-task-type: coder'
+# Coder: discover, read metadata, get a download SAS, download.
+curl localhost:3000/api/artifacts \
+  -H "Authorization: Bearer $CODER_TOKEN" -H "X-Run-Id: $RUN_ID" -H "X-Step-Id: $CODER_STEP_ID"
+curl localhost:3000/api/artifacts/<id> \
+  -H "Authorization: Bearer $CODER_TOKEN" -H "X-Run-Id: $RUN_ID" -H "X-Step-Id: $CODER_STEP_ID"
+curl localhost:3000/api/artifacts/<id>/sas \
+  -H "Authorization: Bearer $CODER_TOKEN" -H "X-Run-Id: $RUN_ID" -H "X-Step-Id: $CODER_STEP_ID"
 curl "<url>" -o downloaded.txt
 ```
+
+Missing, malformed, expired or mismatched step credentials all return generic 401. Coder upload reports for the visible planner artifact return 403; registration still targets the caller's own slot, which is invisible to a coder and therefore returns 404. Missing authentication configuration returns 503. A new run is needed after token expiry; there is no renewal endpoint.
+
+Verified locally on 2026-11-10 (#41) against the production build, disposable PostgreSQL 17 and the configured `local-dev` Azure container: admin run issuance, planner upload/report, coder discovery and byte-for-byte download, invalid admin and wrong-step 401s, coder report 403, and actual expiry using a shortened window. Each tested rejection emitted exactly one security event; captured logs and error responses contained no test credentials or SAS URLs. The temporary blob was deleted. Automated coverage remains direct Vitest unit/guard tests and PostgreSQL integration tests; HTTP flows are checked manually. The proposed additional HTTP testing layer (#42) was declined. Cluster execution is unverified.
 
 ### Logging and readiness
 
@@ -143,11 +153,12 @@ The server writes JSON lines to stdout with [pino](https://getpino.io/); Kuberne
 
 | Domain | Lines |
 | --- | --- |
-| `http` | One access line per response (`method`, `path`, `search`, `status`, `duration`), except `/readyz`. Unhandled request errors at `error` level with `err`; expected `createError()` responses appear only as their access line |
+| `http` | One access line per response (`method`, `path`, `search`, `status`, `duration`), except `/readyz`. Unhandled request errors at `error` level with `err`; expected `createError()` responses appear in the access log, with separate security events for authentication failures and artifact 403s |
+| `security` | One warning per authentication rejection or artifact 403, with reason, IP, user agent, method, pathname and allowlisted IDs/actions; no credentials or SAS URLs |
 | `db` | Failed idle database connections; the pool replaces them instead of the process exiting |
 | `readyz` | One `error` line per failed readiness check, with `check`, the driver `code` if any, and `err` |
 
-Request and response bodies, headers and step context are never logged. SAS URLs may appear in logs, for example in error messages; that is an [accepted risk](./docs/architecture.md#decision-log). `NUXT_LOG_LEVEL=warn` suppresses access lines.
+Request and response bodies, authorization headers and full step context are never logged. Security events include the user agent and validated run/step IDs, not credential values. SAS URLs may appear in logs, for example in error messages; that is an [accepted risk](./docs/architecture.md#decision-log). `NUXT_LOG_LEVEL=warn` suppresses access lines.
 
 `GET /readyz` is the Kubernetes readiness probe: public, outside `/api`, no step context guard. It responds with `application/health+json` and `Cache-Control: no-store`:
 

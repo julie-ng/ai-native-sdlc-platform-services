@@ -4,6 +4,7 @@
  * requested one. Identical 404s mean an ID reveals nothing.
  * @module
  */
+import { logSecurityEvent } from '../log-security-event.utils.ts'
 import { createError } from 'h3'
 import type { H3Event } from 'h3'
 import type { ArtifactRef } from '../../../shared/types/artifact.ts'
@@ -18,6 +19,7 @@ import type { ArtifactRecord } from '../artifact/repository.utils.ts'
  * references that need not exist yet, such as a registration. Call after
  * `requireStepContext`.
  * @param event - The request event; reads `event.context.step`.
+ * @param reference - Exact server-selected artifact slot to authorize, even before registration.
  * @param actions - All are required.
  * @throws H3Error 404 when the reference is not visible to the caller, 403 when an action is missing.
  */
@@ -27,6 +29,12 @@ export function requireArtifactPermission(event: H3Event, reference: ArtifactRef
     throw createError({ statusCode: 404, message: 'Artifact not found' })
   }
   if (!actions.every(action => canAccessArtifact(step, reference, action))) {
+    logSecurityEvent(event, 'artifact_action_denied', {
+      runId: step.runId,
+      stepId: step.stepId,
+      requiredActions: actions,
+      grantedActions: (['create', 'read', 'update'] as const).filter(action => canAccessArtifact(step, reference, action)),
+    })
     throw createError({ statusCode: 403, message: 'Forbidden' })
   }
 }

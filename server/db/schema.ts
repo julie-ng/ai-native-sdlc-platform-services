@@ -5,6 +5,7 @@
  */
 import { sql } from 'drizzle-orm'
 import { check, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
+import type { StepRole } from '../../shared/utils/zod-schemas/run.schema.ts'
 import type { artifactStates } from '../../shared/utils/zod-schemas/artifact.schema.ts'
 
 /**
@@ -14,13 +15,17 @@ import type { artifactStates } from '../../shared/utils/zod-schemas/artifact.sch
 /** A workflow run. */
 export const runs = pgTable('runs', {
   id: uuid('id').primaryKey(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
 /** A step of a run: the producer that owns artifacts. Deleting a run with steps is restricted. */
 export const steps = pgTable('steps', {
   id: uuid('id').primaryKey(),
   runId: uuid('run_id').notNull().references(() => runs.id, { onDelete: 'restrict' }),
-})
+  role: text('role').$type<StepRole>().notNull(),
+}, table => [
+  check('steps_role_check', sql`${table.role} IN ('planner', 'coder')`),
+])
 
 /**
  * One current artifact per producing step/name. No attempt, revision, SAS or

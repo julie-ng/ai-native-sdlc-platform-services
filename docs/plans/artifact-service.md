@@ -30,7 +30,7 @@
 - One artifact ID and one blob per producing step/name, reused across retries and repeated writes.
   - No attempt IDs in artifact ownership, references or step context. No per-attempt records, blob keys, logs or artifact revision history.
 - The planner can create and overwrite its own plan; a later execution of the same step can continue editing it.
-  - A different step cannot overwrite it by default. Matching task type alone grants nothing; read, create and update capabilities stay distinct.
+  - A different step cannot overwrite it by default. Matching step role alone grants nothing; read, create and update capabilities stay distinct.
 - Each successful-upload acknowledgment replaces the latest size/hash and last-acknowledgment time.
   - Only the current values are stored. Consumers read after the producing step finishes.
 - Assume one active writer per step and no overlapping executions.
@@ -58,12 +58,12 @@
 
 - Read the applicable [server](../../server/AGENTS.md), [database](../../server/db/AGENTS.md) and [shared](../../shared/AGENTS.md) instructions before changing artifact code.
 - Start with the [overview](../api/README.md), then [implementation details](../api/implementation.md). [OpenAPI](../api/artifact.openapi.json) and [shared types](../../shared/types/artifact.ts) define exact shapes.
-- Step context is `{ runId, stepId, taskType, inputs, outputs }`; internal references are `{ runId, producerStepId, name }`. Registration derives the producing step from the caller; bindings point to a step's current artifact, not a historical execution.
+- Step context is `{ runId, stepId, role, inputs, outputs }`; internal references are `{ runId, producerStepId, name }`. Registration derives the producing step from the caller; bindings point to a step's current artifact, not a historical execution.
 - Artifacts keep `createdAt` and `updatedAt`. Every accepted write (repeated POST or upload report) refreshes `updatedAt`; reads and denials do not.
 
 | Piece | Location | Tests |
 | --- | --- | --- |
-| Routes | `server/api/artifacts/` | Manual `curl` check through the local stub (#38); HTTP tests follow authentication (#13) |
+| Routes | `server/api/artifacts/` | Authenticated production-build flow checked locally against Azure (#41); HTTP checks remain manual |
 | Guards (step context, configuration, 404/403) | `server/utils/guards/` | Unit tests; access lookups via `npm run test:db` |
 | Policy | `server/utils/artifact/policy.utils.ts` | Unit tests |
 | PostgreSQL repository and migrations | `server/utils/artifact/repository.utils.ts`, `server/db/` | `npm run test:db` against disposable PostgreSQL 17 |
@@ -71,7 +71,7 @@
 
 ## Remaining work
 
-1. Authentication inside the `requireStepContext` guard that constructs `event.context.step` (#13; HMAC tokens per ADR-016 in the parent repository). Until then every artifact request returns 503, except through the local development stub (#38).
-2. Unit tests for the guard and a static check that every artifact route calls it before reading input (#19).
-3. Azure through the routes: upload, overwrite, report and download via HTTP once authentication exists (#13), then with workload identity in the cluster. The SAS functions alone were verified against Azure on 2026-11-04 (#20).
-4. Cluster execution, broader workflow endpoints, attempt logging, GitHub broker, webhook ingress, UI and LLM calls remain outside this slice. The [workflow reference](./workflow-service.md) preserves broader planning ideas, not POC requirements.
+1. HMAC authentication and admin run creation are implemented in #41, with direct guard tests and PostgreSQL integration tests. The temporary local stub is removed.
+2. A static check that every artifact route awaits its guard before reading input remains in #19. The proposed additional HTTP testing layer (#42) was declined; use existing testing patterns and manual HTTP checks.
+3. Workload identity and execution in the cluster remain unverified. Local live verification is recorded in the README.
+4. Broader workflow endpoints, attempt logging, GitHub broker, webhook ingress, UI and LLM calls remain outside this slice. The [workflow reference](./workflow-service.md) preserves broader planning ideas, not POC requirements.

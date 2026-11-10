@@ -18,26 +18,26 @@ export const planRunB: ArtifactRef = { runId: runB, producerStepId: stepIds.plan
 export const otherP1: ArtifactRef = { runId: runA, producerStepId: stepIds.plannerP1, name: 'other' }
 
 export const contexts = {
-  'planner-p1': { runId: runA, stepId: stepIds.plannerP1, taskType: 'planner', inputs: [], outputs: [planP1] },
+  'planner-p1': { runId: runA, stepId: stepIds.plannerP1, role: 'planner', inputs: [], outputs: [planP1] },
   // A retry or later execution of P1 receives the same logical step context.
-  'planner-p1-later-execution': { runId: runA, stepId: stepIds.plannerP1, taskType: 'planner', inputs: [], outputs: [planP1] },
-  'planner-p2': { runId: runA, stepId: stepIds.plannerP2, taskType: 'planner', inputs: [], outputs: [planP2] },
-  'coder-c1': { runId: runA, stepId: stepIds.coderC1, taskType: 'coder', inputs: [planP1], outputs: [] },
+  'planner-p1-later-execution': { runId: runA, stepId: stepIds.plannerP1, role: 'planner', inputs: [], outputs: [planP1] },
+  'planner-p2': { runId: runA, stepId: stepIds.plannerP2, role: 'planner', inputs: [], outputs: [planP2] },
+  'coder-c1': { runId: runA, stepId: stepIds.coderC1, role: 'coder', inputs: [planP1], outputs: [] },
   // Collection behavior only; the POC assumes one plan per consumer.
-  'coder-multiple-inputs': { runId: runA, stepId: stepIds.coderC2, taskType: 'coder', inputs: [planP1, planP2], outputs: [] },
-  'coder-no-inputs': { runId: runA, stepId: stepIds.coderC1, taskType: 'coder', inputs: [], outputs: [] },
-  'unknown-task': { runId: runA, stepId: stepIds.coderC1, taskType: 'unrecognized', inputs: [planP1], outputs: [] },
+  'coder-multiple-inputs': { runId: runA, stepId: stepIds.coderC2, role: 'coder', inputs: [planP1, planP2], outputs: [] },
+  'coder-no-inputs': { runId: runA, stepId: stepIds.coderC1, role: 'coder', inputs: [], outputs: [] },
+  'unknown-role': { runId: runA, stepId: stepIds.coderC1, role: 'unrecognized', inputs: [planP1], outputs: [] },
 } satisfies Record<string, StepContext>
 
 // Workflow-owned rows that artifact persistence tests seed before inserting artifacts.
 export const workflowRecords = {
   runs: [{ id: runA }, { id: runB }],
   steps: [
-    { id: stepIds.plannerP1, runId: runA },
-    { id: stepIds.coderC1, runId: runA },
-    { id: stepIds.plannerP2, runId: runA },
-    { id: stepIds.coderC2, runId: runA },
-    { id: stepIds.plannerRunB, runId: runB },
+    { id: stepIds.plannerP1, runId: runA, role: 'planner' as const },
+    { id: stepIds.coderC1, runId: runA, role: 'coder' as const },
+    { id: stepIds.plannerP2, runId: runA, role: 'planner' as const },
+    { id: stepIds.coderC2, runId: runA, role: 'coder' as const },
+    { id: stepIds.plannerRunB, runId: runB, role: 'planner' as const },
   ],
 }
 

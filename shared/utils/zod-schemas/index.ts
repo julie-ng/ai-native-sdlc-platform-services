@@ -1,3 +1,4 @@
+import { createRunResponseSchema } from './run.schema.ts'
 import {
   uuidSchema, nameSchema, utcInstantSchema, contentTypeSchema,
   sizeBytesSchema, sha256Schema, titleSchema, descriptionSchema, detailsSchema,
@@ -14,6 +15,7 @@ import { errorResponseSchema } from './error.schema.ts'
 // Stable public component names connect Zod schemas to generated OpenAPI.
 // Runtime callers import individual domain schemas.
 export const artifactSchemas = {
+  CreateRunResponse: createRunResponseSchema,
   Uuid: uuidSchema,
   Name: nameSchema,
   UtcInstant: utcInstantSchema,

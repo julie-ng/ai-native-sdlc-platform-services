@@ -15,6 +15,13 @@
       "when": 1793541575733,
       "tag": "0001_upload_failures",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794307928266,
+      "tag": "0002_step_authentication",
+      "breakpoints": true
     }
   ]
 }

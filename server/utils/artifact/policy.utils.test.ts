@@ -30,8 +30,8 @@ test('a reference is not a permission: other names, runs and steps grant nothing
   expect(canAccessArtifact(contexts['planner-p2'], planP1, 'update')).toBe(false)
   expect(canAccessArtifact({ ...contexts['coder-c1'], inputs: [] }, planP1, 'read')).toBe(false)
   expect(canAccessArtifact({ ...contexts['planner-p1'], outputs: [] }, planP1, 'create')).toBe(false)
-  for (const taskType of ['unknown', 'constructor', '__proto__']) {
-    const step = { ...contexts['coder-c1'], taskType }
+  for (const role of ['unknown', 'constructor', '__proto__']) {
+    const step = { ...contexts['coder-c1'], role }
     expect(isArtifactVisible(step, planP1)).toBe(false)
     expect(readableArtifactReferences(step)).toStrictEqual([])
   }
@@ -45,7 +45,7 @@ test('visibility is any granted action; it separates 404 from 403', () => {
     [contexts['planner-p2'], planP1],
     [contexts['coder-c1'], planP2],
     [contexts['planner-p1'], otherP1],
-    [contexts['unknown-task'], planP1],
+    [contexts['unknown-role'], planP1],
   ] as const) {
     expect(isArtifactVisible(step, reference)).toBe(false)
   }
@@ -64,7 +64,7 @@ test('policy fails closed on invalid JS callers and does not mutate bindings', (
 })
 
 test('read scope follows declared bindings without assuming persistence', () => {
-  for (const [name, count] of [['planner-p1', 0], ['coder-c1', 1], ['coder-multiple-inputs', 2], ['coder-no-inputs', 0], ['unknown-task', 0]] as const) {
+  for (const [name, count] of [['planner-p1', 0], ['coder-c1', 1], ['coder-multiple-inputs', 2], ['coder-no-inputs', 0], ['unknown-role', 0]] as const) {
     expect(readableArtifactReferences(contexts[name]).length).toBe(count)
   }
   const step = structuredClone(contexts['coder-c1']) as StepContext

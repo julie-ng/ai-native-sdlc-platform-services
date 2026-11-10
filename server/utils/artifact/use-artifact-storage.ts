@@ -15,9 +15,10 @@ let storage: ArtifactStorage | undefined
 
 /**
  * Return the shared artifact storage, creating its Blob client on first use.
- * DefaultAzureCredential uses workload identity in a cluster and `az login` locally.
+ * DefaultAzureCredential uses workload identity in a cluster and the configured service principal locally.
  * Call after `requireArtifactConfiguration`, which rejects missing settings with 503.
  * @param event - The request event, for runtime configuration.
+ * @returns The cached Azure identity-backed client and configured artifact container.
  */
 export function useArtifactStorage(event: H3Event): ArtifactStorage {
   if (!storage) {

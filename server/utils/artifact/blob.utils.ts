@@ -8,6 +8,7 @@ import { artifactRefSchema } from '../../../shared/utils/zod-schemas/step-contex
  * Derive the blob name for an artifact: `v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}`.
  * Accepts a server-selected reference, never an HTTP path or blob name override.
  * @param reference - Validated against the artifact reference schema.
+ * @returns The deterministic run/step/name path inside the artifact container.
  * @throws TypeError when `reference` is not a valid artifact reference.
  */
 export function deriveBlobName(reference: unknown): string {

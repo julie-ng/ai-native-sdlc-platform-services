@@ -19,6 +19,7 @@ let database: ReturnType<typeof createDatabase> | undefined
  * maintenance) is logged instead of crashing the process: without an
  * `error` listener, node-postgres's pool error event is fatal. The pool
  * discards that connection and opens a new one when needed.
+ * @returns The shared Drizzle client, reused until shutdown.
  * @throws Error when `NUXT_DATABASE_URL` is not configured; HTTP callers translate it.
  */
 export function useDB(): Database {
