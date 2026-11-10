@@ -13,7 +13,7 @@ Applies to `server/**`, in addition to the root instructions. For schema or migr
 
 ## Logging and database
 
-- Log with `useLogger(domain)` from `server/utils/use-logger.ts`, called inside handlers or callbacks, not at module top level. Never log request or response bodies, credential headers or step context. SAS URLs in logs are an accepted risk; do not add code to strip them.
+- Log with `useLogger(domain)` from `server/utils/use-logger.ts`, called inside handlers or callbacks, not at module top level. Never log request or response bodies, credential headers or full step context. Security events may include the user agent and validated run/step IDs with server-derived actions. SAS URLs in logs are an accepted risk; do not add code to strip them.
 - The access log is the only global middleware. Readiness probes are excluded from it.
 - Use the shared pool through `useDB()` (`server/db/use-db.ts`); do not create another pool in application code. `createDatabase()` is for tests and tooling that own their pool.
 

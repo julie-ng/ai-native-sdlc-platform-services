@@ -91,7 +91,7 @@ v1/runs/{runId}/steps/{producerStepId}/artifacts/{name}
 | Download | `sp=r` | GET the current blob. |
 
 - SAS issuance does not revoke earlier URLs or coordinate metadata with blob contents. Disable Blob versioning if storage must retain no revisions.
-- `signUpload` and `signDownload` were checked once against real Azure on 2026-11-04 (#20), using a local service principal and no routes: upload, overwrite and download worked, and Azure returned 403 `AuthorizationPermissionMismatch` for writing with a read SAS, reading with a write SAS and using another container. The routes have not been exercised against Azure. Automated signing tests run offline with a fixed test key.
+- `signUpload` and `signDownload` were checked once against real Azure on 2026-11-04 (#20), using a local service principal and no routes: upload, overwrite and download worked, and Azure returned 403 `AuthorizationPermissionMismatch` for writing with a read SAS, reading with a write SAS and using another container. The authenticated routes passed a local production-build upload/report/discovery/download flow against Azure on 2026-11-10 (#41); see the [README verification record](../../README.md#trying-the-artifact-routes-locally). Cluster workload identity remains unverified. Automated signing tests run offline with a fixed test key.
 
 References: [user delegation SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas), [Put Blob permissions](https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob#user-delegation-sas), and [Blob versioning](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview).
 

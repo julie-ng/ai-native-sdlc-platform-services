@@ -71,7 +71,7 @@
 
 ## Remaining work
 
-1. Authentication inside the `requireStepContext` guard that constructs `event.context.step` (#13; HMAC tokens per ADR-016 in the parent repository). Until then every artifact request returns 503, except through the local development stub (#38).
-2. Unit tests for the guard and a static check that every artifact route calls it before reading input (#19).
-3. Azure through the routes: upload, overwrite, report and download via HTTP once authentication exists (#13), then with workload identity in the cluster. The SAS functions alone were verified against Azure on 2026-11-04 (#20).
-4. Cluster execution, broader workflow endpoints, attempt logging, GitHub broker, webhook ingress, UI and LLM calls remain outside this slice. The [workflow reference](./workflow-service.md) preserves broader planning ideas, not POC requirements.
+1. HMAC authentication and admin run creation are implemented in #41, with direct guard tests and PostgreSQL integration tests. The temporary local stub is removed.
+2. A static check that every artifact route awaits its guard before reading input remains in #19. Project-wide automated HTTP coverage is separate (#42); #41 uses existing testing patterns.
+3. Workload identity and execution in the cluster remain unverified. Local live verification is recorded in the README.
+4. Broader workflow endpoints, attempt logging, GitHub broker, webhook ingress, UI and LLM calls remain outside this slice. The [workflow reference](./workflow-service.md) preserves broader planning ideas, not POC requirements.
