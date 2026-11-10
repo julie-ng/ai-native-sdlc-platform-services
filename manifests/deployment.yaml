@@ -28,6 +28,9 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
+        # The container runtime's default syscall filter; required by Pod Security "restricted".
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: platform-services
           image: ${AZURE_ACR_NAME}.azurecr.io/platform-services:latest
