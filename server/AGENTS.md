@@ -48,7 +48,8 @@ Applies to `server/**`, in addition to the root instructions. For schema or migr
 ## Verification
 
 - Test success, malformed input, missing resources, authentication/authorization failures, and response-field permissions.
-- Unit-test implemented policy/context functions; test HTTP sequencing against actual handlers. Use real database/storage integration tests for persistence and transfer claims.
+- Follow the existing direct-function testing pattern: call utilities and guards with plain event objects, mock only their selected runtime dependencies, and assert results, context and thrown errors. Use the existing real PostgreSQL integration tests for database behavior.
+- HTTP sequencing and live storage transfers are checked manually under the current setup. Report verification gaps; ask before adding an automated HTTP server harness or another testing layer. Do not treat a missing automated check as permission to introduce new infrastructure.
 - Do not add placeholder endpoints, permissive guards, or simulated services merely to satisfy tests.
 
 Reference: [Nuxt server directory](https://nuxt.com/docs/4.x/directory-structure/server). Check installed Nuxt/H3 versions before adapting examples.

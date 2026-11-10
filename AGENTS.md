@@ -21,6 +21,12 @@ Shared instructions for every coding agent working in this repository.
 
 - When adding a REST route or HTTP method, read the [add-api-endpoint skill](./.agents/skills/add-api-endpoint/SKILL.md). Read it directly if your client does not discover skills.
 
+## Implementation approach
+
+- Read comparable code and tests before choosing an approach. Extend existing patterns and helpers with the smallest direct change that satisfies the task; avoid speculative flexibility and unrelated cleanup.
+- Ask Julie before introducing a new architectural or testing layer, dependency, infrastructure component, or abstraction pattern. Explain the concrete gap in the existing approach and the simplest proposed change, then wait for agreement. A request to implement a feature or add tests does not authorize redesigning those mechanisms.
+- New task-required functions and files that follow established patterns are ordinary implementation work; proceed without asking again. Apply decisions already authorized in the session rather than requesting repeated approval.
+
 ## Commands and completion
 
 Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed lockfile.
@@ -51,6 +57,7 @@ Use Node.js 24 (see [.node-version](./.node-version)) and npm with the committed
 
 - For documentation-only changes, run `npm run check:guidance` and `git diff --check`. For application or configuration changes, run `npm run verify` plus relevant behavioral checks.
 - `npm run typecheck` uses `nuxt typecheck` and a strict standalone TypeScript project for tests/support. `npm run test:unit` and `npm run test:contract` run [Vitest](https://vitest.dev/) with one `vitest.config.ts`; each test file is isolated, so run only the affected files with `npx vitest run <path>`. Keep tests independent and avoid shared environment mutations. ESLint and the build are not substitutes for these checks.
+- Do not introduce new testing layers without explicit agreement. Extend the existing Vitest unit/contract tests and PostgreSQL integration tests; a coverage gap is a reason to ask, not to add a new harness by default.
 - Unit tests belong beside their source (`name.utils.test.ts`) and import `test`, `expect` and other helpers explicitly from `vitest`; contract/export tests belong in `tests/contract/`; database integration tests belong in `tests/integration/`. Verify meaningful behavior, failure paths, and authorization constraints.
 
 ## Code conventions
