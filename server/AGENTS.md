@@ -47,6 +47,8 @@ Applies to `server/**`, in addition to the root instructions. For schema or migr
 
 ## Verification
 
+- `server/utils/guards/guard-usage.test.ts` runs in `test:unit` and `verify`: artifact routes must await `requireStepContext(event)` and run routes must call `requireAdminToken(event)` before input reads. Other API routes fail until explicitly classified. Its unguarded-route allow-list permits only `[...path].ts`, which returns JSON 404 without input or protected data; every exception needs a justification comment. These regex checks do not prove runtime control flow, and commented-out code can fool them.
+
 - Test success, malformed input, missing resources, authentication/authorization failures, and response-field permissions.
 - Follow the existing direct-function testing pattern: call utilities and guards with plain event objects, mock only their selected runtime dependencies, and assert results, context and thrown errors. Use the existing real PostgreSQL integration tests for database behavior.
 - HTTP sequencing and live storage transfers are checked manually under the current setup. Report verification gaps; ask before adding an automated HTTP server harness or another testing layer. Do not treat a missing automated check as permission to introduce new infrastructure.
