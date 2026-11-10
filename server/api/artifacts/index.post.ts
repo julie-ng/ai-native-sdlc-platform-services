@@ -10,7 +10,7 @@ import { useArtifactStorage } from '#server/utils/artifact/use-artifact-storage'
 
 // Register (201) or re-register (200) the caller's own artifact and issue an upload SAS.
 export default defineEventHandler(async (event) => {
-  requireStepContext(event)
+  await requireStepContext(event)
   const { name, ...metadata } = await readArtifactBody(event, createArtifactRequestSchema)
   preventCaching(event)
   requireArtifactConfiguration(event)

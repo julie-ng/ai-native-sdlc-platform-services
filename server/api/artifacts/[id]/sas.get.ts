@@ -7,7 +7,7 @@ import { useArtifactStorage } from '#server/utils/artifact/use-artifact-storage'
 
 // Issue a just-in-time download SAS; 409 until an upload has been reported.
 export default defineEventHandler(async (event) => {
-  requireStepContext(event)
+  await requireStepContext(event)
   const id = await readArtifactId(event)
   preventCaching(event)
   requireArtifactConfiguration(event)

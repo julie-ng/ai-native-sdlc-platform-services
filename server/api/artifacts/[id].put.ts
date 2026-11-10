@@ -9,7 +9,7 @@ import { recordUploadReport } from '#server/utils/artifact/repository.utils'
 // Report the outcome of a direct upload to Azure: uploaded (reported, not verified,
 // size/hash) or failed, with optional details. Each report replaces the previous one.
 export default defineEventHandler(async (event) => {
-  requireStepContext(event)
+  await requireStepContext(event)
   const id = await readArtifactId(event)
   const report = await readArtifactBody(event, completeArtifactRequestSchema)
   requireArtifactConfiguration(event)

@@ -5,7 +5,7 @@ import { readArtifactId, toArtifactInfo } from '#server/utils/artifact/http.util
 
 // Read one artifact's metadata. Never issues SAS URLs.
 export default defineEventHandler(async (event) => {
-  requireStepContext(event)
+  await requireStepContext(event)
   const id = await readArtifactId(event)
   requireArtifactConfiguration(event)
   await requireArtifactAccess(event, id, () => 'read')

@@ -4,6 +4,7 @@
  * requested one. Identical 404s mean an ID reveals nothing.
  * @module
  */
+import { logSecurityEvent } from '../log-security-event.utils.ts'
 import { createError } from 'h3'
 import type { H3Event } from 'h3'
 import type { ArtifactRef } from '../../../shared/types/artifact.ts'
@@ -27,6 +28,12 @@ export function requireArtifactPermission(event: H3Event, reference: ArtifactRef
     throw createError({ statusCode: 404, message: 'Artifact not found' })
   }
   if (!actions.every(action => canAccessArtifact(step, reference, action))) {
+    logSecurityEvent(event, 'artifact_action_denied', {
+      runId: step.runId,
+      stepId: step.stepId,
+      requiredActions: actions,
+      grantedActions: (['create', 'read', 'update'] as const).filter(action => canAccessArtifact(step, reference, action)),
+    })
     throw createError({ statusCode: 403, message: 'Forbidden' })
   }
 }

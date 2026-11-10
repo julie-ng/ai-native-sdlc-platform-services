@@ -2,12 +2,13 @@
 
 One current file and metadata record per producing step/name. Retries and later executions reuse the artifact ID and blob; bytes transfer directly between callers and Azure Blob Storage.
 
-Routes, guards, PostgreSQL queries and Azure SAS signing are implemented. Nothing sets the step context yet: until the `requireStepContext` guard authenticates callers (#13), every artifact request returns 503, except through the temporary [local development stub](../../README.md#trying-the-artifact-routes-locally) (#38).
+Routes, HMAC authentication, PostgreSQL queries and Azure SAS signing are implemented. A trusted caller creates a fixed planner/coder run with an admin token; each step then authenticates with its issued Bearer token and `X-Run-Id` / `X-Step-Id`. See the [local walkthrough](../../README.md#trying-the-artifact-routes-locally) and [authentication contract](./implementation.md#run-creation-and-authentication).
 
 ## Operations
 
 | Request | Result |
 | --- | --- |
+| `POST /api/runs` | Admin-only: create a run and planner/coder step credentials, with shared `expiresAt`. Returns 201 and `Cache-Control: no-store`; no request body. |
 | `POST /api/artifacts` | Register or re-register the caller's artifact and issue an upload SAS. 201 for a new artifact; otherwise 200. |
 | `PUT <upload SAS URL>` | Upload or overwrite directly in Azure. |
 | `PUT /api/artifacts/{id}` | Report the upload outcome: `uploaded` with size and SHA-256, or `failed`; optional `details`. Returns 200. |

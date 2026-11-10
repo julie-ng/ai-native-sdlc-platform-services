@@ -41,7 +41,7 @@ test('every documentation example satisfies its Zod schema', () => {
     ...Object.values(operation.responses).map(response => response.content['application/json']!),
   ])
   const examples = media.filter(entry => 'example' in entry)
-  expect(examples.length).toBe(8)
+  expect(examples.length).toBe(9)
   for (const entry of examples) {
     const name = entry.schema.$ref.split('/').at(-1) as ArtifactSchemaName
     expect(artifactSchemas[name].safeParse(entry.example).success, name).toBe(true)

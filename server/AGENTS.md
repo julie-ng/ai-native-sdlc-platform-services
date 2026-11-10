@@ -35,7 +35,7 @@ Applies to `server/**`, in addition to the root instructions. For schema or migr
 ## Artifacts
 
 - Follow the [API overview](../docs/api/README.md), [implementation contract](../docs/api/implementation.md), and [shared types](../shared/types/artifact.ts).
-- Call `requireStepContext(event)` explicitly and first in every artifact route; the guard establishes `event.context.step`. Do not move this into global middleware. Never replace it with HTTP claims or a workflow-step lookup. Fixed step contexts belong only in tests.
+- Await `requireStepContext(event)` explicitly and first in every artifact route; the guard establishes `event.context.step`. Do not move this into global middleware. It authenticates HMAC credentials against stored run/step records; never substitute unverified HTTP claims. Fixed step contexts belong only in tests.
 - Logical steps own artifacts. Reuse IDs/blobs across retries; do not add attempt history or overlapping-writer coordination.
 - Keep discovery/metadata separate from SAS issuance. List readable records only; transfer bytes directly between caller and cloud storage.
 - Each permitted POST issues a fresh SAS for the same artifact. Never persist SAS URLs.

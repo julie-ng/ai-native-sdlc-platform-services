@@ -6,7 +6,7 @@ See the [API overview](./README.md) for operations, access policy, and POC assum
 
 Each route under `server/api/artifacts/` runs, in order:
 
-1. `requireStepContext(event)`: the explicit guard that establishes `event.context.step`; 503 if it cannot. Today it only validates a context that nothing sets yet; #13 replaces its body with authentication that constructs the context.
+1. `await requireStepContext(event)`: authenticate the Bearer token plus `X-Run-Id`/`X-Step-Id` against stored run creation and step role, check expiry, and establish `event.context.step`. Invalid credentials always return generic 401; missing configuration returns 503.
 2. Validate the body and `id` route parameter with the strict [Zod schemas](../../shared/utils/zod-schemas/index.ts); 400 on failure, with `z.flattenError()` output in `data`. h3 rejects malformed JSON with 400.
 3. [`requireArtifactConfiguration(event)`](../../server/utils/guards/require-artifact-configuration.ts): 503 unless the database URL and storage settings are configured.
 4. [`requireArtifactAccess`](../../server/utils/guards/require-artifact-access.ts) for routes with an ID, or `requireArtifactPermission` for registration: 404 or 403 as below.
@@ -16,6 +16,18 @@ Each route under `server/api/artifacts/` runs, in order:
 - Objects are closed at every level: no coercion, trimming, defaults, transforms, or unknown-field stripping. Exact constraints are in [common schemas](../../shared/utils/zod-schemas/common.schema.ts).
 - Responses that carry SAS URLs set `Cache-Control: no-store`. Never redirect to SAS URLs.
 - Unknown `/api` paths return JSON 404. Unsupported methods on existing paths still fall through to the Nuxt page renderer; this is a known gap, not a contract.
+
+## Run creation and authentication
+
+`POST /api/runs` explicitly calls `requireAdminToken` first. The admin Bearer credential is compared using constant-time comparison of fixed-length SHA-256 digests. No body is consumed. Missing admin configuration returns 503; missing or invalid admin credentials return the same 401.
+
+After validating private signing/database configuration, the route inserts a run and one step of each role in a transaction. It returns 201 with `Cache-Control: no-store`, `runId`, a shared UTC `expiresAt`, and `steps.planner` / `steps.coder` credentials (`stepId`, `token`). Tokens are not persisted. The signing key is never returned.
+
+Each step token is HMAC-SHA256 lowercase hex over the JSON tuple `[runId, createdAt.toISOString(), "step:" + stepId, sortedActions]`. Planner actions are `create/update`; coder actions are `read`. Verification uses `timingSafeEqual`. Expiry is measured from the stored run timestamp, defaults to 15 minutes, and includes the exact deadline. Changing the key invalidates existing tokens; changing the configured window changes their effective deadlines. Issuance and verification must use the same settings.
+
+The step guard makes one database query per authenticated request. It rejects steps outside the selected run, invalid signatures, expiry, and workflow shapes other than exactly one planner and one coder. Planner outputs its own `plan`; coder reads that plan. Context is established only after successful verification and existing context validation.
+
+Authentication failures and artifact 403s each emit one `security` event with a reason, request metadata, and allowlisted validated IDs/actions. These events never include credentials, query strings or SAS URLs. Unknown IDs and invalid signatures have identical public 401 responses.
 
 ## Step context and authorization
 
@@ -32,7 +44,7 @@ The `requireStepContext` guard establishes `event.context.step`:
 // Each reference: { runId, producerStepId, name }
 ```
 
-- `readStepContext` requires all bindings in the caller's run and outputs owned by its step. Context comes only from the guard's authentication, never HTTP claims or workflow-step lookups. Fixed contexts are test-only.
+- `readStepContext` requires all bindings in the caller's run and outputs owned by its step. Context comes only from the guard's authentication, never unverified HTTP claims. The guard looks up stored run/step records and derives the fixed bindings. Fixed contexts are test-only.
 - [`canAccessArtifact`](../../server/utils/artifact/policy.utils.ts) applies the task policy to one exact reference and action: planners create and update their own `plan` outputs, coders read `plan` references among their bindings. Create and update stay distinct, mirroring Azure's `c`/`w` SAS permissions. Unknown tasks get nothing.
 - The `requireArtifactAccess` guard looks up an ID and sets `event.context.artifact`:
 
@@ -85,7 +97,7 @@ References: [user delegation SAS](https://learn.microsoft.com/en-us/rest/api/sto
 
 ## Code boundaries
 
-- Routes call guards, then plain functions; there is no service layer or adapter interface. Guards and routes throw `createError()` for expected 403/404/409/503 results. Repository and SAS functions throw ordinary errors on unexpected failures, which Nitro reports as sanitized 500s.
+- Routes call guards, then plain functions; there is no service layer or adapter interface. Guards and routes throw `createError()` for expected 401/403/404/409/503 results. Repository and SAS functions throw ordinary errors on unexpected failures, which Nitro reports as sanitized 500s.
 - Internal types live with their code: `ArtifactRecord` in the repository, `ArtifactAction` in the policy.
 - Payload types in [shared types](../../shared/types/artifact.ts) use `z.infer`.
 

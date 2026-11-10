@@ -25,7 +25,6 @@
     "db:down": "docker compose down",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed:stub": "node --env-file-if-exists=.env scripts/db-seed-stub.ts",
     "test:db": "vitest run tests/integration"
   },
   "dependencies": {

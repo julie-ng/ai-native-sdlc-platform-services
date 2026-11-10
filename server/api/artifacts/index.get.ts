@@ -7,7 +7,7 @@ import { listArtifactsByReferences } from '#server/utils/artifact/repository.uti
 
 // Discover readable artifact metadata. Never issues SAS URLs.
 export default defineEventHandler(async (event) => {
-  requireStepContext(event)
+  await requireStepContext(event)
   requireArtifactConfiguration(event)
   const records = await listArtifactsByReferences(useDB(), readableArtifactReferences(event.context.step!))
   return { artifacts: records.map(toArtifactInfo) }

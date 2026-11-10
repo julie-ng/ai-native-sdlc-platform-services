@@ -14,6 +14,9 @@ vi.mock('../../server/db/use-db.ts', () => ({ useDB: () => shared.db }))
 
 let database: Awaited<ReturnType<typeof createTestDatabase>>
 let connection: ReturnType<typeof database.connect>
+const securityLog = vi.hoisted(() => vi.fn())
+vi.mock('../../server/utils/log-security-event.utils.ts', () => ({ logSecurityEvent: securityLog }))
+
 const eventFor = (step: StepContext) => ({ context: { step } }) as unknown as H3Event
 const missingId = '40000000-0000-4000-8000-000000000099'
 const report = { state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) } as const
