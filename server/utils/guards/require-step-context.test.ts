@@ -13,12 +13,12 @@ vi.mock('../../db/use-db.ts', () => ({ useDB: () => ({}) }))
 vi.mock('../run/repository.utils.ts', () => ({ findRunSteps: vi.fn() }))
 const lookup = vi.mocked(findRunSteps)
 const createdAt = new Date('2026-11-10T10:00:00.000Z')
-const records = () => (['planner', 'coder'] as const).map(taskType => ({
+const records = () => (['planner', 'coder'] as const).map(role => ({
   run: { id: runA, createdAt },
-  step: { id: taskType === 'planner' ? stepIds.plannerP1 : stepIds.coderC1, runId: runA, taskType },
+  step: { id: role === 'planner' ? stepIds.plannerP1 : stepIds.coderC1, runId: runA, role },
 }))
-const tokenFor = (taskType: 'planner' | 'coder') => signStepToken(config.hmacKey, {
-  runId: runA, createdAt, stepId: taskType === 'planner' ? stepIds.plannerP1 : stepIds.coderC1, taskType,
+const tokenFor = (role: 'planner' | 'coder') => signStepToken(config.hmacKey, {
+  runId: runA, createdAt, stepId: role === 'planner' ? stepIds.plannerP1 : stepIds.coderC1, role,
 })
 const eventFor = (headers: Record<string, string | undefined> = {}) => ({
   node: { req: { headers: { 'authorization': `Bearer ${tokenFor('planner')}`, 'x-run-id': runA, 'x-step-id': stepIds.plannerP1, ...headers } } },
@@ -48,10 +48,10 @@ test('authenticates both roles and derives bindings only from stored records', a
   const planner = eventFor()
   await requireStepContext(planner)
   const plan = { runId: runA, producerStepId: stepIds.plannerP1, name: 'plan' }
-  expect(planner.context.step).toEqual({ runId: runA, stepId: stepIds.plannerP1, taskType: 'planner', inputs: [], outputs: [plan] })
+  expect(planner.context.step).toEqual({ runId: runA, stepId: stepIds.plannerP1, role: 'planner', inputs: [], outputs: [plan] })
   const coder = eventFor({ 'authorization': `Bearer ${tokenFor('coder')}`, 'x-step-id': stepIds.coderC1 })
   await requireStepContext(coder)
-  expect(coder.context.step).toEqual({ runId: runA, stepId: stepIds.coderC1, taskType: 'coder', inputs: [plan], outputs: [] })
+  expect(coder.context.step).toEqual({ runId: runA, stepId: stepIds.coderC1, role: 'coder', inputs: [plan], outputs: [] })
   expect(lookup).toHaveBeenCalledTimes(2)
   expect(log).not.toHaveBeenCalled()
 })
@@ -85,7 +85,7 @@ test('expiry uses the stored creation time and configured window', async () => {
 
 test('invalid signatures cannot reuse a pre-established context', async () => {
   const event = eventFor({ authorization: `Bearer ${'0'.repeat(64)}` })
-  Reflect.set(event.context, 'step', { taskType: 'planner' })
+  Reflect.set(event.context, 'step', { role: 'planner' })
   await rejected(event, 'invalid_hmac')
 })
 

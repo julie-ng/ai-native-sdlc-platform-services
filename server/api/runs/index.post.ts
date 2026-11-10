@@ -11,11 +11,11 @@ export default defineEventHandler(async (event): Promise<CreateRunResponse> => {
   const { key, expiryMinutes } = requireStepTokenConfiguration(event)
   setResponseHeader(event, 'Cache-Control', 'no-store')
   const run = await createRun(useDB())
-  const credential = (taskType: 'planner' | 'coder') => {
-    const step = run.steps.find(step => step.taskType === taskType)!
+  const credential = (role: 'planner' | 'coder') => {
+    const step = run.steps.find(step => step.role === role)!
     return {
       stepId: step.id,
-      token: signStepToken(key, { runId: run.id, createdAt: run.createdAt, stepId: step.id, taskType }),
+      token: signStepToken(key, { runId: run.id, createdAt: run.createdAt, stepId: step.id, role }),
     }
   }
   setResponseStatus(event, 201)

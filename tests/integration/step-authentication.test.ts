@@ -31,9 +31,9 @@ const eventFor = (runId: string, stepId: string, token: string) => ({
 test('stored roles authenticate planner/coder, enforce membership, and retain artifact policy', async () => {
   const run = await createRun(connection.db)
   const otherRun = await createRun(connection.db)
-  const planner = run.steps.find(step => step.taskType === 'planner')!
-  const coder = run.steps.find(step => step.taskType === 'coder')!
-  const token = (step: typeof planner) => signStepToken('integration-key', { runId: run.id, createdAt: run.createdAt, stepId: step.id, taskType: step.taskType })
+  const planner = run.steps.find(step => step.role === 'planner')!
+  const coder = run.steps.find(step => step.role === 'coder')!
+  const token = (step: typeof planner) => signStepToken('integration-key', { runId: run.id, createdAt: run.createdAt, stepId: step.id, role: step.role })
   const producer = eventFor(run.id, planner.id, token(planner))
   await requireStepContext(producer)
   const reference = producer.context.step!.outputs[0]!

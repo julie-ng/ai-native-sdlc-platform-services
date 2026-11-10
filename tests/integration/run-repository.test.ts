@@ -18,7 +18,7 @@ afterAll(async () => {
 
 test('creates one planner and coder with a stored, immutable creation timestamp', async () => {
   const run = await createRun(connection.db)
-  expect(run.steps.map(step => step.taskType).sort()).toEqual(['coder', 'planner'])
+  expect(run.steps.map(step => step.role).sort()).toEqual(['coder', 'planner'])
   expect(new Set(run.steps.map(step => step.id)).size).toBe(2)
   expect(run.steps.every(step => step.runId === run.id)).toBe(true)
   expect(run.createdAt).toBeInstanceOf(Date)
@@ -55,6 +55,6 @@ test('step insertion failure rolls back the run as well', async () => {
 test('stored step roles are required and restricted to planner/coder', async () => {
   const run = await createRun(connection.db)
   await expect(connection.db.execute(sql`INSERT INTO steps (id, run_id) VALUES (${randomUUID()}, ${run.id})`)).rejects.toThrow()
-  await expect(connection.db.execute(sql`INSERT INTO steps (id, run_id, task_type) VALUES (${randomUUID()}, ${run.id}, 'admin')`)).rejects.toThrow()
+  await expect(connection.db.execute(sql`INSERT INTO steps (id, run_id, role) VALUES (${randomUUID()}, ${run.id}, 'admin')`)).rejects.toThrow()
   expect((await connection.db.select().from(steps)).some(step => step.runId === run.id)).toBe(true)
 })

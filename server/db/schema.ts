@@ -5,7 +5,7 @@
  */
 import { sql } from 'drizzle-orm'
 import { check, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
-import type { TaskType } from '../../shared/utils/zod-schemas/run.schema.ts'
+import type { StepRole } from '../../shared/utils/zod-schemas/run.schema.ts'
 import type { artifactStates } from '../../shared/utils/zod-schemas/artifact.schema.ts'
 
 /**
@@ -22,9 +22,9 @@ export const runs = pgTable('runs', {
 export const steps = pgTable('steps', {
   id: uuid('id').primaryKey(),
   runId: uuid('run_id').notNull().references(() => runs.id, { onDelete: 'restrict' }),
-  taskType: text('task_type').$type<TaskType>().notNull(),
+  role: text('role').$type<StepRole>().notNull(),
 }, table => [
-  check('steps_task_type_check', sql`${table.taskType} IN ('planner', 'coder')`),
+  check('steps_role_check', sql`${table.role} IN ('planner', 'coder')`),
 ])
 
 /**

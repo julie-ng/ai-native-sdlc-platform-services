@@ -61,7 +61,7 @@ test('missing and invisible artifacts are the same 404, and set no artifact', as
     [contexts['coder-c1'], p2.id, 'read'],
     [contexts['planner-p1'], p2.id, 'update'],
     [contexts['planner-p1'], p2.id, 'create'],
-    [contexts['unknown-task'], p2.id, 'read'],
+    [contexts['unknown-role'], p2.id, 'read'],
   ] as const) {
     const event = eventFor(step)
     await expect(requireArtifactAccess(event, id, () => action)).rejects.toMatchObject({ statusCode: 404, message: 'Artifact not found' })

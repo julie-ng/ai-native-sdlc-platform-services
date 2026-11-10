@@ -37,7 +37,7 @@ The `requireStepContext` guard establishes `event.context.step`:
 {
   runId,     // workflow instance
   stepId,    // caller's logical step
-  taskType,  // server-established work type
+  role,  // server-established work type
   inputs,    // bound input references
   outputs,   // bound own-output references
 }
@@ -45,7 +45,7 @@ The `requireStepContext` guard establishes `event.context.step`:
 ```
 
 - `readStepContext` requires all bindings in the caller's run and outputs owned by its step. Context comes only from the guard's authentication, never unverified HTTP claims. The guard looks up stored run/step records and derives the fixed bindings. Fixed contexts are test-only.
-- [`canAccessArtifact`](../../server/utils/artifact/policy.utils.ts) applies the task policy to one exact reference and action: planners create and update their own `plan` outputs, coders read `plan` references among their bindings. Create and update stay distinct, mirroring Azure's `c`/`w` SAS permissions. Unknown tasks get nothing.
+- [`canAccessArtifact`](../../server/utils/artifact/policy.utils.ts) applies the role policy to one exact reference and action: planners create and update their own `plan` outputs, coders read `plan` references among their bindings. Create and update stay distinct, mirroring Azure's `c`/`w` SAS permissions. Unknown tasks get nothing.
 - The `requireArtifactAccess` guard looks up an ID and sets `event.context.artifact`:
 
 ```ts
@@ -70,7 +70,7 @@ if (!canAccessArtifact(caller, record.reference, action))    → 403
 
 - PostgreSQL 17 with Drizzle/node-postgres. [Schema](../../server/db/schema.ts) and generated [migrations](../../server/db/migrations/) live under `server/db/`. One lazy `pg.Pool` (max 5) per Nitro process, shared with the readiness check through `useDB()`, closed on shutdown. Connecting or waiting for a free connection times out after 5 seconds. Idle connection errors are logged, not fatal.
 - `artifacts`: `id`, `producer_step_id`, `name`, `content_type`, `kind`, `title`, `description`, `state`, `size_bytes`, `sha256`, `details`, `created_at`, `updated_at`. Unique `(producer_step_id, name)`; `producer_step_id → steps(id) ON DELETE RESTRICT`; a CHECK ties state to the report columns: reserved has no size/hash/details, uploaded has size/hash, failed has neither size nor hash. No attempt, revision, SAS or blob-key columns.
-- Runs store immutable `created_at` timestamps; steps store a required `task_type` (`planner` or `coder`) and reference their run. Run creation inserts one planner and one coder atomically; no bindings table is stored. Lookups join `steps` so references carry the step's actual run; registration fails if the step is not in the caller's run.
+- Runs store immutable `created_at` timestamps; steps store a required `role` (`planner` or `coder`) and reference their run. Run creation inserts one planner and one coder atomically; no bindings table is stored. Lookups join `steps` so references carry the step's actual run; registration fails if the step is not in the caller's run.
 - `created_at` is fixed. `updated_at` is set explicitly to `now()` by every accepted write (repeated POST or upload report); reads and denials leave it unchanged.
 - [Repository tests](../../tests/integration/artifact-repository.test.ts) run against a disposable database: constraints, run membership, stable IDs, metadata replacement, report replacement, timestamps and a fresh connection pool. [Guard tests](../../tests/integration/artifact-guards.test.ts) cover the planner-to-coder handoff and 404/403 decisions on stored artifacts.
 

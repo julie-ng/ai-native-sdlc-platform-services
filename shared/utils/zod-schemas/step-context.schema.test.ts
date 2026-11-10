@@ -4,7 +4,7 @@ import { stepContextSchema } from './step-context.schema.ts'
 const step = {
   runId: '10000000-0000-4000-8000-000000000001',
   stepId: '20000000-0000-4000-8000-000000000001',
-  taskType: 'planner',
+  role: 'planner',
   inputs: [],
   outputs: [{ runId: '10000000-0000-4000-8000-000000000001', producerStepId: '20000000-0000-4000-8000-000000000001', name: 'plan' }],
 }

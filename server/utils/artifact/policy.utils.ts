@@ -19,10 +19,10 @@ export function sameArtifactReference(left: ArtifactRef, right: ArtifactRef): bo
 }
 
 /**
- * Task-type access policy for one reference and action.
+ * Role access policy for one reference and action.
  * - `planner`: creates and updates its own `plan` outputs; reads nothing.
  * - `coder`: reads `plan` references among its inputs and outputs; writes nothing.
- * - Any other task type, or an invalid context: no access.
+ * - Any other step role, or an invalid context: no access.
  *
  * Check {@link isArtifactVisible} first: a visible artifact with a missing action is a 403.
  * @param step - Trusted step context.
@@ -32,10 +32,10 @@ export function canAccessArtifact(step: StepContext, reference: ArtifactRef, act
   if (!readStepContext({ step }).ok || reference.name !== 'plan') {
     return false
   }
-  if (step.taskType === 'planner') {
+  if (step.role === 'planner') {
     return (action === 'create' || action === 'update') && step.outputs.some(ref => sameArtifactReference(ref, reference))
   }
-  if (step.taskType === 'coder') {
+  if (step.role === 'coder') {
     return action === 'read' && [...step.inputs, ...step.outputs].some(ref => sameArtifactReference(ref, reference))
   }
   return false

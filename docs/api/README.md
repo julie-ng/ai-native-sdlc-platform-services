@@ -19,15 +19,15 @@ Routes, HMAC authentication, PostgreSQL queries and Azure SAS signing are implem
 
 ## Access policy
 
-The `requireStepContext` guard, called explicitly by every artifact route, establishes step context; task policy and exact workflow bindings determine access. An artifact ID or claimed role grants nothing.
+The `requireStepContext` guard, called explicitly by every artifact route, establishes step context; role policy and exact workflow bindings determine access. An artifact ID or claimed role grants nothing.
 
 | Caller | Permitted operations |
 | --- | --- |
 | Planner | Create/overwrite its own bound `plan` and report uploads. No metadata or download access. |
 | Coder | Discover, inspect, and download bound plans. No writes. |
-| Other task types | No access. |
+| Other step roles | No access. |
 
-- A different step does not inherit ownership, even with the same task type.
+- A different step does not inherit ownership, even with the same step role.
 - Missing artifact, or not visible (no granted action): 404. Visible but wrong action: 403. For example, a planner reading its own plan, or a coder reporting an upload.
 - Write responses contain acknowledgments, not stored metadata. Metadata/list responses never contain SAS URLs.
 

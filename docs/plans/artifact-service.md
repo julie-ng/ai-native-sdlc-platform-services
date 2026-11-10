@@ -30,7 +30,7 @@
 - One artifact ID and one blob per producing step/name, reused across retries and repeated writes.
   - No attempt IDs in artifact ownership, references or step context. No per-attempt records, blob keys, logs or artifact revision history.
 - The planner can create and overwrite its own plan; a later execution of the same step can continue editing it.
-  - A different step cannot overwrite it by default. Matching task type alone grants nothing; read, create and update capabilities stay distinct.
+  - A different step cannot overwrite it by default. Matching step role alone grants nothing; read, create and update capabilities stay distinct.
 - Each successful-upload acknowledgment replaces the latest size/hash and last-acknowledgment time.
   - Only the current values are stored. Consumers read after the producing step finishes.
 - Assume one active writer per step and no overlapping executions.
@@ -58,7 +58,7 @@
 
 - Read the applicable [server](../../server/AGENTS.md), [database](../../server/db/AGENTS.md) and [shared](../../shared/AGENTS.md) instructions before changing artifact code.
 - Start with the [overview](../api/README.md), then [implementation details](../api/implementation.md). [OpenAPI](../api/artifact.openapi.json) and [shared types](../../shared/types/artifact.ts) define exact shapes.
-- Step context is `{ runId, stepId, taskType, inputs, outputs }`; internal references are `{ runId, producerStepId, name }`. Registration derives the producing step from the caller; bindings point to a step's current artifact, not a historical execution.
+- Step context is `{ runId, stepId, role, inputs, outputs }`; internal references are `{ runId, producerStepId, name }`. Registration derives the producing step from the caller; bindings point to a step's current artifact, not a historical execution.
 - Artifacts keep `createdAt` and `updatedAt`. Every accepted write (repeated POST or upload report) refreshes `updatedAt`; reads and denials do not.
 
 | Piece | Location | Tests |

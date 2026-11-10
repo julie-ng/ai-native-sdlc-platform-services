@@ -12,8 +12,8 @@ export async function createRun(db: Database) {
   return db.transaction(async (tx) => {
     const [run] = await tx.insert(runs).values({ id: randomUUID() }).returning()
     const created = await tx.insert(steps).values([
-      { id: randomUUID(), runId: run!.id, taskType: 'planner' },
-      { id: randomUUID(), runId: run!.id, taskType: 'coder' },
+      { id: randomUUID(), runId: run!.id, role: 'planner' },
+      { id: randomUUID(), runId: run!.id, role: 'coder' },
     ]).returning()
     return { ...run!, steps: created }
   })

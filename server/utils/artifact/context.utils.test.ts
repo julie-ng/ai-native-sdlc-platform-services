@@ -19,7 +19,7 @@ test('does not resolve tokens, authenticate or trust HTTP claims', () => {
   for (const context of [null, undefined, 'planner', {}, { token: 'planner-p1' }, { body: { step: planner } }, { query: planner }, { headers: { 'x-step-context': JSON.stringify(planner) } }]) {
     expect(readStepContext(context)).toStrictEqual({ ok: false, error: 'context_unavailable' })
   }
-  for (const extra of [{ role: 'admin' }, { permissions: ['read-all'] }, { attemptId: '30000000-0000-4000-8000-000000000001' }, { grants: ['read-all'] }]) {
+  for (const extra of [{ claimedRole: 'admin' }, { permissions: ['read-all'] }, { attemptId: '30000000-0000-4000-8000-000000000001' }, { grants: ['read-all'] }]) {
     expect(readStepContext({ step: { ...planner, ...extra } })).toStrictEqual({ ok: false, error: 'context_unavailable' })
   }
 })

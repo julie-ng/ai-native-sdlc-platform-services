@@ -1,11 +1,11 @@
 import { expect, test } from 'vitest'
 import { createHmac } from 'node:crypto'
-import { equalAdminToken, isStepTokenExpired, signStepToken, stepTokenExpiresAt, taskActions, verifyStepToken } from './step-token.utils.ts'
+import { equalAdminToken, isStepTokenExpired, signStepToken, stepTokenExpiresAt, roleActions, verifyStepToken } from './step-token.utils.ts'
 import { contexts, runA, runB, stepIds } from '../../../tests/support/artifact-fixtures.ts'
 import { canAccessArtifact } from '../artifact/policy.utils.ts'
 
 const key = 'test-signing-key'
-const scope = { runId: runA, createdAt: new Date('2026-11-10T10:00:00.000Z'), stepId: stepIds.plannerP1, taskType: 'planner' as const }
+const scope = { runId: runA, createdAt: new Date('2026-11-10T10:00:00.000Z'), stepId: stepIds.plannerP1, role: 'planner' as const }
 
 test('signs the canonical tuple with sorted actions and verifies it', () => {
   const expected = createHmac('sha256', key).update(JSON.stringify([
@@ -22,7 +22,7 @@ test('binds key, run, timestamp, step and granted actions', () => {
     { ...scope, runId: runB },
     { ...scope, createdAt: new Date(scope.createdAt.getTime() + 1) },
     { ...scope, stepId: stepIds.coderC1 },
-    { ...scope, taskType: 'coder' as const },
+    { ...scope, role: 'coder' as const },
   ]) {
     expect(verifyStepToken(token, key, changed)).toBe(false)
   }
@@ -53,6 +53,6 @@ test('signed task actions agree with implemented artifact permissions', () => {
   for (const step of [contexts['planner-p1'], contexts['coder-c1']]) {
     const reference = [...step.inputs, ...step.outputs][0]!
     const granted = (['create', 'read', 'update'] as const).filter(action => canAccessArtifact(step, reference, action))
-    expect(granted).toEqual(taskActions[step.taskType as keyof typeof taskActions])
+    expect(granted).toEqual(roleActions[step.role as keyof typeof roleActions])
   }
 })

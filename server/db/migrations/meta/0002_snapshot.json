@@ -1,5 +1,5 @@
 {
-  "id": "7aab099f-4100-4b4e-a4cf-bcbf14e3dbe2",
+  "id": "8b5b8e61-ccd7-4397-a52e-800a2d33ae7c",
   "prevId": "11510c89-271c-469a-af49-cbb0f2f0801d",
   "version": "7",
   "dialect": "postgresql",
@@ -169,8 +169,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "task_type": {
-          "name": "task_type",
+        "role": {
+          "name": "role",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -196,9 +196,9 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "steps_task_type_check": {
-          "name": "steps_task_type_check",
-          "value": "\"steps\".\"task_type\" IN ('planner', 'coder')"
+        "steps_role_check": {
+          "name": "steps_role_check",
+          "value": "\"steps\".\"role\" IN ('planner', 'coder')"
         }
       },
       "isRLSEnabled": false

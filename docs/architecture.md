@@ -29,12 +29,13 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 
 ## Open decisions
 
-- None for authentication: HMAC tokens are decided (ADR-016 in the parent repository). Where task type and bindings come from is open there.
+- None for authentication: HMAC tokens are decided (ADR-016 in the parent repository). The initial release derives role and bindings from stored planner/coder steps (#41); broader workflow shapes remain deferred.
 
 ## Decision log
 
 | Date / context | Decision and reason |
 | --- | --- |
+| 2026-11-10 / step role naming review (#43) | Rename `taskType` to `role` (`StepRole`, `roleActions`, `steps.role`) because planner/coder name actors; reviewer remains deferred. Regenerate the undeployed migration rather than add a rename migration. |
 | 2026-11-10 / initial authentication (#41) | Authenticate opaque HMAC tokens against stored run/step records; issue both roles with a shared `expiresAt` (Julie). Keep existing direct Vitest/database testing patterns; project-wide HTTP automation is separate (#42). |
 | 2026-11-10 / initial run records (#41) | Store run creation time and step task type; create a fixed planner/coder pair transactionally, deriving bindings rather than persisting them. Existing local data may be discarded instead of inventing legacy roles (Julie). |
 | 2026-11-05 / caller authentication (ADR-016) | Authenticate steps with HMAC tokens in the first release; until then, a dev-only step context stub (#38). Decided by Julie. |

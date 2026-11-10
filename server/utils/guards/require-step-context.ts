@@ -40,11 +40,11 @@ export async function requireStepContext(event: H3Event) {
   if (isStepTokenExpired(run.createdAt, expiryMinutes)) {
     return reject('token_expired')
   }
-  if (!verifyStepToken(token, key, { runId: run.id, createdAt: run.createdAt, stepId: step.id, taskType: step.taskType })) {
+  if (!verifyStepToken(token, key, { runId: run.id, createdAt: run.createdAt, stepId: step.id, role: step.role })) {
     return reject('invalid_hmac')
   }
-  const planners = records.filter(record => record.step.taskType === 'planner')
-  const coders = records.filter(record => record.step.taskType === 'coder')
+  const planners = records.filter(record => record.step.role === 'planner')
+  const coders = records.filter(record => record.step.role === 'coder')
   if (records.length !== 2 || planners.length !== 1 || coders.length !== 1) {
     return reject('invalid_workflow')
   }
@@ -53,9 +53,9 @@ export async function requireStepContext(event: H3Event) {
     step: {
       runId: run.id,
       stepId: step.id,
-      taskType: step.taskType,
-      inputs: step.taskType === 'coder' ? [plan] : [],
-      outputs: step.taskType === 'planner' ? [plan] : [],
+      role: step.role,
+      inputs: step.role === 'coder' ? [plan] : [],
+      outputs: step.role === 'planner' ? [plan] : [],
     },
   })
   if (!context.ok) {

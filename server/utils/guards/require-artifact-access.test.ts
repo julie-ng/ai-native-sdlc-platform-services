@@ -27,7 +27,7 @@ test('invisible references are 404: other steps, names, and callers without bind
     [contexts['coder-c1'], { ...planP1, producerStepId: contexts['coder-c1'].stepId }],
     [contexts['planner-p1'], otherP1],
     [contexts['planner-p2'], planP1],
-    [contexts['unknown-task'], planP1],
+    [contexts['unknown-role'], planP1],
   ] as const) {
     expect(() => requireArtifactPermission(eventFor(step), reference, ['create', 'update']))
       .toThrow(expect.objectContaining({ statusCode: 404, message: 'Artifact not found' }))

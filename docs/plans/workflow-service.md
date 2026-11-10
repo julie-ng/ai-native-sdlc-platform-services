@@ -40,7 +40,7 @@ Architect answers, 2026-10-25.
 
 ## Artifact handoff for this POC
 
-- Trusted middleware supplies artifact step context `{ runId, stepId, taskType, inputs, outputs }`.
+- Trusted middleware supplies artifact step context `{ runId, stepId, role, inputs, outputs }`.
   - The artifact service does not authenticate the caller, accept replacement HTTP grants or require an attempt ID.
 - Artifact references are `{ runId, producerStepId, name }`, pointing to a step's current artifact.
   - A retry or later execution of the same step keeps the same artifact ID/blob. `steps.outputAttemptId` in the broader sketch below is not an artifact version selector or a dependency of this slice.
