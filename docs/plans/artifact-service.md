@@ -73,5 +73,5 @@
 
 1. HMAC authentication and admin run creation are implemented in #41, with direct guard tests and PostgreSQL integration tests. The temporary local stub is removed.
 2. Static checks now require artifact routes to await their authentication guard and run routes to call their admin guard before input reads (#19); only the documented JSON 404 catch-all is allow-listed as unguarded. The proposed additional HTTP testing layer (#42) was declined; use existing testing patterns and manual HTTP checks.
-3. Workload identity and execution in the cluster remain unverified. Local live verification is recorded in the README.
+3. Deployment artifacts (image, CI publish, manifests, startup migrations) exist (#45); workload identity and execution in the cluster remain unverified. Local live verification is recorded in the README.
 4. Broader workflow endpoints, attempt logging, GitHub broker, webhook ingress, UI and LLM calls remain outside this slice. The [workflow reference](./workflow-service.md) preserves broader planning ideas, not POC requirements.
