@@ -24,11 +24,11 @@ let database: ReturnType<typeof createDatabase> | undefined
  */
 export function useDB(): Database {
   if (!database) {
-    const { databaseUrl } = useRuntimeConfig()
+    const { databaseUrl, databaseEntraAuth } = useRuntimeConfig()
     if (!databaseUrl) {
       throw new Error('Database is not configured (NUXT_DATABASE_URL)')
     }
-    database = createDatabase(databaseUrl)
+    database = createDatabase(databaseUrl, String(databaseEntraAuth) === 'true')
     database.pool.on('error', (error) => {
       useLogger('db').error({ err: error }, 'Idle database connection failed')
     })

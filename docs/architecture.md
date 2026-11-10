@@ -20,12 +20,14 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 | --- | --- | --- |
 | First release | RESTful APIs, with UI deferred | [Artifact API](./api/README.md) implemented; HMAC authentication and admin run creation implemented; live verification status is recorded in the README |
 | Language | TypeScript by default, including Vue script logic | Applies to all server code and tests |
-| Persistence | Drizzle is the ORM | PostgreSQL 17 schema, migrations and artifact repository implemented; tested against disposable Docker PostgreSQL; no deployed database |
+| Persistence | Drizzle is the ORM | PostgreSQL 17 schema, migrations and artifact repository implemented; tested against disposable Docker PostgreSQL; Azure database provisioned per #44; cluster connectivity unverified |
 | UI | Pinia, Tailwind CSS, Nuxt UI | Deferred; not installed |
 | Vue naming | PascalCase reusable component filenames | Applies to new components; Nuxt special filenames retain framework conventions |
 | Agent guidance | Root and nested `AGENTS.md`; portable workflows under `.agents/skills/` | Shared guidance authored here; client adapters are managed separately |
 | Durable context | Repository documentation is the minimum; personal memory is optional | No personal memory or other repository is required |
 | Reference documentation | Astro Starlight site in `docs-site/`, published to GitHub Pages from `main` | Site with HTTP API and code reference sections implemented; Pages workflow in `.github/workflows/docs.yml`, first deployment pending ([#28](https://github.com/julie-ng/ai-native-sdlc-platform-services/issues/28)) |
+
+Database authentication: opt-in `NUXT_DATABASE_ENTRA_AUTH=true` uses Azure Identity tokens through the existing pool password callback with verified TLS; default local URL/password authentication is unchanged. See the [Azure PostgreSQL setup](../README.md#azure-postgresql-with-microsoft-entra).
 
 ## Open decisions
 
@@ -36,6 +38,7 @@ Platform Services is a Nuxt 4 application being developed to expose RESTful APIs
 | Date / context | Decision and reason |
 | --- | --- |
 | 2026-11-10 / route boundaries (#19) | Check explicit authentication calls before input reads with regex-based Vitest tests; allow only the documented JSON 404 catch-all to be unguarded. This keeps route coverage visible without an HTTP harness; comments and runtime control flow remain limitations. |
+| 2026-11-10 / Azure PostgreSQL (#44) | Add explicit Entra opt-in and a per-connection token callback using the installed Azure Identity SDK, retaining local password authentication and existing pool limits; Entra URLs supply connection identity fields while TLS is always verified. |
 | 2026-11-10 / JSDoc review (#43) | Enforce parameter and return tags with `eslint-plugin-jsdoc` in server utilities/database code; TypeDoc only checks comment presence. Keep tests and migrations excluded and document throws where useful. |
 | 2026-11-10 / step role naming review (#43) | Rename `taskType` to `role` (`StepRole`, `roleActions`, `steps.role`) because planner/coder name actors; reviewer remains deferred. Regenerate the undeployed migration rather than add a rename migration. |
 | 2026-11-10 / initial authentication (#41) | Authenticate opaque HMAC tokens against stored run/step records; issue both roles with a shared `expiresAt` (Julie). Keep existing direct Vitest/database testing patterns; no additional HTTP testing layer. |

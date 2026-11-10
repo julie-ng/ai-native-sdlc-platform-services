@@ -4,6 +4,7 @@
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import pg from 'pg'
+import { DefaultAzureCredential } from '@azure/identity'
 import * as schema from './schema.ts'
 
 /**
@@ -14,11 +15,32 @@ import * as schema from './schema.ts'
  * Connecting, or waiting for a free connection when all are busy, fails after
  * 5 seconds instead of waiting indefinitely (node-postgres's default), so an
  * unreachable database fails requests and readiness checks rather than hanging.
- * @param connectionString - PostgreSQL connection URL.
+ * Entra mode uses the URL host, port, database and username with verified TLS.
+ * A token is obtained for each new connection; Azure Identity manages token caching.
+ * @param connectionString - PostgreSQL connection URL; passwordless in Entra mode.
+ * @param entraAuth - Opt in to Microsoft Entra authentication instead of a URL password.
  * @returns The Drizzle client (`db`) and its pool (`pool`, end it with `pool.end()`).
  */
-export function createDatabase(connectionString: string) {
-  const pool = new pg.Pool({ connectionString, max: 5, connectionTimeoutMillis: 5_000 })
+export function createDatabase(connectionString: string, entraAuth = false) {
+  let config: pg.PoolConfig = { connectionString }
+  if (entraAuth) {
+    const url = new URL(connectionString)
+    const credential = new DefaultAzureCredential()
+    // pg reparses connectionString and overwrites a password callback, even with
+    // an empty URL password. Pass explicit fields so the callback survives.
+    config = {
+      host: url.hostname,
+      port: url.port ? Number(url.port) : 5432,
+      database: decodeURIComponent(url.pathname.slice(1)),
+      user: decodeURIComponent(url.username),
+      ssl: { rejectUnauthorized: true },
+      password: async () => {
+        const token = await credential.getToken('https://ossrdbms-aad.database.windows.net/.default')
+        return token.token
+      },
+    }
+  }
+  const pool = new pg.Pool({ ...config, max: 5, connectionTimeoutMillis: 5_000 })
   return { db: drizzle(pool, { schema }), pool }
 }
 
