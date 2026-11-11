@@ -12,6 +12,9 @@ const stepCredentialSchema = z.strictObject({
 export const createRunResponseSchema = z.strictObject({
   runId: uuidSchema,
   expiresAt: utcInstantSchema,
-  steps: z.strictObject({ planner: stepCredentialSchema, coder: stepCredentialSchema }),
+  steps: z.strictObject({
+    planner: stepCredentialSchema,
+    coder: stepCredentialSchema,
+  }),
 })
 export type CreateRunResponse = z.infer<typeof createRunResponseSchema>

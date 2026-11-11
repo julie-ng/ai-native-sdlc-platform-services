@@ -27,8 +27,7 @@ test('creates one planner and coder with a stored, immutable creation timestamp'
     const rows = await findRunSteps(fresh.db, run.id)
     expect(rows).toHaveLength(2)
     expect(rows.every(row => row.run.createdAt.toISOString() === run.createdAt.toISOString())).toBe(true)
-  }
-  finally {
+  } finally {
     await fresh.pool.end()
   }
   expect(await findRunSteps(connection.db, randomUUID())).toEqual([])
@@ -45,8 +44,7 @@ test('step insertion failure rolls back the run as well', async () => {
   try {
     await expect(createRun(connection.db)).rejects.toThrow()
     expect(await connection.db.select().from(runs)).toEqual(before)
-  }
-  finally {
+  } finally {
     await connection.db.execute(sql`DROP TRIGGER reject_new_steps ON steps`)
     await connection.db.execute(sql`DROP FUNCTION reject_new_steps()`)
   }

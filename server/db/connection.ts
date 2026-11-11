@@ -44,8 +44,15 @@ export function createDatabase(connectionString: string, entraAuth = false) {
       },
     }
   }
-  const pool = new pg.Pool({ ...config, max: 5, connectionTimeoutMillis: 5_000 })
-  return { db: drizzle(pool, { schema }), pool }
+  const pool = new pg.Pool({
+    ...config,
+    max: 5,
+    connectionTimeoutMillis: 5_000,
+  })
+  return {
+    db: drizzle(pool, { schema }),
+    pool,
+  }
 }
 
 /** Drizzle client type returned by {@link createDatabase}. */

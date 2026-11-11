@@ -19,7 +19,11 @@ vi.mock('../../server/utils/log-security-event.utils.ts', () => ({ logSecurityEv
 
 const eventFor = (step: StepContext) => ({ context: { step } }) as unknown as H3Event
 const missingId = '40000000-0000-4000-8000-000000000099'
-const report = { state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) } as const
+const report = {
+  state: 'uploaded',
+  sizeBytes: 5,
+  sha256: 'a'.repeat(64),
+} as const
 
 beforeAll(async () => {
   database = await createTestDatabase()
@@ -50,21 +54,52 @@ test('planner to coder handoff: register, report, discover, read', async () => {
   const listed = await listArtifactsByReferences(connection.db, readableArtifactReferences(contexts['coder-c1']))
   expect(listed.map(artifact => artifact.id)).toStrictEqual([record.id])
   await requireArtifactAccess(coder, record.id, () => 'read')
-  expect(coder.context.artifact).toMatchObject({ id: record.id, state: 'uploaded', sizeBytes: 5 })
+  expect(coder.context.artifact).toMatchObject({
+    id: record.id,
+    state: 'uploaded',
+    sizeBytes: 5,
+  })
 })
 
 test('missing and invisible artifacts are the same 404, and set no artifact', async () => {
   const { record: p2 } = await upsertArtifact(connection.db, planP2, { contentType: 'text/markdown' })
-  for (const [step, id, action] of [
-    [contexts['coder-c1'], missingId, 'read'],
-    // P2's plan exists but is not bound to C1 or P1.
-    [contexts['coder-c1'], p2.id, 'read'],
-    [contexts['planner-p1'], p2.id, 'update'],
-    [contexts['planner-p1'], p2.id, 'create'],
-    [contexts['unknown-role'], p2.id, 'read'],
-  ] as const) {
+  for (const [
+    step,
+    id,
+    action,
+  ] of [
+      [
+        contexts['coder-c1'],
+        missingId,
+        'read',
+      ],
+      // P2's plan exists but is not bound to C1 or P1.
+      [
+        contexts['coder-c1'],
+        p2.id,
+        'read',
+      ],
+      [
+        contexts['planner-p1'],
+        p2.id,
+        'update',
+      ],
+      [
+        contexts['planner-p1'],
+        p2.id,
+        'create',
+      ],
+      [
+        contexts['unknown-role'],
+        p2.id,
+        'read',
+      ],
+    ] as const) {
     const event = eventFor(step)
-    await expect(requireArtifactAccess(event, id, () => action)).rejects.toMatchObject({ statusCode: 404, message: 'Artifact not found' })
+    await expect(requireArtifactAccess(event, id, () => action)).rejects.toMatchObject({
+      statusCode: 404,
+      message: 'Artifact not found',
+    })
     expect(event.context.artifact).toBeUndefined()
   }
 })
@@ -78,7 +113,10 @@ test('a visible artifact with the wrong action is 403', async () => {
     [contexts['coder-c1'], 'update'],
   ] as const) {
     const event = eventFor(step)
-    await expect(requireArtifactAccess(event, record.id, () => action)).rejects.toMatchObject({ statusCode: 403, message: 'Forbidden' })
+    await expect(requireArtifactAccess(event, record.id, () => action)).rejects.toMatchObject({
+      statusCode: 403,
+      message: 'Forbidden',
+    })
     expect(event.context.artifact).toBeUndefined()
   }
 })

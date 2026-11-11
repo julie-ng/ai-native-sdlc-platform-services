@@ -19,7 +19,11 @@ import type { ArtifactRecord } from './repository.utils.ts'
 function orBadRequest<T>(result: z.ZodSafeParseResult<T>): T {
   if (!result.success) {
     // Field paths and messages only; Zod messages do not echo input values.
-    throw createError({ statusCode: 400, message: 'Invalid request', data: z.flattenError(result.error) })
+    throw createError({
+      statusCode: 400,
+      message: 'Invalid request',
+      data: z.flattenError(result.error),
+    })
   }
   return result.data
 }
@@ -61,7 +65,9 @@ export function preventCaching(event: H3Event) {
  * @returns Public metadata appropriate to the current upload state, without internal references.
  */
 export function toArtifactInfo(record: ArtifactRecord): ArtifactInfo {
-  const { contentType, kind, title, description } = record.metadata
+  const {
+    contentType, kind, title, description,
+  } = record.metadata
   const common = {
     id: record.id,
     name: record.reference.name,
@@ -76,10 +82,23 @@ export function toArtifactInfo(record: ArtifactRecord): ArtifactInfo {
   switch (record.state) {
     case 'uploaded':
       // The database CHECK constraint guarantees size and hash for uploaded records.
-      return { ...common, state: 'uploaded', sizeBytes: record.sizeBytes!, sha256: record.sha256!, ...details }
+      return {
+        ...common,
+        state: 'uploaded',
+        sizeBytes: record.sizeBytes!,
+        sha256: record.sha256!,
+        ...details,
+      }
     case 'failed':
-      return { ...common, state: 'failed', ...details }
+      return {
+        ...common,
+        state: 'failed',
+        ...details,
+      }
     case 'reserved':
-      return { ...common, state: 'reserved' }
+      return {
+        ...common,
+        state: 'reserved',
+      }
   }
 }

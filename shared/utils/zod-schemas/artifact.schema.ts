@@ -6,7 +6,11 @@ import {
 import { uploadSasSchema } from './sas.schema.ts'
 
 // reserved: registered, no upload reported. uploaded/failed: the latest upload report.
-export const artifactStates = { reserved: 'reserved', uploaded: 'uploaded', failed: 'failed' } as const
+export const artifactStates = {
+  reserved: 'reserved',
+  uploaded: 'uploaded',
+  failed: 'failed',
+} as const
 export const artifactStateSchema = z.enum(artifactStates)
 const descriptiveMetadata = {
   contentType: contentTypeSchema,

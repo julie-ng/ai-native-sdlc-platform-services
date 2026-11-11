@@ -19,22 +19,53 @@ const key: UserDelegationKey = {
 
 function setup(url = 'https://account.blob.core.windows.net') {
   const getUserDelegationKey = vi.fn(async () => key)
-  const storage = { service: { accountName: 'account', url, getUserDelegationKey }, container: 'artifacts', now: () => now }
-  return { storage, getUserDelegationKey }
+  const storage = {
+    service: {
+      accountName: 'account',
+      url,
+      getUserDelegationKey,
+    },
+    container: 'artifacts',
+    now: () => now,
+  }
+  return {
+    storage,
+    getUserDelegationKey,
+  }
 }
 
 test('upload SAS: exact blob, write-only, HTTPS, 300 seconds, no start time', async () => {
   const { storage, getUserDelegationKey } = setup()
-  const record = { ...uploadedRecord('40000000-0000-4000-8000-000000000001', planP1), metadata: { contentType: 'text/plain' } }
+  const record = {
+    ...uploadedRecord('40000000-0000-4000-8000-000000000001', planP1),
+    metadata: { contentType: 'text/plain' },
+  }
   const upload = uploadSasSchema.parse(await signUpload(storage, record))
   const url = new URL(upload.url)
   expect(`${url.origin}${url.pathname}`).toBe(`https://account.blob.core.windows.net/artifacts/${deriveBlobName(planP1)}`)
-  expect(Object.fromEntries(['sp', 'sr', 'spr', 'se', 'skoid'].map(name => [name, url.searchParams.get(name)]))).toStrictEqual({
-    sp: 'w', sr: 'b', spr: 'https', se: '2026-10-27T10:05:00Z', skoid: key.signedObjectId,
+  expect(Object.fromEntries([
+    'sp',
+    'sr',
+    'spr',
+    'se',
+    'skoid',
+  ].map(name => [name, url.searchParams.get(name)]))).toStrictEqual({
+    sp: 'w',
+    sr: 'b',
+    spr: 'https',
+    se: '2026-10-27T10:05:00Z',
+    skoid: key.signedObjectId,
   })
   expect(url.searchParams.has('st')).toBe(false)
   expect(url.searchParams.get('sig')).toBeTruthy()
-  expect(upload).toMatchObject({ method: 'PUT', expiresAt: '2026-10-27T10:05:00.000Z', headers: { 'x-ms-blob-type': 'BlockBlob', 'Content-Type': 'text/plain' } })
+  expect(upload).toMatchObject({
+    method: 'PUT',
+    expiresAt: '2026-10-27T10:05:00.000Z',
+    headers: {
+      'x-ms-blob-type': 'BlockBlob',
+      'Content-Type': 'text/plain',
+    },
+  })
   expect(getUserDelegationKey).toHaveBeenCalledWith(now, new Date('2026-10-27T10:05:00.000Z'))
 })
 
@@ -52,7 +83,13 @@ test('delegation key failures and invalid references produce no URL', async () =
   getUserDelegationKey.mockRejectedValueOnce(new Error('AuthorizationPermissionMismatch'))
   const record = uploadedRecord('40000000-0000-4000-8000-000000000001', planP1)
   await expect(signUpload(storage, record)).rejects.toThrow('AuthorizationPermissionMismatch')
-  const invalid = { ...record, reference: { ...planP1, name: '../escape' } }
+  const invalid = {
+    ...record,
+    reference: {
+      ...planP1,
+      name: '../escape',
+    },
+  }
   const error = await signUpload(storage, invalid).catch((error: unknown) => error)
   assert(error instanceof TypeError)
   expect(error.message).toBe('Invalid artifact reference')

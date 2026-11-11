@@ -31,7 +31,10 @@ export async function requireStepContext(event: H3Event) {
       runId: runId.success ? runId.data : undefined,
       stepId: stepId.success ? stepId.data : undefined,
     })
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
+    throw createError({
+      statusCode: 401,
+      message: 'Unauthorized',
+    })
   }
   if (!token || !runId.success || !stepId.success) {
     return reject('missing_or_malformed_credentials')
@@ -45,7 +48,12 @@ export async function requireStepContext(event: H3Event) {
   if (isStepTokenExpired(run.createdAt, expiryMinutes)) {
     return reject('token_expired')
   }
-  if (!verifyStepToken(token, key, { runId: run.id, createdAt: run.createdAt, stepId: step.id, role: step.role })) {
+  if (!verifyStepToken(token, key, {
+    runId: run.id,
+    createdAt: run.createdAt,
+    stepId: step.id,
+    role: step.role,
+  })) {
     return reject('invalid_hmac')
   }
   const planners = records.filter(record => record.step.role === 'planner')
@@ -53,7 +61,11 @@ export async function requireStepContext(event: H3Event) {
   if (records.length !== 2 || planners.length !== 1 || coders.length !== 1) {
     return reject('invalid_workflow')
   }
-  const plan = { runId: run.id, producerStepId: planners[0]!.step.id, name: 'plan' }
+  const plan = {
+    runId: run.id,
+    producerStepId: planners[0]!.step.id,
+    name: 'plan',
+  }
   const context = readStepContext({
     step: {
       runId: run.id,

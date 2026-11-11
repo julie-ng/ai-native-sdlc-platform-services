@@ -23,9 +23,7 @@ export const steps = pgTable('steps', {
   id: uuid('id').primaryKey(),
   runId: uuid('run_id').notNull().references(() => runs.id, { onDelete: 'restrict' }),
   role: text('role').$type<StepRole>().notNull(),
-}, table => [
-  check('steps_role_check', sql`${table.role} IN ('planner', 'coder')`),
-])
+}, table => [check('steps_role_check', sql`${table.role} IN ('planner', 'coder')`)])
 
 /**
  * One current artifact per producing step/name. No attempt, revision, SAS or

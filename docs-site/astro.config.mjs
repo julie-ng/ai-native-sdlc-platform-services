@@ -21,7 +21,11 @@ export default defineConfig({
       routeMiddleware: './src/route-data.ts',
       components: { Sidebar: './src/components/Sidebar.astro' },
       social: [
-        { icon: 'github', label: 'GitHub', href: 'https://github.com/julie-ng/ai-native-sdlc-platform-services' },
+        {
+          icon: 'github',
+          label: 'GitHub',
+          href: 'https://github.com/julie-ng/ai-native-sdlc-platform-services',
+        },
       ],
       plugins: [
         // Entry points, tsconfig and validation come from typedoc.json, which `npm run check`
@@ -52,7 +56,11 @@ export default defineConfig({
           {
             base: 'http-api',
             schema: '../docs/api/artifact.openapi.json',
-            sidebar: { label: 'HTTP API', collapsed: false, operations: { badges: true } },
+            sidebar: {
+              label: 'HTTP API',
+              collapsed: false,
+              operations: { badges: true },
+            },
           },
         ]),
       ],
@@ -60,7 +68,10 @@ export default defineConfig({
         ...openAPISidebarGroups,
         // starlight-typedoc's own sidebar group expects one page per member, so list the
         // generated module pages instead; src/route-data.ts groups them by folder.
-        { label: 'Code reference', items: [{ autogenerate: { directory: 'code' } }] },
+        {
+          label: 'Code reference',
+          items: [{ autogenerate: { directory: 'code' } }],
+        },
       ],
     }),
   ],

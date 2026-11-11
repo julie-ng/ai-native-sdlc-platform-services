@@ -26,16 +26,26 @@ import type { ArtifactRecord } from '../artifact/repository.utils.ts'
 export function requireArtifactPermission(event: H3Event, reference: ArtifactRef, actions: readonly ArtifactAction[]) {
   const step = event.context.step!
   if (!isArtifactVisible(step, reference)) {
-    throw createError({ statusCode: 404, message: 'Artifact not found' })
+    throw createError({
+      statusCode: 404,
+      message: 'Artifact not found',
+    })
   }
   if (!actions.every(action => canAccessArtifact(step, reference, action))) {
     logSecurityEvent(event, 'artifact_action_denied', {
       runId: step.runId,
       stepId: step.stepId,
       requiredActions: actions,
-      grantedActions: (['create', 'read', 'update'] as const).filter(action => canAccessArtifact(step, reference, action)),
+      grantedActions: ([
+        'create',
+        'read',
+        'update',
+      ] as const).filter(action => canAccessArtifact(step, reference, action)),
     })
-    throw createError({ statusCode: 403, message: 'Forbidden' })
+    throw createError({
+      statusCode: 403,
+      message: 'Forbidden',
+    })
   }
 }
 
@@ -51,7 +61,10 @@ export function requireArtifactPermission(event: H3Event, reference: ArtifactRef
 export async function requireArtifactAccess(event: H3Event, id: string, action: (record: ArtifactRecord) => ArtifactAction) {
   const record = await findArtifactById(useDB(), id)
   if (!record) {
-    throw createError({ statusCode: 404, message: 'Artifact not found' })
+    throw createError({
+      statusCode: 404,
+      message: 'Artifact not found',
+    })
   }
   requireArtifactPermission(event, record.reference, [action(record)])
   event.context.artifact = record

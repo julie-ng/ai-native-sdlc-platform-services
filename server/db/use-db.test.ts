@@ -1,14 +1,25 @@
 import { beforeEach, expect, test, vi } from 'vitest'
 import { closeDB, useDB } from './use-db.ts'
 
-const { config, createDatabase, pool, db } = vi.hoisted(() => {
-  const pool = { on: vi.fn(), end: vi.fn() }
+const {
+  config, createDatabase, pool, db,
+} = vi.hoisted(() => {
+  const pool = {
+    on: vi.fn(),
+    end: vi.fn(),
+  }
   const db = {}
   return {
-    config: { databaseUrl: 'postgres://localhost/workflow', databaseEntraAuth: false as boolean | string },
+    config: {
+      databaseUrl: 'postgres://localhost/workflow',
+      databaseEntraAuth: false as boolean | string,
+    },
     pool,
     db,
-    createDatabase: vi.fn(() => ({ pool, db })),
+    createDatabase: vi.fn(() => ({
+      pool,
+      db,
+    })),
   }
 })
 vi.mock('nitropack/runtime', () => ({ useRuntimeConfig: () => config }))
@@ -22,7 +33,12 @@ beforeEach(async () => {
   config.databaseEntraAuth = false
 })
 
-test.each([false, 'false', '', '1'])('does not opt in for %j', (value) => {
+test.each([
+  false,
+  'false',
+  '',
+  '1',
+])('does not opt in for %j', (value) => {
   config.databaseEntraAuth = value
   expect(useDB()).toBe(db)
   expect(createDatabase).toHaveBeenCalledWith(config.databaseUrl, false)

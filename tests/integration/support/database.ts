@@ -15,8 +15,7 @@ async function admin(statement: string) {
   await client.connect()
   try {
     await client.query(statement)
-  }
-  finally {
+  } finally {
     await client.end()
   }
 }

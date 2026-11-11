@@ -11,7 +11,13 @@ import { createTestDatabase } from './support/database.ts'
 const shared = vi.hoisted(() => ({ db: undefined as Database | undefined }))
 const securityLog = vi.hoisted(() => vi.fn())
 vi.mock('../../server/db/use-db.ts', () => ({ useDB: () => shared.db }))
-vi.mock('nitropack/runtime', () => ({ useRuntimeConfig: () => ({ hmacKey: 'integration-key', hmacTokenExpiryMinutes: 15, databaseUrl: 'configured' }) }))
+vi.mock('nitropack/runtime', () => ({
+  useRuntimeConfig: () => ({
+    hmacKey: 'integration-key',
+    hmacTokenExpiryMinutes: 15,
+    databaseUrl: 'configured',
+  }),
+}))
 vi.mock('../../server/utils/log-security-event.utils.ts', () => ({ logSecurityEvent: securityLog }))
 let database: Awaited<ReturnType<typeof createTestDatabase>>
 let connection: ReturnType<typeof database.connect>
@@ -25,7 +31,16 @@ afterAll(async () => {
   await database?.drop()
 })
 const eventFor = (runId: string, stepId: string, token: string) => ({
-  node: { req: { headers: { 'authorization': `Bearer ${token}`, 'x-run-id': runId, 'x-step-id': stepId } } }, context: {},
+  node: {
+    req: {
+      headers: {
+        'authorization': `Bearer ${token}`,
+        'x-run-id': runId,
+        'x-step-id': stepId,
+      },
+    },
+  },
+  context: {},
 }) as unknown as H3Event
 
 test('stored roles authenticate planner/coder, enforce membership, and retain artifact policy', async () => {
@@ -33,7 +48,12 @@ test('stored roles authenticate planner/coder, enforce membership, and retain ar
   const otherRun = await createRun(connection.db)
   const planner = run.steps.find(step => step.role === 'planner')!
   const coder = run.steps.find(step => step.role === 'coder')!
-  const token = (step: typeof planner) => signStepToken('integration-key', { runId: run.id, createdAt: run.createdAt, stepId: step.id, role: step.role })
+  const token = (step: typeof planner) => signStepToken('integration-key', {
+    runId: run.id,
+    createdAt: run.createdAt,
+    stepId: step.id,
+    role: step.role,
+  })
   const producer = eventFor(run.id, planner.id, token(planner))
   await requireStepContext(producer)
   const reference = producer.context.step!.outputs[0]!
@@ -45,12 +65,12 @@ test('stored roles authenticate planner/coder, enforce membership, and retain ar
   securityLog.mockClear()
   await expect(requireArtifactAccess(consumer, record.id, () => 'update')).rejects.toMatchObject({ statusCode: 403 })
   expect(securityLog).toHaveBeenCalledTimes(1)
-  for (const event of [
-    eventFor(run.id, coder.id, token(planner)),
-    eventFor(otherRun.id, planner.id, token(planner)),
-  ]) {
+  for (const event of [eventFor(run.id, coder.id, token(planner)), eventFor(otherRun.id, planner.id, token(planner))]) {
     securityLog.mockClear()
-    await expect(requireStepContext(event)).rejects.toMatchObject({ statusCode: 401, message: 'Unauthorized' })
+    await expect(requireStepContext(event)).rejects.toMatchObject({
+      statusCode: 401,
+      message: 'Unauthorized',
+    })
     expect(event.context.step).toBeUndefined()
     expect(securityLog).toHaveBeenCalledTimes(1)
   }

@@ -14,7 +14,10 @@ export default defineEventHandler(async (event) => {
   await requireArtifactAccess(event, id, () => 'read')
   const record = event.context.artifact!
   if (record.state !== 'uploaded') {
-    throw createError({ statusCode: 409, message: 'No successful upload has been reported' })
+    throw createError({
+      statusCode: 409,
+      message: 'No successful upload has been reported',
+    })
   }
   return signDownload(useArtifactStorage(event), record)
 })

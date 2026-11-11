@@ -2,7 +2,11 @@
 // examples here are documentation only, not test data.
 const artifactId = '40000000-0000-4000-8000-000000000001'
 const examples = {
-  createRequest: { name: 'plan', contentType: 'text/markdown', title: 'Implementation plan' },
+  createRequest: {
+    name: 'plan',
+    contentType: 'text/markdown',
+    title: 'Implementation plan',
+  },
   createResponse: {
     id: artifactId,
     state: 'reserved',
@@ -10,11 +14,21 @@ const examples = {
       url: `https://account.blob.core.windows.net/artifacts/v1/runs/10000000-0000-4000-8000-000000000001/steps/20000000-0000-4000-8000-000000000001/artifacts/plan?sp=w&sig=DOCUMENTATION-ONLY`,
       method: 'PUT',
       expiresAt: '2026-10-27T10:05:00.000Z',
-      headers: { 'x-ms-blob-type': 'BlockBlob', 'Content-Type': 'text/markdown' },
+      headers: {
+        'x-ms-blob-type': 'BlockBlob',
+        'Content-Type': 'text/markdown',
+      },
     },
   },
-  completeRequest: { state: 'uploaded', sizeBytes: 5, sha256: '1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3' },
-  completeResponse: { id: artifactId, state: 'uploaded' },
+  completeRequest: {
+    state: 'uploaded',
+    sizeBytes: 5,
+    sha256: '1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3',
+  },
+  completeResponse: {
+    id: artifactId,
+    state: 'uploaded',
+  },
   info: {
     id: artifactId,
     name: 'plan',
@@ -34,7 +48,12 @@ const examples = {
 }
 
 const noStoreHeaders = {
-  'Cache-Control': { schema: { type: 'string', enum: ['no-store'] } },
+  'Cache-Control': {
+    schema: {
+      type: 'string',
+      enum: ['no-store'],
+    },
+  },
 }
 
 function jsonMedia(schema: string, value?: unknown) {
@@ -46,10 +65,17 @@ function jsonMedia(schema: string, value?: unknown) {
   }
 }
 function response(schema: string, value: unknown, description = 'Success', headers?: object) {
-  return { description, ...(headers ? { headers } : {}), content: jsonMedia(schema, value) }
+  return {
+    description,
+    ...(headers ? { headers } : {}),
+    content: jsonMedia(schema, value),
+  }
 }
 function requestBody(schema: string, value: unknown) {
-  return { required: true, content: jsonMedia(schema, value) }
+  return {
+    required: true,
+    content: jsonMedia(schema, value),
+  }
 }
 const errorDescriptions: Record<number, string> = {
   400: 'Invalid body or route parameter; `data` holds z.flattenError() output',
@@ -61,7 +87,13 @@ const errorDescriptions: Record<number, string> = {
   503: 'Authentication or artifact service is not configured',
 }
 function errors(...statuses: number[]) {
-  return Object.fromEntries(statuses.map(status => [status, { description: errorDescriptions[status], content: jsonMedia('ErrorResponse') }]))
+  return Object.fromEntries(statuses.map(status => [
+    status,
+    {
+      description: errorDescriptions[status],
+      content: jsonMedia('ErrorResponse'),
+    },
+  ]))
 }
 
 // Operations are tagged by resource; documentation tools such as the docs site group them by tag.
@@ -71,15 +103,20 @@ const artifactTags = ['Artifacts']
 // There is no filesystem access, server validation or test-runner dependency.
 export function buildArtifactHttpContract() {
   const stepParameters = ['X-Run-Id', 'X-Step-Id'].map(name => ({
-    name, in: 'header', required: true, schema: { $ref: '#/components/schemas/Uuid' },
-  }))
-  const idParameter = [{
-    name: 'id',
-    in: 'path',
+    name,
+    in: 'header',
     required: true,
     schema: { $ref: '#/components/schemas/Uuid' },
-    example: artifactId,
-  }]
+  }))
+  const idParameter = [
+    {
+      name: 'id',
+      in: 'path',
+      required: true,
+      schema: { $ref: '#/components/schemas/Uuid' },
+      example: artifactId,
+    },
+  ]
   return {
     'openapi': '3.0.3',
     'info': {
@@ -87,7 +124,10 @@ export function buildArtifactHttpContract() {
       version: '0.6.0',
       description: 'One current artifact per producing step/name. The explicit requireStepContext guard establishes event.context.step; role policy and exact bindings determine access. Missing or not visible is 404; visible but wrong action is 403. Planners write their own plan; coders read bound plans. Bytes move directly between caller and Azure Blob Storage. Errors use Nitro\'s createError() JSON.',
     },
-    'x-step-context': { location: 'event.context.step', schema: { $ref: '#/components/schemas/StepContext' } },
+    'x-step-context': {
+      location: 'event.context.step',
+      schema: { $ref: '#/components/schemas/StepContext' },
+    },
     'security': [{ StepBearer: [] }],
     'paths': {
       '/api/runs': {
@@ -102,8 +142,14 @@ export function buildArtifactHttpContract() {
               runId: '10000000-0000-4000-8000-000000000001',
               expiresAt: '2026-11-10T10:15:00.000Z',
               steps: {
-                planner: { stepId: '20000000-0000-4000-8000-000000000001', token: 'a'.repeat(64) },
-                coder: { stepId: '20000000-0000-4000-8000-000000000002', token: 'b'.repeat(64) },
+                planner: {
+                  stepId: '20000000-0000-4000-8000-000000000001',
+                  token: 'a'.repeat(64),
+                },
+                coder: {
+                  stepId: '20000000-0000-4000-8000-000000000002',
+                  token: 'b'.repeat(64),
+                },
               },
             }, 'Created', noStoreHeaders),
             ...errors(401, 500, 503),
@@ -119,7 +165,10 @@ export function buildArtifactHttpContract() {
           description: 'Insert, or replace the descriptive metadata of, the caller\'s step/name artifact (last write wins; omitted optional fields are cleared). State, size and hash are kept. Every call issues a fresh write SAS for the same blob.',
           requestBody: requestBody('CreateArtifactRequest', examples.createRequest),
           responses: {
-            200: response('CreateArtifactResponse', { ...examples.createResponse, state: 'uploaded' }, 'Existing artifact', noStoreHeaders),
+            200: response('CreateArtifactResponse', {
+              ...examples.createResponse,
+              state: 'uploaded',
+            }, 'Existing artifact', noStoreHeaders),
             201: response('NewArtifactResponse', examples.createResponse, 'Created', noStoreHeaders),
             ...errors(401, 400, 403, 404, 500, 503),
           },
@@ -176,8 +225,16 @@ export function buildArtifactHttpContract() {
     },
     'components': {
       securitySchemes: {
-        StepBearer: { type: 'http', scheme: 'bearer', description: 'Opaque HMAC-SHA256 hex token issued by POST /api/runs; requires X-Run-Id and X-Step-Id.' },
-        AdminBearer: { type: 'http', scheme: 'bearer', description: 'Server-configured admin token, used only to create runs.' },
+        StepBearer: {
+          type: 'http',
+          scheme: 'bearer',
+          description: 'Opaque HMAC-SHA256 hex token issued by POST /api/runs; requires X-Run-Id and X-Step-Id.',
+        },
+        AdminBearer: {
+          type: 'http',
+          scheme: 'bearer',
+          description: 'Server-configured admin token, used only to create runs.',
+        },
       },
     },
   } as const

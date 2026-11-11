@@ -24,14 +24,24 @@ export default defineEventHandler(async (event) => {
     },
   ]
   if (!import.meta.dev) {
-    probes.push({ name: 'postgres:migrations', componentType: 'datastore', run: requireMigrations })
+    probes.push({
+      name: 'postgres:migrations',
+      componentType: 'datastore',
+      run: requireMigrations,
+    })
   }
-  const { statusCode, body, failures } = await checkReadiness(probes, process.uptime())
+  const {
+    statusCode, body, failures,
+  } = await checkReadiness(probes, process.uptime())
   for (const { name, error } of failures) {
     // Driver errors arrive wrapped (e.g. DrizzleQueryError); surface the cause's code, e.g. ECONNREFUSED.
     const cause = error instanceof Error ? error.cause : undefined
     const code = cause instanceof Object && 'code' in cause ? cause.code : undefined
-    useLogger('readyz').error({ check: name, code, err: error }, 'Readiness check failed')
+    useLogger('readyz').error({
+      check: name,
+      code,
+      err: error,
+    }, 'Readiness check failed')
   }
   setResponseStatus(event, statusCode)
   setResponseHeader(event, 'Content-Type', 'application/health+json')

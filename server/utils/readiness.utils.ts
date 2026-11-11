@@ -36,13 +36,26 @@ export interface ReadinessFailure {
 export async function checkReadiness(probes: ReadinessProbe[], uptimeSeconds: number, now = new Date()) {
   const time = now.toISOString()
   const results = await Promise.allSettled(probes.map(async probe => probe.run()))
-  const checks: Record<string, { componentType: string, status: 'pass' | 'fail', time: string }[]> = {}
+  const checks: Record<string, {
+    componentType: string
+    status: 'pass' | 'fail'
+    time: string
+  }[]> = {}
   const failures: ReadinessFailure[] = []
   results.forEach((result, index) => {
     const { name, componentType } = probes[index]!
-    checks[name] = [{ componentType, status: result.status === 'fulfilled' ? 'pass' : 'fail', time }]
+    checks[name] = [
+      {
+        componentType,
+        status: result.status === 'fulfilled' ? 'pass' : 'fail',
+        time,
+      },
+    ]
     if (result.status === 'rejected') {
-      failures.push({ name, error: result.reason })
+      failures.push({
+        name,
+        error: result.reason,
+      })
     }
   })
   const ready = failures.length === 0

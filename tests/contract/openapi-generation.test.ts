@@ -33,13 +33,16 @@ test('schema registry and exported component names agree', () => {
 })
 
 test('every documentation example satisfies its Zod schema', () => {
-  interface Media { schema: { $ref: string }, example?: unknown }
-  interface Operation { requestBody?: { content: Record<string, Media> }, responses: Record<string, { content: Record<string, Media> }> }
+  interface Media {
+    schema: { $ref: string }
+    example?: unknown
+  }
+  interface Operation {
+    requestBody?: { content: Record<string, Media> }
+    responses: Record<string, { content: Record<string, Media> }>
+  }
   const paths = buildArtifactOpenApi().paths as unknown as Record<string, Record<string, Operation>>
-  const media = Object.values(paths).flatMap(methods => Object.values(methods)).flatMap(operation => [
-    ...(operation.requestBody ? [operation.requestBody.content['application/json']!] : []),
-    ...Object.values(operation.responses).map(response => response.content['application/json']!),
-  ])
+  const media = Object.values(paths).flatMap(methods => Object.values(methods)).flatMap(operation => [...(operation.requestBody ? [operation.requestBody.content['application/json']!] : []), ...Object.values(operation.responses).map(response => response.content['application/json']!)])
   const examples = media.filter(entry => 'example' in entry)
   expect(examples.length).toBe(9)
   for (const entry of examples) {

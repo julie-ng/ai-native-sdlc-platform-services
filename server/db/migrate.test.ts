@@ -1,8 +1,14 @@
 import { beforeEach, expect, test, vi } from 'vitest'
 
-const { db, migrate, useDB } = vi.hoisted(() => {
+const {
+  db, migrate, useDB,
+} = vi.hoisted(() => {
   const db = {}
-  return { db, migrate: vi.fn(), useDB: vi.fn(() => db) }
+  return {
+    db,
+    migrate: vi.fn(),
+    useDB: vi.fn(() => db),
+  }
 })
 vi.mock('drizzle-orm/node-postgres/migrator', () => ({ migrate }))
 vi.mock('./use-db.ts', () => ({ useDB }))
@@ -14,7 +20,9 @@ beforeEach(() => {
 })
 
 test('readiness fails until migrations complete, then passes', async () => {
-  const { MIGRATIONS_FOLDER, migrateDatabase, requireMigrations } = await import('./migrate.ts')
+  const {
+    MIGRATIONS_FOLDER, migrateDatabase, requireMigrations,
+  } = await import('./migrate.ts')
   expect(() => requireMigrations()).toThrow('Database migrations have not completed')
 
   await migrateDatabase()
