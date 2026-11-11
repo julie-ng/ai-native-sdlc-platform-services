@@ -28,7 +28,10 @@ export interface StepTokenScope {
  */
 export function signStepToken(key: string, scope: StepTokenScope): string {
   const canonical = JSON.stringify([
-    scope.runId, scope.createdAt.toISOString(), `step:${scope.stepId}`, [...roleActions[scope.role]].sort(),
+    scope.runId,
+    scope.createdAt.toISOString(),
+    `step:${scope.stepId}`,
+    [...roleActions[scope.role]].sort(),
   ])
   return createHmac('sha256', key).update(canonical).digest('hex')
 }

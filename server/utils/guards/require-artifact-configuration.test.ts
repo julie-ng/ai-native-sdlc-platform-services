@@ -2,7 +2,11 @@ import { beforeEach, expect, test, vi } from 'vitest'
 import type { H3Event } from 'h3'
 import { requireArtifactConfiguration } from './require-artifact-configuration.ts'
 
-const config = vi.hoisted(() => ({ databaseUrl: '', artifactStorageAccountUrl: '', artifactStorageContainer: '' }))
+const config = vi.hoisted(() => ({
+  databaseUrl: '',
+  artifactStorageAccountUrl: '',
+  artifactStorageContainer: '',
+}))
 vi.mock('nitropack/runtime', () => ({ useRuntimeConfig: () => config }))
 
 const event = {} as H3Event
@@ -28,6 +32,9 @@ test('any missing or non-HTTPS setting is the same 503, without naming it', () =
   ]) {
     Object.assign(config, missing)
     expect(() => requireArtifactConfiguration(event))
-      .toThrow(expect.objectContaining({ statusCode: 503, message: 'Artifact service is not configured' }))
+      .toThrow(expect.objectContaining({
+        statusCode: 503,
+        message: 'Artifact service is not configured',
+      }))
   }
 })

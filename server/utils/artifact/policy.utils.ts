@@ -57,7 +57,11 @@ export function canAccessArtifact(step: StepContext, reference: ArtifactRef, act
  * @returns Whether the caller holds any action on the slot.
  */
 export function isArtifactVisible(step: StepContext, reference: ArtifactRef): boolean {
-  return (['create', 'read', 'update'] as const).some(action => canAccessArtifact(step, reference, action))
+  return ([
+    'create',
+    'read',
+    'update',
+  ] as const).some(action => canAccessArtifact(step, reference, action))
 }
 
 /**

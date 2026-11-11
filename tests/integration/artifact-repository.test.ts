@@ -23,9 +23,23 @@ test('migrations can be applied again safely', async () => {
 })
 
 test('register, replace metadata, report uploads and keep one stable record', async () => {
-  const first = await upsertArtifact(connection.db, planP1, { contentType: 'text/markdown', title: 'Plan', kind: 'notes' })
+  const first = await upsertArtifact(connection.db, planP1, {
+    contentType: 'text/markdown',
+    title: 'Plan',
+    kind: 'notes',
+  })
   expect(first.created).toBe(true)
-  expect(first.record).toMatchObject({ reference: planP1, state: 'reserved', sizeBytes: null, sha256: null, metadata: { contentType: 'text/markdown', title: 'Plan', kind: 'notes' } })
+  expect(first.record).toMatchObject({
+    reference: planP1,
+    state: 'reserved',
+    sizeBytes: null,
+    sha256: null,
+    metadata: {
+      contentType: 'text/markdown',
+      title: 'Plan',
+      kind: 'notes',
+    },
+  })
   expect(first.record.createdAt).toBe(first.record.updatedAt)
   expect(first.record.createdAt).toMatch(/Z$/)
 
@@ -39,36 +53,82 @@ test('register, replace metadata, report uploads and keep one stable record', as
   expect(again.record.updatedAt > first.record.updatedAt).toBe(true)
 
   await sleep(5)
-  const uploaded = await recordUploadReport(connection.db, first.record.id, { state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) })
-  expect(uploaded).toMatchObject({ id: first.record.id, state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) })
+  const uploaded = await recordUploadReport(connection.db, first.record.id, {
+    state: 'uploaded',
+    sizeBytes: 5,
+    sha256: 'a'.repeat(64),
+  })
+  expect(uploaded).toMatchObject({
+    id: first.record.id,
+    state: 'uploaded',
+    sizeBytes: 5,
+    sha256: 'a'.repeat(64),
+  })
   expect(uploaded.updatedAt > again.record.updatedAt).toBe(true)
 
-  const replaced = await recordUploadReport(connection.db, first.record.id, { state: 'uploaded', sizeBytes: 13, sha256: 'b'.repeat(64) })
-  expect(replaced).toMatchObject({ sizeBytes: 13, sha256: 'b'.repeat(64) })
+  const replaced = await recordUploadReport(connection.db, first.record.id, {
+    state: 'uploaded',
+    sizeBytes: 13,
+    sha256: 'b'.repeat(64),
+  })
+  expect(replaced).toMatchObject({
+    sizeBytes: 13,
+    sha256: 'b'.repeat(64),
+  })
 
   // A repeated POST after upload keeps the reported content.
   const afterUpload = await upsertArtifact(connection.db, planP1, { contentType: 'text/markdown' })
-  expect(afterUpload.record).toMatchObject({ state: 'uploaded', sizeBytes: 13 })
+  expect(afterUpload.record).toMatchObject({
+    state: 'uploaded',
+    sizeBytes: 13,
+  })
 })
 
 test('each upload report replaces state, size, hash and details', async () => {
-  const { record } = await upsertArtifact(connection.db, { ...planP1, name: 'report' }, { contentType: 'text/markdown' })
-  const failed = await recordUploadReport(connection.db, record.id, { state: 'failed', details: 'Azure returned 403' })
-  expect(failed).toMatchObject({ state: 'failed', sizeBytes: null, sha256: null, details: 'Azure returned 403' })
+  const { record } = await upsertArtifact(connection.db, {
+    ...planP1,
+    name: 'report',
+  }, { contentType: 'text/markdown' })
+  const failed = await recordUploadReport(connection.db, record.id, {
+    state: 'failed',
+    details: 'Azure returned 403',
+  })
+  expect(failed).toMatchObject({
+    state: 'failed',
+    sizeBytes: null,
+    sha256: null,
+    details: 'Azure returned 403',
+  })
 
-  const uploaded = await recordUploadReport(connection.db, record.id, { state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) })
+  const uploaded = await recordUploadReport(connection.db, record.id, {
+    state: 'uploaded',
+    sizeBytes: 5,
+    sha256: 'a'.repeat(64),
+  })
   // Omitted details are cleared, not kept from the previous report.
-  expect(uploaded).toStrictEqual({ ...uploaded, state: 'uploaded', sizeBytes: 5, sha256: 'a'.repeat(64) })
+  expect(uploaded).toStrictEqual({
+    ...uploaded,
+    state: 'uploaded',
+    sizeBytes: 5,
+    sha256: 'a'.repeat(64),
+  })
   expect(uploaded).not.toHaveProperty('details')
 
   // Last report wins: a failure after an upload clears the size and hash.
   const failedAgain = await recordUploadReport(connection.db, record.id, { state: 'failed' })
-  expect(failedAgain).toMatchObject({ state: 'failed', sizeBytes: null, sha256: null })
+  expect(failedAgain).toMatchObject({
+    state: 'failed',
+    sizeBytes: null,
+    sha256: null,
+  })
   expect(failedAgain).not.toHaveProperty('details')
   expect(await findArtifactById(connection.db, record.id)).toStrictEqual(failedAgain)
 
   // A repeated POST keeps the reported state.
-  const afterFailure = await upsertArtifact(connection.db, { ...planP1, name: 'report' }, { contentType: 'text/markdown' })
+  const afterFailure = await upsertArtifact(connection.db, {
+    ...planP1,
+    name: 'report',
+  }, { contentType: 'text/markdown' })
   expect(afterFailure.record.state).toBe('failed')
 })
 
@@ -82,31 +142,61 @@ test('reads leave timestamps unchanged and survive a new connection pool', async
 })
 
 test('listing matches exact references, including run, in creation order', async () => {
-  const listed = await listArtifactsByReferences(connection.db, [planP2, planP1, otherP1, planRunB])
+  const listed = await listArtifactsByReferences(connection.db, [
+    planP2,
+    planP1,
+    otherP1,
+    planRunB,
+  ])
   expect(listed.map(record => record.reference)).toStrictEqual([planP1, planP2])
-  expect(await listArtifactsByReferences(connection.db, [{ ...planP1, runId: planRunB.runId }])).toStrictEqual([])
+  expect(await listArtifactsByReferences(connection.db, [
+    {
+      ...planP1,
+      runId: planRunB.runId,
+    },
+  ])).toStrictEqual([])
   expect(await listArtifactsByReferences(connection.db, [])).toStrictEqual([])
 })
 
 test('a producing step must exist in the caller\'s run', async () => {
-  await expect(upsertArtifact(connection.db, { ...planP1, runId: planRunB.runId, name: 'mismatch' }, { contentType: 'text/plain' })).rejects.toThrow('not registered')
-  await expect(upsertArtifact(connection.db, { runId: runA, producerStepId: '20000000-0000-4000-8000-000000000099', name: 'plan' }, { contentType: 'text/plain' })).rejects.toThrow('not registered')
+  await expect(upsertArtifact(connection.db, {
+    ...planP1,
+    runId: planRunB.runId,
+    name: 'mismatch',
+  }, { contentType: 'text/plain' })).rejects.toThrow('not registered')
+  await expect(upsertArtifact(connection.db, {
+    runId: runA,
+    producerStepId: '20000000-0000-4000-8000-000000000099',
+    name: 'plan',
+  }, { contentType: 'text/plain' })).rejects.toThrow('not registered')
 })
 
 test('PostgreSQL enforces the step foreign key, step/name uniqueness and upload fields', async () => {
   const insert = (values: Partial<typeof artifacts.$inferInsert>) => connection.db.insert(artifacts)
-    .values({ producerStepId: stepIds.coderC1, name: 'constraint', contentType: 'text/plain', ...values })
+    .values({
+      producerStepId: stepIds.coderC1,
+      name: 'constraint',
+      contentType: 'text/plain',
+      ...values,
+    })
   const failure = async (promise: Promise<unknown>) => {
     const error = await promise.then(() => undefined, (error: unknown) => error)
     assert(error instanceof Error && error.cause instanceof Error)
     return error.cause.message
   }
   expect(await failure(insert({ producerStepId: '20000000-0000-4000-8000-000000000099' }))).toMatch(/foreign key/)
-  expect(await failure(insert({ producerStepId: planP1.producerStepId, name: 'plan' }))).toMatch(/artifacts_producer_step_id_name_unique/)
+  expect(await failure(insert({
+    producerStepId: planP1.producerStepId,
+    name: 'plan',
+  }))).toMatch(/artifacts_producer_step_id_name_unique/)
   expect(await failure(insert({ state: 'uploaded' }))).toMatch(/artifacts_state_check/)
   expect(await failure(insert({ sizeBytes: 5 }))).toMatch(/artifacts_state_check/)
   expect(await failure(insert({ details: 'Not before a report' }))).toMatch(/artifacts_state_check/)
-  expect(await failure(insert({ state: 'failed', sizeBytes: 5, sha256: 'a'.repeat(64) }))).toMatch(/artifacts_state_check/)
+  expect(await failure(insert({
+    state: 'failed',
+    sizeBytes: 5,
+    sha256: 'a'.repeat(64),
+  }))).toMatch(/artifacts_state_check/)
   const [{ count }] = (await connection.db.execute<{ count: string }>(sql`SELECT count(*) FROM artifacts WHERE name = 'constraint'`)).rows as [{ count: string }]
   expect(count).toBe('0')
 })

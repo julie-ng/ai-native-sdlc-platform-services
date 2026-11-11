@@ -6,7 +6,13 @@ import { stepContextSchema } from '../../../shared/utils/zod-schemas/step-contex
 import type { StepContext } from '../../../shared/types/artifact.ts'
 
 /** Result of {@link readStepContext}; failures carry no detail about what was wrong. */
-export type ContextResult = { ok: true, value: StepContext } | { ok: false, error: 'context_unavailable' }
+export type ContextResult = {
+  ok: true
+  value: StepContext
+} | {
+  ok: false
+  error: 'context_unavailable'
+}
 
 /**
  * Read and validate the trusted step context from an event context.
@@ -22,16 +28,28 @@ export type ContextResult = { ok: true, value: StepContext } | { ok: false, erro
  */
 export function readStepContext(eventContext: unknown): ContextResult {
   if (typeof eventContext !== 'object' || eventContext === null || !('step' in eventContext)) {
-    return { ok: false, error: 'context_unavailable' }
+    return {
+      ok: false,
+      error: 'context_unavailable',
+    }
   }
   const parsed = stepContextSchema.safeParse(eventContext.step)
   if (!parsed.success) {
-    return { ok: false, error: 'context_unavailable' }
+    return {
+      ok: false,
+      error: 'context_unavailable',
+    }
   }
   const step = parsed.data
   if ([...step.inputs, ...step.outputs].some(ref => ref.runId !== step.runId)
     || step.outputs.some(ref => ref.producerStepId !== step.stepId)) {
-    return { ok: false, error: 'context_unavailable' }
+    return {
+      ok: false,
+      error: 'context_unavailable',
+    }
   }
-  return { ok: true, value: step }
+  return {
+    ok: true,
+    value: step,
+  }
 }

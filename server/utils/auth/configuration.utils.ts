@@ -13,11 +13,19 @@ import { useRuntimeConfig } from 'nitropack/runtime'
  * @throws H3Error 503 for missing or invalid server configuration, without disclosing settings.
  */
 export function requireStepTokenConfiguration(event: H3Event) {
-  const { hmacKey, hmacTokenExpiryMinutes, databaseUrl } = useRuntimeConfig(event)
+  const {
+    hmacKey, hmacTokenExpiryMinutes, databaseUrl,
+  } = useRuntimeConfig(event)
   const expiryMinutes = Number(hmacTokenExpiryMinutes)
   if (!hmacKey || !databaseUrl || !Number.isFinite(expiryMinutes) || expiryMinutes <= 0
     || !Number.isFinite(new Date(Date.now() + expiryMinutes * 60_000).getTime())) {
-    throw createError({ statusCode: 503, message: 'Authentication is not configured' })
+    throw createError({
+      statusCode: 503,
+      message: 'Authentication is not configured',
+    })
   }
-  return { key: hmacKey, expiryMinutes }
+  return {
+    key: hmacKey,
+    expiryMinutes,
+  }
 }

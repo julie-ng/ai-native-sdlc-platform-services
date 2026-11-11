@@ -13,7 +13,10 @@ const unguardedRoutes = [
 // visible guard placement, not runtime control flow or authentication behavior.
 const inputCall = /\b(?:readArtifactBody|readArtifactId|readBody|readValidatedBody|getQuery|getValidatedQuery|getRouter\w*)\s*\(/
 
-const files = await readdir(apiDirectory, { recursive: true, withFileTypes: true })
+const files = await readdir(apiDirectory, {
+  recursive: true,
+  withFileTypes: true,
+})
 const routes = files.filter(file => file.isFile()).map(file =>
   relative(fileURLToPath(apiDirectory), `${file.parentPath}/${file.name}`),
 )

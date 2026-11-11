@@ -3,9 +3,12 @@ import { createDatabase } from './connection.ts'
 
 const { getToken, credential } = vi.hoisted(() => {
   const getToken = vi.fn()
-  return { getToken, credential: vi.fn(class {
-    getToken = getToken
-  }) }
+  return {
+    getToken,
+    credential: vi.fn(class {
+      getToken = getToken
+    }),
+  }
 })
 vi.mock('@azure/identity', () => ({ DefaultAzureCredential: credential }))
 
@@ -44,10 +47,7 @@ test('Entra uses a reusable credential and a dynamic password with verified TLS'
     .mockResolvedValueOnce({ token: 'second-test-token' })
   expect(await password()).toBe('first-test-token')
   expect(await password()).toBe('second-test-token')
-  expect(getToken.mock.calls).toEqual([
-    ['https://ossrdbms-aad.database.windows.net/.default'],
-    ['https://ossrdbms-aad.database.windows.net/.default'],
-  ])
+  expect(getToken.mock.calls).toEqual([['https://ossrdbms-aad.database.windows.net/.default'], ['https://ossrdbms-aad.database.windows.net/.default']])
   expect(credential).toHaveBeenCalledTimes(1)
   getToken.mockRejectedValueOnce(new Error('Credential unavailable'))
   await expect(password()).rejects.toThrow('Credential unavailable')

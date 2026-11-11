@@ -45,8 +45,7 @@ try {
       for (const advisory of vulnerability.via) {
         if (isRecord(advisory)) {
           console.log(`- ${text(advisory.title)} (${text(advisory.severity)}); advisory: ${text(advisory.url)}`)
-        }
-        else if (typeof advisory === 'string') {
+        } else if (typeof advisory === 'string') {
           console.log(`- Via vulnerable dependency: ${text(advisory)}`)
         }
       }
@@ -55,13 +54,11 @@ try {
     const fix = vulnerability.fixAvailable
     if (isRecord(fix)) {
       console.log(`\nSuggested dependency change from npm: ${text(fix.name)}@${text(fix.version)}${fix.isSemVerMajor ? ' (potentially breaking; review compatibility)' : ''}.\n`)
-    }
-    else {
+    } else {
       console.log(`\n${fix === true ? 'Fix available; review npm audit output before updating.' : 'No fix reported by npm audit.'}\n`)
     }
   }
-}
-catch (error) {
+} catch (error) {
   console.log('## Dependency audit\n\nAudit results unavailable; check the audit step logs and retry. This is not a clean audit result.')
   console.error(error instanceof Error ? error.message : error)
   process.exitCode = 1

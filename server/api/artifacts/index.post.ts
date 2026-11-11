@@ -16,12 +16,20 @@ export default defineEventHandler(async (event) => {
   requireArtifactConfiguration(event)
   // The producing step comes from the caller, never the request body.
   const step = event.context.step!
-  const reference = { runId: step.runId, producerStepId: step.stepId, name }
+  const reference = {
+    runId: step.runId,
+    producerStepId: step.stepId,
+    name,
+  }
   // The upload SAS can overwrite (`sp=w`), so it needs both permissions.
   requireArtifactPermission(event, reference, ['create', 'update'])
   const { record, created } = await upsertArtifact(useDB(), reference, metadata)
   // If signing fails the registration stays; a repeated POST signs again.
   const upload = await signUpload(useArtifactStorage(event), record)
   setResponseStatus(event, created ? 201 : 200)
-  return { id: record.id, state: record.state, upload }
+  return {
+    id: record.id,
+    state: record.state,
+    upload,
+  }
 })

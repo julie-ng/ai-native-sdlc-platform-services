@@ -17,5 +17,8 @@ export default defineEventHandler(async (event) => {
   await requireArtifactAccess(event, id, record => record.state === 'reserved' ? 'create' : 'update')
   await recordUploadReport(useDB(), id, report)
   // Acknowledgment only: a write-only caller must not read the stored metadata.
-  return { id, state: report.state }
+  return {
+    id,
+    state: report.state,
+  }
 })

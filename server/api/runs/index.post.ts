@@ -15,13 +15,21 @@ export default defineEventHandler(async (event): Promise<CreateRunResponse> => {
     const step = run.steps.find(step => step.role === role)!
     return {
       stepId: step.id,
-      token: signStepToken(key, { runId: run.id, createdAt: run.createdAt, stepId: step.id, role }),
+      token: signStepToken(key, {
+        runId: run.id,
+        createdAt: run.createdAt,
+        stepId: step.id,
+        role,
+      }),
     }
   }
   setResponseStatus(event, 201)
   return {
     runId: run.id,
     expiresAt: stepTokenExpiresAt(run.createdAt, expiryMinutes).toISOString(),
-    steps: { planner: credential('planner'), coder: credential('coder') },
+    steps: {
+      planner: credential('planner'),
+      coder: credential('coder'),
+    },
   }
 })

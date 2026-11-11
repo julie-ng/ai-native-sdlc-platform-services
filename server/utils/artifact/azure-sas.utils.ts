@@ -50,7 +50,9 @@ export interface ArtifactStorage {
  * @param permissions - `r` for download, `w` for upload.
  * @returns The full SAS URL and its expiry as an ISO string.
  */
-async function sign({ service, container, now = () => new Date() }: ArtifactStorage, record: ArtifactRecord, permissions: 'r' | 'w') {
+async function sign({
+  service, container, now = () => new Date(),
+}: ArtifactStorage, record: ArtifactRecord, permissions: 'r' | 'w') {
   const startsOn = now()
   const expiresOn = new Date(startsOn.getTime() + sasLifetimeSeconds * 1000)
   // The delegation key must cover the SAS lifetime. The SAS itself omits
@@ -66,7 +68,10 @@ async function sign({ service, container, now = () => new Date() }: ArtifactStor
   }, key, service.accountName).toString()
   const url = new URL(`${container}/${blobName}`, service.url.endsWith('/') ? service.url : `${service.url}/`)
   url.search = query
-  return { url: url.toString(), expiresAt: expiresOn.toISOString() }
+  return {
+    url: url.toString(),
+    expiresAt: expiresOn.toISOString(),
+  }
 }
 
 /**
@@ -83,7 +88,10 @@ export async function signUpload(storage: ArtifactStorage, record: ArtifactRecor
     url,
     method: 'PUT',
     expiresAt,
-    headers: { 'x-ms-blob-type': 'BlockBlob', 'Content-Type': record.metadata.contentType },
+    headers: {
+      'x-ms-blob-type': 'BlockBlob',
+      'Content-Type': record.metadata.contentType,
+    },
   }
 }
 
@@ -97,5 +105,9 @@ export async function signUpload(storage: ArtifactStorage, record: ArtifactRecor
  */
 export async function signDownload(storage: ArtifactStorage, record: ArtifactRecord): Promise<DownloadSas> {
   const { url, expiresAt } = await sign(storage, record, 'r')
-  return { url, method: 'GET', expiresAt }
+  return {
+    url,
+    method: 'GET',
+    expiresAt,
+  }
 }

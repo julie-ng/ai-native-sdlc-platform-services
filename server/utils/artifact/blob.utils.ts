@@ -16,6 +16,8 @@ export function deriveBlobName(reference: unknown): string {
   if (!parsed.success) {
     throw new TypeError('Invalid artifact reference')
   }
-  const { runId, producerStepId, name } = parsed.data
+  const {
+    runId, producerStepId, name,
+  } = parsed.data
   return `v1/runs/${runId}/steps/${producerStepId}/artifacts/${name}`
 }

@@ -17,10 +17,21 @@ export async function createRun(db: Database) {
   return db.transaction(async (tx) => {
     const [run] = await tx.insert(runs).values({ id: randomUUID() }).returning()
     const created = await tx.insert(steps).values([
-      { id: randomUUID(), runId: run!.id, role: 'planner' },
-      { id: randomUUID(), runId: run!.id, role: 'coder' },
+      {
+        id: randomUUID(),
+        runId: run!.id,
+        role: 'planner',
+      },
+      {
+        id: randomUUID(),
+        runId: run!.id,
+        role: 'coder',
+      },
     ]).returning()
-    return { ...run!, steps: created }
+    return {
+      ...run!,
+      steps: created,
+    }
   })
 }
 
@@ -32,6 +43,9 @@ export async function createRun(db: Database) {
  * @throws On database query failure.
  */
 export async function findRunSteps(db: Database, runId: string) {
-  return db.select({ run: runs, step: steps }).from(runs)
+  return db.select({
+    run: runs,
+    step: steps,
+  }).from(runs)
     .innerJoin(steps, eq(steps.runId, runs.id)).where(eq(runs.id, runId))
 }

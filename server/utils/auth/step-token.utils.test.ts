@@ -5,11 +5,19 @@ import { contexts, runA, runB, stepIds } from '../../../tests/support/artifact-f
 import { canAccessArtifact } from '../artifact/policy.utils.ts'
 
 const key = 'test-signing-key'
-const scope = { runId: runA, createdAt: new Date('2026-11-10T10:00:00.000Z'), stepId: stepIds.plannerP1, role: 'planner' as const }
+const scope = {
+  runId: runA,
+  createdAt: new Date('2026-11-10T10:00:00.000Z'),
+  stepId: stepIds.plannerP1,
+  role: 'planner' as const,
+}
 
 test('signs the canonical tuple with sorted actions and verifies it', () => {
   const expected = createHmac('sha256', key).update(JSON.stringify([
-    runA, scope.createdAt.toISOString(), `step:${scope.stepId}`, ['create', 'update'],
+    runA,
+    scope.createdAt.toISOString(),
+    `step:${scope.stepId}`,
+    ['create', 'update'],
   ])).digest('hex')
   expect(signStepToken(key, scope)).toBe(expected)
   expect(verifyStepToken(expected, key, scope)).toBe(true)
@@ -19,17 +27,36 @@ test('binds key, run, timestamp, step and granted actions', () => {
   const token = signStepToken(key, scope)
   expect(verifyStepToken(token, 'other-key', scope)).toBe(false)
   for (const changed of [
-    { ...scope, runId: runB },
-    { ...scope, createdAt: new Date(scope.createdAt.getTime() + 1) },
-    { ...scope, stepId: stepIds.coderC1 },
-    { ...scope, role: 'coder' as const },
+    {
+      ...scope,
+      runId: runB,
+    },
+    {
+      ...scope,
+      createdAt: new Date(scope.createdAt.getTime() + 1),
+    },
+    {
+      ...scope,
+      stepId: stepIds.coderC1,
+    },
+    {
+      ...scope,
+      role: 'coder' as const,
+    },
   ]) {
     expect(verifyStepToken(token, key, changed)).toBe(false)
   }
 })
 
 test('malformed signatures fail without buffer length errors', () => {
-  for (const token of ['', 'a', 'g'.repeat(64), 'A'.repeat(64), 'a'.repeat(63), 'a'.repeat(65)]) {
+  for (const token of [
+    '',
+    'a',
+    'g'.repeat(64),
+    'A'.repeat(64),
+    'a'.repeat(63),
+    'a'.repeat(65),
+  ]) {
     expect(verifyStepToken(token, key, scope)).toBe(false)
   }
 })
@@ -52,7 +79,11 @@ test('opaque admin comparison handles different lengths and equal byte lengths',
 test('signed task actions agree with implemented artifact permissions', () => {
   for (const step of [contexts['planner-p1'], contexts['coder-c1']]) {
     const reference = [...step.inputs, ...step.outputs][0]!
-    const granted = (['create', 'read', 'update'] as const).filter(action => canAccessArtifact(step, reference, action))
+    const granted = ([
+      'create',
+      'read',
+      'update',
+    ] as const).filter(action => canAccessArtifact(step, reference, action))
     expect(granted).toEqual(roleActions[step.role as keyof typeof roleActions])
   }
 })

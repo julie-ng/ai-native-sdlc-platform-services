@@ -35,8 +35,19 @@ jobs:
       - name: Summarize high and critical vulnerabilities (non-blocking)
         continue-on-error: true
         run: node scripts/summarize-audit.ts "$RUNNER_TEMP/npm-audit.json" >> "$GITHUB_STEP_SUMMARY"
-      # verify runs lint, guidance checks, and the production build once.
-      - run: npm run verify
+      # Keep these steps aligned with the local verify script.
+      - name: Lint
+        run: npm run lint
+      - name: Check guidance
+        run: npm run check:guidance
+      - name: Contract tests
+        run: npm run test:contract
+      - name: Unit tests
+        run: npm run test:unit
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
 
   # Publish the image only after verify passes on a push to main; pull requests and manual runs only verify.
   # Follows julie-ng/ai-native-sdlc-agent-images (.github/workflows/publish.yml).

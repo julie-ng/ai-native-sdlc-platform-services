@@ -15,7 +15,12 @@ import { useLogger } from '#server/utils/use-logger'
 export default defineNitroErrorHandler(async (error, event, { defaultHandler }) => {
   const { pathname } = getRequestURL(event)
   if (error.unhandled || error.fatal) {
-    useLogger('http').error({ err: error, method: event.method, path: pathname, status: error.statusCode }, 'Request failed')
+    useLogger('http').error({
+      err: error,
+      method: event.method,
+      path: pathname,
+      status: error.statusCode,
+    }, 'Request failed')
   }
   if (import.meta.dev || !pathname.startsWith('/api/') || event.headers.get('accept')?.includes('text/html')) {
     return

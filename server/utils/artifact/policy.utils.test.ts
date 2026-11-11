@@ -12,26 +12,57 @@ test('planner creates/updates its own bound plan; coder reads its exact bound pl
   expect(canAccessArtifact(planner, planP1, 'read')).toBe(false)
   expect(canAccessArtifact(contexts['planner-p1-later-execution'], planP1, 'update')).toBe(true)
   expect(canAccessArtifact(coder, planP1, 'read')).toBe(true)
-  for (const action of ['create', 'update', 'delete', '__proto__', 'constructor']) {
+  for (const action of [
+    'create',
+    'update',
+    'delete',
+    '__proto__',
+    'constructor',
+  ]) {
     expect(canAccessArtifact(coder, planP1, action as ArtifactAction)).toBe(false)
   }
-  for (const action of ['delete', '__proto__', 'constructor']) {
+  for (const action of [
+    'delete',
+    '__proto__',
+    'constructor',
+  ]) {
     expect(canAccessArtifact(planner, planP1, action as ArtifactAction)).toBe(false)
   }
 })
 
 test('a reference is not a permission: other names, runs and steps grant nothing', () => {
-  for (const reference of [otherP1, planRunB, planP2]) {
-    for (const action of ['create', 'read', 'update'] as const) {
+  for (const reference of [
+    otherP1,
+    planRunB,
+    planP2,
+  ]) {
+    for (const action of [
+      'create',
+      'read',
+      'update',
+    ] as const) {
       expect(canAccessArtifact(contexts['planner-p1'], reference, action)).toBe(false)
       expect(canAccessArtifact(contexts['coder-c1'], reference, action)).toBe(false)
     }
   }
   expect(canAccessArtifact(contexts['planner-p2'], planP1, 'update')).toBe(false)
-  expect(canAccessArtifact({ ...contexts['coder-c1'], inputs: [] }, planP1, 'read')).toBe(false)
-  expect(canAccessArtifact({ ...contexts['planner-p1'], outputs: [] }, planP1, 'create')).toBe(false)
-  for (const role of ['unknown', 'constructor', '__proto__']) {
-    const step = { ...contexts['coder-c1'], role }
+  expect(canAccessArtifact({
+    ...contexts['coder-c1'],
+    inputs: [],
+  }, planP1, 'read')).toBe(false)
+  expect(canAccessArtifact({
+    ...contexts['planner-p1'],
+    outputs: [],
+  }, planP1, 'create')).toBe(false)
+  for (const role of [
+    'unknown',
+    'constructor',
+    '__proto__',
+  ]) {
+    const step = {
+      ...contexts['coder-c1'],
+      role,
+    }
     expect(isArtifactVisible(step, planP1)).toBe(false)
     expect(readableArtifactReferences(step)).toStrictEqual([])
   }
@@ -57,20 +88,40 @@ test('policy fails closed on invalid JS callers and does not mutate bindings', (
   expect(canAccessArtifact(step, planP1, 'create')).toBe(true)
   expect(readableArtifactReferences(step)).toStrictEqual([])
   expect(step).toStrictEqual(before)
-  for (const invalid of [null, undefined, {}, { ...contexts['coder-c1'], inputs: [planRunB] }]) {
+  for (const invalid of [
+    null,
+    undefined,
+    {},
+    {
+      ...contexts['coder-c1'],
+      inputs: [planRunB],
+    },
+  ]) {
     expect(canAccessArtifact(invalid as unknown as StepContext, planP1, 'read')).toBe(false)
     expect(readableArtifactReferences(invalid as unknown as StepContext)).toStrictEqual([])
   }
 })
 
 test('read scope follows declared bindings without assuming persistence', () => {
-  for (const [name, count] of [['planner-p1', 0], ['coder-c1', 1], ['coder-multiple-inputs', 2], ['coder-no-inputs', 0], ['unknown-role', 0]] as const) {
+  for (const [name, count] of [
+    ['planner-p1', 0],
+    ['coder-c1', 1],
+    ['coder-multiple-inputs', 2],
+    ['coder-no-inputs', 0],
+    ['unknown-role', 0],
+  ] as const) {
     expect(readableArtifactReferences(contexts[name]).length).toBe(count)
   }
   const step = structuredClone(contexts['coder-c1']) as StepContext
-  const unregistered = { ...planP1, producerStepId: '20000000-0000-4000-8000-000000000099' }
+  const unregistered = {
+    ...planP1,
+    producerStepId: '20000000-0000-4000-8000-000000000099',
+  }
   step.inputs.push({ ...otherP1 }, unregistered)
   // Policy returns permitted references; the repository resolves which exist.
   expect(readableArtifactReferences(step)).toStrictEqual([planP1, unregistered])
-  expect(sameArtifactReference(planP1, { ...planP1, producerStepId: stepIds.plannerP2 })).toBe(false)
+  expect(sameArtifactReference(planP1, {
+    ...planP1,
+    producerStepId: stepIds.plannerP2,
+  })).toBe(false)
 })

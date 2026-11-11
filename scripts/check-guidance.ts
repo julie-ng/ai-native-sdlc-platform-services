@@ -11,15 +11,20 @@ async function collectMarkdown(directory: string) {
     const path = `${directory}/${entry.name}`
     if (entry.isDirectory()) {
       await collectMarkdown(path)
-    }
-    else if (entry.isFile() && entry.name.endsWith('.md')) {
+    } else if (entry.isFile() && entry.name.endsWith('.md')) {
       files.push(path)
     }
   }
 }
 
 // Explicit roots keep local clones, build output, and personal adapters out of this check.
-for (const directory of ['docs', 'app', 'server', 'shared', '.agents/skills']) {
+for (const directory of [
+  'docs',
+  'app',
+  'server',
+  'shared',
+  '.agents/skills',
+]) {
   await collectMarkdown(directory)
 }
 
@@ -40,8 +45,7 @@ for (const file of files) {
       if (relativeTarget === '..' || relativeTarget.startsWith(`..${sep}`) || isAbsolute(relativeTarget)) {
         failures.push(`${file}: local link leaves this repository: ${target}`)
       }
-    }
-    catch {
+    } catch {
       failures.push(`${file}: missing local link target ${target}`)
     }
   }
@@ -60,7 +64,6 @@ for (const file of files) {
 if (failures.length > 0) {
   console.error(failures.join('\n'))
   process.exitCode = 1
-}
-else {
+} else {
   console.log(`Checked local file links and skill metadata in ${files.length} Markdown files.`)
 }

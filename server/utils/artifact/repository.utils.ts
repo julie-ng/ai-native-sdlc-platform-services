@@ -29,7 +29,10 @@ export interface ArtifactRecord {
 }
 
 /** Artifact columns plus the run ID from the workflow-owned step the artifact references. */
-const columns = { ...getTableColumns(artifacts), runId: steps.runId }
+const columns = {
+  ...getTableColumns(artifacts),
+  runId: steps.runId,
+}
 /** An artifact row joined with its step's run ID. */
 type Row = typeof artifacts.$inferSelect & { runId: string }
 
@@ -41,7 +44,11 @@ type Row = typeof artifacts.$inferSelect & { runId: string }
 function toRecord(row: Row): ArtifactRecord {
   return {
     id: row.id,
-    reference: { runId: row.runId, producerStepId: row.producerStepId, name: row.name },
+    reference: {
+      runId: row.runId,
+      producerStepId: row.producerStepId,
+      name: row.name,
+    },
     metadata: {
       contentType: row.contentType,
       ...(row.kind === null ? {} : { kind: row.kind }),
@@ -82,8 +89,15 @@ export async function findArtifactById(db: Database, id: string): Promise<Artifa
  * @throws If the producing step is not registered in the reference's run.
  */
 export async function upsertArtifact(db: Database, reference: ArtifactRef, fields: ArtifactMetadata) {
-  const { contentType, kind, title, description } = fields
-  const metadata = { contentType, kind: kind ?? null, title: title ?? null, description: description ?? null }
+  const {
+    contentType, kind, title, description,
+  } = fields
+  const metadata = {
+    contentType,
+    kind: kind ?? null,
+    title: title ?? null,
+    description: description ?? null,
+  }
   const { id, created } = await db.transaction(async (tx) => {
     const [step] = await tx.select({ id: steps.id }).from(steps)
       .where(and(eq(steps.id, reference.producerStepId), eq(steps.runId, reference.runId)))
@@ -91,19 +105,35 @@ export async function upsertArtifact(db: Database, reference: ArtifactRef, field
       throw new Error('Producing step is not registered in the caller\'s run')
     }
     const [inserted] = await tx.insert(artifacts)
-      .values({ producerStepId: reference.producerStepId, name: reference.name, ...metadata })
+      .values({
+        producerStepId: reference.producerStepId,
+        name: reference.name,
+        ...metadata,
+      })
       .onConflictDoNothing({ target: [artifacts.producerStepId, artifacts.name] })
       .returning({ id: artifacts.id })
     if (inserted) {
-      return { id: inserted.id, created: true }
+      return {
+        id: inserted.id,
+        created: true,
+      }
     }
     const [updated] = await tx.update(artifacts)
-      .set({ ...metadata, updatedAt: sql`now()` })
+      .set({
+        ...metadata,
+        updatedAt: sql`now()`,
+      })
       .where(and(eq(artifacts.producerStepId, reference.producerStepId), eq(artifacts.name, reference.name)))
       .returning({ id: artifacts.id })
-    return { id: updated!.id, created: false }
+    return {
+      id: updated!.id,
+      created: false,
+    }
   })
-  return { record: (await findArtifactById(db, id))!, created }
+  return {
+    record: (await findArtifactById(db, id))!,
+    created,
+  }
 }
 
 /**
@@ -139,10 +169,22 @@ export async function listArtifactsByReferences(db: Database, references: readon
  */
 export async function recordUploadReport(db: Database, id: string, report: CompleteArtifactRequest): Promise<ArtifactRecord> {
   const outcome = report.state === 'uploaded'
-    ? { state: report.state, sizeBytes: report.sizeBytes, sha256: report.sha256 }
-    : { state: report.state, sizeBytes: null, sha256: null }
+    ? {
+      state: report.state,
+      sizeBytes: report.sizeBytes,
+      sha256: report.sha256,
+    }
+    : {
+      state: report.state,
+      sizeBytes: null,
+      sha256: null,
+    }
   const [updated] = await db.update(artifacts)
-    .set({ ...outcome, details: report.details ?? null, updatedAt: sql`now()` })
+    .set({
+      ...outcome,
+      details: report.details ?? null,
+      updatedAt: sql`now()`,
+    })
     .where(eq(artifacts.id, id))
     .returning({ id: artifacts.id })
   if (!updated) {

@@ -42,7 +42,10 @@ export const onRequest = defineRouteMiddleware(async (context, next) => {
       return entry
     }
     if (entry.label === codeReferenceLabel) {
-      return { ...entry, entries: groupModulesByFolder(collectLinks(entry.entries), members) }
+      return {
+        ...entry,
+        entries: groupModulesByFolder(collectLinks(entry.entries), members),
+      }
     }
     return entry
   })
@@ -66,7 +69,10 @@ function parseMembers(markdown: string) {
     }
     const heading = /^### (.+)$/.exec(line)
     if (heading && kind) {
-      members.push({ name: heading[1]!.replace(/\(\)$/, ''), kind })
+      members.push({
+        name: heading[1]!.replace(/\(\)$/, ''),
+        kind,
+      })
     }
   }
   return members
@@ -87,14 +93,30 @@ function groupModulesByFolder(links: SidebarLink[], membersByTitle: Map<string, 
     const segments = link.label.split('/')
     if (segments.length < 2) {
       // The TypeDoc project index (`name` in astro.config.mjs).
-      overview.push({ ...link, label: 'Overview' })
+      overview.push({
+        ...link,
+        label: 'Overview',
+      })
       continue
     }
     const folder = segments.at(-2)!
-    const group = folders.get(folder) ?? { type: 'group', label: folder, entries: [], collapsed: false, badge: undefined }
+    const group = folders.get(folder) ?? {
+      type: 'group',
+      label: folder,
+      entries: [],
+      collapsed: false,
+      badge: undefined,
+    }
     folders.set(folder, group)
     group.entries.push(
-      { ...link, label: segments.at(-1)!, attrs: { ...link.attrs, 'data-sidebar-kind': 'module' } },
+      {
+        ...link,
+        label: segments.at(-1)!,
+        attrs: {
+          ...link.attrs,
+          'data-sidebar-kind': 'module',
+        },
+      },
       ...(membersByTitle.get(link.label) ?? []).map(member => memberLink(link.href, member)),
     )
   }
@@ -108,7 +130,10 @@ function memberLink(moduleHref: string, { name, kind }: Member): SidebarLink {
     // Starlight slugs headings with github-slugger; member names are identifiers, so lower-casing matches.
     href: `${moduleHref}#${name.toLowerCase()}`,
     isCurrent: false,
-    badge: { text: kind, variant: 'default' },
+    badge: {
+      text: kind,
+      variant: 'default',
+    },
     attrs: { 'data-sidebar-kind': 'member' },
   }
 }

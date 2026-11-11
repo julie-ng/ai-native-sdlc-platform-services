@@ -24,13 +24,22 @@ test('registration needs create and update on the caller\'s own slot', () => {
 
 test('invisible references are 404: other steps, names, and callers without bindings', () => {
   for (const [step, reference] of [
-    [contexts['coder-c1'], { ...planP1, producerStepId: contexts['coder-c1'].stepId }],
+    [
+      contexts['coder-c1'],
+      {
+        ...planP1,
+        producerStepId: contexts['coder-c1'].stepId,
+      },
+    ],
     [contexts['planner-p1'], otherP1],
     [contexts['planner-p2'], planP1],
     [contexts['unknown-role'], planP1],
   ] as const) {
     expect(() => requireArtifactPermission(eventFor(step), reference, ['create', 'update']))
-      .toThrow(expect.objectContaining({ statusCode: 404, message: 'Artifact not found' }))
+      .toThrow(expect.objectContaining({
+        statusCode: 404,
+        message: 'Artifact not found',
+      }))
   }
 })
 
@@ -38,11 +47,17 @@ test('a visible reference without every requested action is 403', () => {
   securityLog.mockClear()
   // Coder can read P1's plan but not write it; planner can write but not read.
   expect(() => requireArtifactPermission(eventFor(contexts['coder-c1']), planP1, ['create', 'update']))
-    .toThrow(expect.objectContaining({ statusCode: 403, message: 'Forbidden' }))
+    .toThrow(expect.objectContaining({
+      statusCode: 403,
+      message: 'Forbidden',
+    }))
   expect(() => requireArtifactPermission(eventFor(contexts['planner-p1']), planP1, ['read']))
     .toThrow(expect.objectContaining({ statusCode: 403 }))
   expect(securityLog).toHaveBeenCalledTimes(2)
   expect(securityLog.mock.calls.map(call => call[1])).toEqual(['artifact_action_denied', 'artifact_action_denied'])
-  expect(securityLog.mock.calls[0]?.[2]).toMatchObject({ requiredActions: ['create', 'update'], grantedActions: ['read'] })
+  expect(securityLog.mock.calls[0]?.[2]).toMatchObject({
+    requiredActions: ['create', 'update'],
+    grantedActions: ['read'],
+  })
   expect(() => requireArtifactPermission(eventFor(contexts['coder-multiple-inputs']), planP2, ['read'])).not.toThrow()
 })

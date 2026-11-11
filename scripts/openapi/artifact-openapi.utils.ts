@@ -21,6 +21,9 @@ export function buildArtifactOpenApi() {
   return {
     ...http,
     'x-generated-by': 'npm run generate:artifact-openapi; edit shared/utils/zod-schemas/ and scripts/openapi/artifact-http.ts',
-    'components': { ...http.components, schemas },
+    'components': {
+      ...http.components,
+      schemas,
+    },
   }
 }

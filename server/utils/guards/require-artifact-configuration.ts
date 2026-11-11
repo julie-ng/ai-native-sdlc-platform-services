@@ -15,15 +15,19 @@ import { requireStorageConfiguration } from '../readiness.utils.ts'
  * @throws H3Error 503 when the database URL, storage account URL or container is not configured.
  */
 export function requireArtifactConfiguration(event: H3Event) {
-  const { databaseUrl, artifactStorageAccountUrl, artifactStorageContainer } = useRuntimeConfig(event)
+  const {
+    databaseUrl, artifactStorageAccountUrl, artifactStorageContainer,
+  } = useRuntimeConfig(event)
   try {
     if (!databaseUrl) {
       throw new Error('NUXT_DATABASE_URL is not set')
     }
     requireStorageConfiguration(artifactStorageAccountUrl, artifactStorageContainer)
-  }
-  catch {
+  } catch {
     // Do not name the missing setting in the response; it is server configuration.
-    throw createError({ statusCode: 503, message: 'Artifact service is not configured' })
+    throw createError({
+      statusCode: 503,
+      message: 'Artifact service is not configured',
+    })
   }
 }
